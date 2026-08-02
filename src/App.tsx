@@ -1,35 +1,33 @@
-import Header from "./components/Header";
-import UserCard from "./components/UserCard";
-import ProductCard from "./components/ProductCard";
-import Footer from "./components/Footer";
+import  "./jsx/JSX.css";
+import Attributes from "./jsx/Attributes";
+import BasicJSX from "./jsx/BasicJSX";
+import ConditionalRendering from "./jsx/ConditionalRendering";
+import Events from "./jsx/Events";
+import Expressions from "./jsx/Expressions";
+import Fragments from "./jsx/Fragments";
+import Lists from "./jsx/Lists";
+
+
 
 function App() {
   return (
-    <>
-      <Header />
+    <div className="container">
+      <h1>React JSX Learning</h1>
 
-      <UserCard
-        name="Batool"
-        email="batool@example.com"
-      />
+      <BasicJSX />
 
-      <UserCard
-        name="John"
-        email="john@example.com"
-      />
+      <Expressions />
 
-      <ProductCard
-        name="iPhone 16"
-        price={999}
-      />
+      <Attributes />
 
-      <ProductCard
-        name="MacBook Pro"
-        price={2499}
-      />
+      <ConditionalRendering />
 
-      <Footer />
-    </>
+      <Lists />
+
+      <Fragments />
+
+      <Events />
+    </div>
   );
 }
 

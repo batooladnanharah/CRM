@@ -1,0 +1,26 @@
+.container {
+  max-width: 900px;
+  margin: 40px auto;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.lesson {
+  margin-bottom: 25px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+}
+
+.lesson h2 {
+  color: #2563eb;
+}
+
+button {
+  padding: 10px 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+img {
+  border-radius: 10px;
+}
