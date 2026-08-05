@@ -1,0 +1,108 @@
+/* ===== Phase 4: State (useState) - Shared Styles ===== */
+
+.state-app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #222;
+}
+
+.lesson {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  background: #fafafa;
+}
+
+.lesson h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+.lesson p.explanation {
+  color: #555;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.state-btn {
+  padding: 6px 14px;
+  margin-right: 8px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.state-btn:hover {
+  background: #1d4ed8;
+}
+
+.state-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.count-display {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+/* Theme switcher */
+.theme-box {
+  padding: 16px;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.theme-light {
+  background: #ffffff;
+  color: #111;
+  border: 1px solid #ccc;
+}
+
+.theme-dark {
+  background: #1f2937;
+  color: #f9fafb;
+  border: 1px solid #374151;
+}
+
+/* Like button */
+.like-btn {
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Inputs */
+.state-input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  margin-right: 8px;
+}
+
+/* Todo / cart / users lists */
+.state-list {
+  list-style: none;
+  padding: 0;
+}
+
+.state-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+}
