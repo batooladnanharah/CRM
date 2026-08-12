@@ -1,0 +1,166 @@
+/* ===== Phase 5: Events & Forms - Shared Styles ===== */
+
+.events-forms-app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #222;
+}
+
+.lesson {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  background: #fafafa;
+}
+
+.lesson h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+.lesson p.explanation {
+  color: #555;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.ef-btn {
+  padding: 6px 14px;
+  margin-right: 8px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.ef-btn:hover {
+  background: #1d4ed8;
+}
+
+.ef-btn.danger {
+  background: #dc2626;
+}
+
+.ef-btn.danger:hover {
+  background: #b91c1c;
+}
+
+.ef-input,
+.ef-textarea,
+.ef-select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  margin-right: 8px;
+  margin-bottom: 6px;
+}
+
+.ef-textarea {
+  width: 100%;
+  max-width: 400px;
+  resize: vertical;
+}
+
+.ef-hover-box {
+  padding: 20px;
+  border: 2px dashed #94a3b8;
+  border-radius: 8px;
+  text-align: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.ef-hover-box.hovering {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+.ef-focus-input {
+  padding: 8px 10px;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ef-focus-input.focused {
+  border: 2px solid #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.ef-focus-input.blurred {
+  border: 2px solid #cbd5e1;
+}
+
+/* Form field / error styles */
+.ef-field {
+  margin-bottom: 12px;
+}
+
+.ef-field label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ef-error {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.ef-success-box {
+  background: #dcfce7;
+  border: 1px solid #16a34a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 12px;
+}
+
+/* Task manager */
+.task-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+
+.task-summary span {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+}
+
+.task-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+}
+
+.task-card.completed .task-title {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+.task-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
