@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import PropsApp from './props/App.tsx'
 import StateApp from './state/App.tsx'
+import EventsFormsApp from './events-forms/App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -15,5 +16,8 @@ createRoot(document.getElementById('root')!).render(
     <hr />
     {/* Phase 4: State */}
     <StateApp />
+    <hr />
+    {/* Phase 5: Events and Forms */}
+    <EventsFormsApp />
   </StrictMode>,
 )
