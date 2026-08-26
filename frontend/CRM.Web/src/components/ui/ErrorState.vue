@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import AppButton from './AppButton.vue'
 
 withDefaults(defineProps<{ message?: string; retryable?: boolean }>(), {
   retryable: true,
@@ -13,9 +14,16 @@ const { t } = useI18n()
 <template>
   <div class="ui-error-state error" role="alert">
     <p class="ui-error-state__message">{{ message ?? t('common.error') }}</p>
-    <button v-if="retryable" type="button" class="ui-error-state__retry secondary-button" @click="$emit('retry')">
+    <AppButton
+      v-if="retryable"
+      type="button"
+      variant="secondary"
+      size="sm"
+      class="ui-error-state__retry"
+      @click="$emit('retry')"
+    >
       {{ t('common.retry') }}
-    </button>
+    </AppButton>
   </div>
 </template>
 

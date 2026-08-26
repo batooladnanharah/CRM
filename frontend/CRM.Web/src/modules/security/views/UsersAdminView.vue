@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSecurityStore } from '@/stores/security'
@@ -25,6 +25,87 @@ const customersStore = useCustomersStore()
 function isSelf(user: AdminUserListItem): boolean {
   return user.id === authStore.user?.id
 }
+
+const popoverUserId = ref<string | null>(null)
+const popoverStyle = ref<{ top: string; left: string }>({ top: '0px', left: '0px' })
+
+function togglePermissions(userId: string, event: MouseEvent) {
+  if (popoverUserId.value === userId) {
+    popoverUserId.value = null
+    return
+  }
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  popoverStyle.value = { top: `${rect.bottom + 8}px`, left: `${rect.left}px` }
+  popoverUserId.value = userId
+}
+
+function closePermissionsPopover() {
+  popoverUserId.value = null
+}
+
+function onDocumentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  if (!target.closest('.permissions-cell') && !target.closest('.permissions-popover')) {
+    closePermissionsPopover()
+  }
+}
+
+watch(popoverUserId, (value) => {
+  if (value) {
+    document.addEventListener('click', onDocumentClick)
+    window.addEventListener('scroll', closePermissionsPopover, true)
+    window.addEventListener('resize', closePermissionsPopover)
+  } else {
+    document.removeEventListener('click', onDocumentClick)
+    window.removeEventListener('scroll', closePermissionsPopover, true)
+    window.removeEventListener('resize', closePermissionsPopover)
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', onDocumentClick)
+  window.removeEventListener('scroll', closePermissionsPopover, true)
+  window.removeEventListener('resize', closePermissionsPopover)
+})
+
+// Short, unambiguous module labels for the expanded plain-text list.
+const permissionModuleLabels: Record<string, string> = {
+  customers: 'Customers',
+  tickets: 'Tickets',
+  quickReplies: 'Quick Replies',
+  kb: 'Knowledge Base',
+  channels: 'Channels',
+  sla: 'SLA',
+  reports: 'Reports',
+  security: 'Security',
+  portal: 'Portal',
+}
+
+function moduleLabel(permission: string): string {
+  const module = permission.split('.')[0] ?? permission
+  return permissionModuleLabels[module] ?? module
+}
+
+function actionLabel(permission: string): string {
+  const action = permission.split('.').pop() ?? permission
+  return action.charAt(0).toUpperCase() + action.slice(1)
+}
+
+// "customers.manage" -> "Customers: Manage"
+function formatPermission(permission: string): string {
+  return `${moduleLabel(permission)}: ${actionLabel(permission)}`
+}
+
+function permissionsSummary(user: AdminUserListItem): string {
+  const count = store.permissionsFor(user.role).length
+  return t('security.users.permissionsCount', { count }, count)
+}
+
+function permissionsList(user: AdminUserListItem): string {
+  return store.permissionsFor(user.role).map(formatPermission).join(', ')
+}
+
+const popoverUser = computed(() => store.users.find((user) => user.id === popoverUserId.value) ?? null)
 
 const isCreateOpen = ref(false)
 const createForm = reactive({
@@ -292,6 +373,7 @@ onMounted(() => {
             <td>{{ user.email }}</td>
             <td>
               <select
+                class="role-select"
                 :value="user.role"
                 :disabled="isSelf(user) || store.mutating"
                 @change="onRoleChange(user, $event)"
@@ -300,9 +382,10 @@ onMounted(() => {
               </select>
             </td>
             <td class="permissions-cell">
-              <AppBadge v-for="permission in store.permissionsFor(user.role)" :key="permission" tone="neutral">
-                {{ permission }}
-              </AppBadge>
+              <span class="permissions-text permissions-text--muted">{{ permissionsSummary(user) }}</span>
+              <button type="button" class="permissions-toggle" @click="togglePermissions(user.id, $event)">
+                {{ popoverUserId === user.id ? t('security.users.showLess') : t('security.users.showAll') }}
+              </button>
             </td>
             <td>
               <AppBadge :tone="user.isDisabled ? 'danger' : 'success'">
@@ -332,7 +415,7 @@ onMounted(() => {
                 {{ t('security.users.actions.enable') }}
               </AppButton>
               <AppButton variant="ghost" size="sm" type="button" @click="openEdit(user)">
-                {{ t('security.users.editUser') }}
+                {{ t('security.users.actions.edit') }}
               </AppButton>
             </td>
           </tr>
@@ -347,6 +430,12 @@ onMounted(() => {
       :total-count="store.usersTotalCount"
       @update:page="store.setUsersPage"
     />
+
+    <Teleport to="body">
+      <div v-if="popoverUser" class="permissions-popover" :style="popoverStyle">
+        {{ permissionsList(popoverUser) }}
+      </div>
+    </Teleport>
 
     <AppDialog v-if="isCreateOpen" :title="t('security.users.createUser')" @close="closeCreate">
       <form class="user-form" @submit.prevent="submitCreate">
@@ -443,17 +532,62 @@ onMounted(() => {
   margin: var(--space-8) auto;
 }
 
+.role-select {
+  width: auto;
+  min-width: 8rem;
+}
+
 .row-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: var(--space-2);
+  white-space: nowrap;
 }
 
 .permissions-cell {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  max-width: 16rem;
+  white-space: nowrap;
+}
+
+.permissions-text {
+  color: var(--text-primary, var(--ink));
+  font: 400 13px var(--font-sans, Arial, sans-serif);
+}
+
+.permissions-text--muted {
+  color: var(--text-secondary, var(--muted));
+}
+
+.permissions-toggle {
+  display: inline;
+  margin-inline-start: var(--space-2);
+  padding: 0;
+  min-height: auto;
+  color: var(--accent-dark, var(--teal-dark));
+  background: transparent;
+  border: 0;
+  font: 500 13px var(--font-sans, Arial, sans-serif);
+  cursor: pointer;
+}
+
+.permissions-toggle:hover {
+  text-decoration: underline;
+}
+
+.permissions-popover {
+  position: fixed;
+  z-index: var(--z-toast, 30);
+  width: max-content;
+  max-width: 22rem;
+  padding: var(--space-3);
+  color: var(--text-primary, var(--ink));
+  background: var(--surface, white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font: 400 13px var(--font-sans, Arial, sans-serif);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .user-form {

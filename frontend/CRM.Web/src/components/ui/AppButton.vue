@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { RouterLink, type RouteLocationRaw } from 'vue-router'
+
 withDefaults(
   defineProps<{
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
@@ -6,6 +8,11 @@ withDefaults(
     type?: 'button' | 'submit' | 'reset'
     loading?: boolean
     disabled?: boolean
+    // When set, renders as a RouterLink instead of a <button> — the same
+    // token/variant system for navigation CTAs as for actions, so a page's
+    // "Add" link and its row-level "Edit" buttons never drift into two
+    // different visual systems.
+    to?: RouteLocationRaw
   }>(),
   {
     variant: 'primary',
@@ -13,12 +20,23 @@ withDefaults(
     type: 'button',
     loading: false,
     disabled: false,
+    to: undefined,
   },
 )
 </script>
 
 <template>
+  <RouterLink
+    v-if="to"
+    class="ui-button"
+    :class="[`ui-button--${variant}`, `ui-button--${size}`, { 'ui-button--disabled': disabled }]"
+    :to="to"
+    :aria-disabled="disabled"
+  >
+    <slot />
+  </RouterLink>
   <button
+    v-else
     class="ui-button"
     :class="[`ui-button--${variant}`, `ui-button--${size}`]"
     :type="type"
@@ -43,17 +61,21 @@ withDefaults(
   color: white;
   background: var(--accent, var(--teal));
   font: 500 13px var(--font-sans, Arial, sans-serif);
+  text-decoration: none;
   cursor: pointer;
   transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+  box-sizing: border-box;
 }
 
 .ui-button:hover:not(:disabled) {
   background: var(--accent-dark, var(--teal-dark));
 }
 
-.ui-button:disabled {
+.ui-button:disabled,
+.ui-button--disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .ui-button--sm {

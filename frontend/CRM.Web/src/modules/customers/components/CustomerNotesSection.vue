@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useCustomerNotesStore } from '@/stores/customerNotes'
 import { useAuthStore } from '@/stores/auth'
 import { useLocale } from '@/composables/useLocale'
+import AppButton from '@/components/ui/AppButton.vue'
 import type { CustomerNote } from '@/types/customers'
 
 const props = defineProps<{ customerId: string }>()
@@ -98,9 +99,9 @@ async function onDelete(noteId: string) {
   <div class="customer-notes-section">
     <header class="notes-header">
       <h3>{{ t('customers.notes.title') }}</h3>
-      <button type="button" @click="openAddForm" :disabled="isAdding">
+      <AppButton type="button" size="sm" @click="openAddForm" :disabled="isAdding">
         {{ t('customers.notes.addButton') }}
-      </button>
+      </AppButton>
     </header>
 
     <p v-if="store.error" role="alert">{{ t(`customers.notes.errors.${store.error}`) }}</p>
@@ -114,10 +115,12 @@ async function onDelete(noteId: string) {
         rows="3"
       ></textarea>
       <div class="note-form-actions">
-        <button type="submit" :disabled="store.saving || !draftContent.trim()">
+        <AppButton type="submit" size="sm" :disabled="store.saving || !draftContent.trim()">
           {{ t('customers.notes.save') }}
-        </button>
-        <button type="button" @click="cancelAdd">{{ t('customers.notes.cancel') }}</button>
+        </AppButton>
+        <AppButton type="button" variant="secondary" size="sm" @click="cancelAdd">
+          {{ t('customers.notes.cancel') }}
+        </AppButton>
       </div>
     </form>
 
@@ -144,10 +147,12 @@ async function onDelete(noteId: string) {
               rows="3"
             ></textarea>
             <div class="note-form-actions">
-              <button type="submit" :disabled="store.saving || !editContent.trim()">
+              <AppButton type="submit" size="sm" :disabled="store.saving || !editContent.trim()">
                 {{ t('customers.notes.save') }}
-              </button>
-              <button type="button" @click="cancelEdit">{{ t('customers.notes.cancel') }}</button>
+              </AppButton>
+              <AppButton type="button" variant="secondary" size="sm" @click="cancelEdit">
+                {{ t('customers.notes.cancel') }}
+              </AppButton>
             </div>
           </form>
         </template>
@@ -159,8 +164,12 @@ async function onDelete(noteId: string) {
           </p>
           <p class="note-content">{{ note.content }}</p>
           <div v-if="canModify(note)" class="note-actions">
-            <button type="button" @click="startEdit(note)">{{ t('customers.notes.edit') }}</button>
-            <button type="button" @click="onDelete(note.id)">{{ t('customers.notes.delete') }}</button>
+            <AppButton type="button" variant="ghost" size="sm" @click="startEdit(note)">
+              {{ t('customers.notes.edit') }}
+            </AppButton>
+            <AppButton type="button" variant="danger" size="sm" @click="onDelete(note.id)">
+              {{ t('customers.notes.delete') }}
+            </AppButton>
           </div>
         </template>
       </li>

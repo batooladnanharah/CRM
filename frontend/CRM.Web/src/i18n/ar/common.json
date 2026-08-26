@@ -648,6 +648,9 @@
       "disabled": "معطّل",
       "createUser": "إنشاء مستخدم",
       "editUser": "تعديل المستخدم",
+      "showLess": "عرض أقل",
+      "showAll": "عرض الكل",
+      "permissionsCount": "لا توجد صلاحيات | صلاحية واحدة | {count} صلاحيات",
       "cannotDeactivateSelf": "لا يمكنك تعطيل حسابك الخاص.",
       "filters": {
         "role": "الدور",
@@ -667,7 +670,8 @@
       "actions": {
         "assignRole": "تعيين الدور",
         "disable": "تعطيل",
-        "enable": "تفعيل"
+        "enable": "تفعيل",
+        "edit": "تعديل"
       },
       "fields": {
         "email": "البريد الإلكتروني",

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCustomerAttachmentsStore } from '@/stores/customerAttachments'
 import { useLocale } from '@/composables/useLocale'
+import AppButton from '@/components/ui/AppButton.vue'
 import type { CustomerAttachment } from '@/types/customers'
 
 const props = defineProps<{ customerId: string }>()
@@ -97,9 +98,9 @@ async function onDelete(attachment: CustomerAttachment) {
   <div class="customer-attachments-section">
     <header class="attachments-header">
       <h3>{{ t('customers.attachments.title') }}</h3>
-      <button type="button" @click="openUpload" :disabled="isUploadOpen">
+      <AppButton type="button" size="sm" @click="openUpload" :disabled="isUploadOpen">
         {{ t('customers.attachments.uploadButton') }}
-      </button>
+      </AppButton>
     </header>
 
     <p v-if="errorText" role="alert">{{ errorText }}</p>
@@ -110,10 +111,12 @@ async function onDelete(attachment: CustomerAttachment) {
         {{ selectedFile.name }} — {{ formatFileSize(selectedFile.size) }} ({{ selectedFile.type || '—' }})
       </p>
       <div class="upload-form-actions">
-        <button type="submit" :disabled="store.uploading || !selectedFile">
+        <AppButton type="submit" size="sm" :disabled="store.uploading || !selectedFile">
           {{ t('customers.attachments.uploadButton') }}
-        </button>
-        <button type="button" @click="cancelUpload">{{ t('customers.notes.cancel') }}</button>
+        </AppButton>
+        <AppButton type="button" variant="secondary" size="sm" @click="cancelUpload">
+          {{ t('customers.notes.cancel') }}
+        </AppButton>
       </div>
     </form>
 
@@ -136,20 +139,24 @@ async function onDelete(attachment: CustomerAttachment) {
           <span>{{ formatDate(attachment.createdAtUtc) }}</span>
         </p>
         <div class="attachment-actions">
-          <button
+          <AppButton
             type="button"
+            variant="ghost"
+            size="sm"
             :disabled="store.deletingId === attachment.id"
             @click="onDownload(attachment)"
           >
             {{ t('customers.attachments.download') }}
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
+            variant="danger"
+            size="sm"
             :disabled="store.deletingId === attachment.id"
             @click="onDelete(attachment)"
           >
             {{ t('customers.attachments.delete') }}
-          </button>
+          </AppButton>
         </div>
       </li>
     </ul>

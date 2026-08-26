@@ -40,9 +40,9 @@ onMounted(loadTickets)
         <p class="eyebrow">{{ t('portal.dashboard.overline') }}</p>
         <h1>{{ t('portal.tickets.title') }}</h1>
       </div>
-      <router-link class="button" :to="{ name: 'portal-ticket-create' }">
+      <AppButton :to="{ name: 'portal-ticket-create' }">
         {{ t('portal.dashboard.submitCta') }}
-      </router-link>
+      </AppButton>
     </div>
 
     <LoadingState v-if="store.loading" :label="t('portal.tickets.loading')" />
@@ -51,9 +51,9 @@ onMounted(loadTickets)
       <AppButton variant="secondary" size="sm" type="button" @click="loadTickets">{{ t('portal.tickets.retry') }}</AppButton>
     </AppAlert>
     <EmptyState v-else-if="store.tickets.length === 0" :title="t('portal.tickets.empty')">
-      <router-link class="button" :to="{ name: 'portal-ticket-create' }">
+      <AppButton :to="{ name: 'portal-ticket-create' }">
         {{ t('portal.tickets.emptyCta') }}
-      </router-link>
+      </AppButton>
     </EmptyState>
 
     <div v-else class="surface table-wrap">

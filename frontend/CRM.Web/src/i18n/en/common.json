@@ -648,6 +648,9 @@
       "disabled": "Disabled",
       "createUser": "Create User",
       "editUser": "Edit User",
+      "showLess": "Show less",
+      "showAll": "Show all",
+      "permissionsCount": "no permissions | 1 permission | {count} permissions",
       "cannotDeactivateSelf": "You cannot deactivate your own account.",
       "filters": {
         "role": "Role",
@@ -667,7 +670,8 @@
       "actions": {
         "assignRole": "Assign Role",
         "disable": "Disable",
-        "enable": "Enable"
+        "enable": "Enable",
+        "edit": "Edit"
       },
       "fields": {
         "email": "Email",

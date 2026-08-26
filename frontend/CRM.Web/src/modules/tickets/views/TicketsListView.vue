@@ -6,6 +6,7 @@ import { useTicketsStore } from '@/stores/tickets'
 import { useLocale } from '@/composables/useLocale'
 import SlaBadge from '@/modules/tickets/components/SlaBadge.vue'
 import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import AppPagination from '@/components/ui/AppPagination.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
@@ -68,9 +69,9 @@ onMounted(() => {
         <p class="eyebrow">{{ t('navigation.workspace') }}</p>
         <h1>{{ t('tickets.title') }}</h1>
       </div>
-      <router-link class="button" :to="{ name: 'ticket-create' }">
+      <AppButton :to="{ name: 'ticket-create' }">
         {{ t('tickets.list.newButton') }}
-      </router-link>
+      </AppButton>
     </div>
 
     <div class="surface toolbar">

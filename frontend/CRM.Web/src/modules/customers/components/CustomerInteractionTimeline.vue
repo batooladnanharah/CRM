@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCustomerInteractionsStore } from '@/stores/customerInteractions'
 import { useLocale } from '@/composables/useLocale'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const props = defineProps<{ customerId: string }>()
 
@@ -51,7 +52,7 @@ function onNext() {
 
     <div v-else-if="store.error" role="alert">
       <p>{{ t('customers.interactions.errorLoad') }}</p>
-      <button type="button" @click="onRetry">{{ t('customers.interactions.retry') }}</button>
+      <AppButton type="button" size="sm" @click="onRetry">{{ t('customers.interactions.retry') }}</AppButton>
     </div>
 
     <div v-else-if="store.items.length === 0">
@@ -73,13 +74,19 @@ function onNext() {
     </ol>
 
     <div v-if="!store.loading && !store.error && store.totalCount > store.pageSize" class="pagination">
-      <button type="button" :disabled="store.page <= 1" @click="onPrev">
+      <AppButton type="button" variant="secondary" size="sm" :disabled="store.page <= 1" @click="onPrev">
         {{ t('customers.interactions.previous') }}
-      </button>
+      </AppButton>
       <span>{{ t('customers.interactions.pageOf', { page: store.page, total: totalPages }) }}</span>
-      <button type="button" :disabled="store.page >= totalPages" @click="onNext">
+      <AppButton
+        type="button"
+        variant="secondary"
+        size="sm"
+        :disabled="store.page >= totalPages"
+        @click="onNext"
+      >
         {{ t('customers.interactions.next') }}
-      </button>
+      </AppButton>
     </div>
   </div>
 </template>

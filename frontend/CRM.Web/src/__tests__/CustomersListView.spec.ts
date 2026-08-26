@@ -19,6 +19,7 @@ const routerMock = { replace: vi.fn<(location: unknown) => void>() }
 vi.mock('vue-router', () => ({
   useRoute: () => routeState,
   useRouter: () => routerMock,
+  RouterLink: { name: 'RouterLink', template: '<a><slot /></a>' },
 }))
 
 function makeCustomer(overrides: Partial<Customer> = {}): Customer {

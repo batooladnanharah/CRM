@@ -8,6 +8,7 @@ import { useLocale } from '@/composables/useLocale'
 import AppAlert from '@/components/ui/AppAlert.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import type { EligibleAgent, MessageChannel, Ticket } from '@/types/tickets'
 
 const props = defineProps<{ ticketId: string; ticket?: Ticket | null }>()
@@ -209,9 +210,9 @@ function isMentionSegment(segment: string): boolean {
   <div class="ticket-messages-section">
     <header class="messages-header">
       <h3>{{ t('tickets.messages.title') }}</h3>
-      <button type="button" @click="openAddForm" :disabled="isAdding">
+      <AppButton type="button" size="sm" @click="openAddForm" :disabled="isAdding">
         {{ t('tickets.messages.addButton') }}
-      </button>
+      </AppButton>
     </header>
 
     <p v-if="store.error" role="alert">{{ t(`tickets.messages.errors.${store.error}`) }}</p>
@@ -282,9 +283,9 @@ function isMentionSegment(segment: string): boolean {
 
       <div class="message-form-actions">
         <div class="quick-reply-control">
-          <button type="button" @click="toggleQuickReplyPopover">
+          <AppButton type="button" variant="secondary" size="sm" @click="toggleQuickReplyPopover">
             {{ t('quickReplies.button') }}
-          </button>
+          </AppButton>
           <div v-if="isQuickReplyOpen" class="quick-reply-popover">
             <input
               type="text"
@@ -306,8 +307,9 @@ function isMentionSegment(segment: string): boolean {
           </div>
         </div>
 
-        <button
+        <AppButton
           type="submit"
+          size="sm"
           :disabled="store.saving || !draftBody.trim() || (draftChannel === 'Email' && !hasCustomerEmail)"
         >
           {{
@@ -317,8 +319,10 @@ function isMentionSegment(segment: string): boolean {
                 ? t('tickets.messages.email.send')
                 : t('tickets.messages.save')
           }}
-        </button>
-        <button type="button" @click="cancelAdd">{{ t('tickets.messages.cancel') }}</button>
+        </AppButton>
+        <AppButton type="button" variant="secondary" size="sm" @click="cancelAdd">
+          {{ t('tickets.messages.cancel') }}
+        </AppButton>
       </div>
     </form>
 

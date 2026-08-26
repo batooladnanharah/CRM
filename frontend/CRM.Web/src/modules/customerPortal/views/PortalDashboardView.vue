@@ -63,12 +63,12 @@ onMounted(loadDashboard)
     </div>
 
     <div class="portal-cta-row">
-      <router-link class="button" :to="{ name: 'portal-ticket-create' }">
+      <AppButton :to="{ name: 'portal-ticket-create' }">
         {{ t('portal.dashboard.submitCta') }}
-      </router-link>
-      <router-link class="button" :to="{ name: 'portal-tickets-list' }">
+      </AppButton>
+      <AppButton variant="secondary" :to="{ name: 'portal-tickets-list' }">
         {{ t('portal.dashboard.viewAllCta') }}
-      </router-link>
+      </AppButton>
     </div>
 
     <section class="surface recent-tickets">

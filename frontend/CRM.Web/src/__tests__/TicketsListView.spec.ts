@@ -17,6 +17,7 @@ const pushMock = vi.fn<(location: unknown) => void>()
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
+  RouterLink: { name: 'RouterLink', template: '<a><slot /></a>' },
 }))
 
 function makeTicket(overrides: Partial<TicketListItem> = {}): TicketListItem {

@@ -302,8 +302,8 @@ async function onDelete(article: KnowledgeBaseArticle) {
         </select>
       </div>
       <div class="form-actions">
-        <button type="submit" :disabled="store.isLoading">{{ t('knowledgeBase.actions.save') }}</button>
-        <button type="button" @click="cancelForm">{{ t('knowledgeBase.actions.cancel') }}</button>
+        <AppButton type="submit" size="sm" :disabled="store.isLoading">{{ t('knowledgeBase.actions.save') }}</AppButton>
+        <AppButton type="button" variant="secondary" size="sm" @click="cancelForm">{{ t('knowledgeBase.actions.cancel') }}</AppButton>
       </div>
     </form>
 
@@ -344,8 +344,8 @@ async function onDelete(article: KnowledgeBaseArticle) {
         </select>
       </div>
       <div class="form-actions">
-        <button type="submit" :disabled="store.isLoading">{{ t('knowledgeBase.actions.save') }}</button>
-        <button type="button" @click="cancelForm">{{ t('knowledgeBase.actions.cancel') }}</button>
+        <AppButton type="submit" size="sm" :disabled="store.isLoading">{{ t('knowledgeBase.actions.save') }}</AppButton>
+        <AppButton type="button" variant="secondary" size="sm" @click="cancelForm">{{ t('knowledgeBase.actions.cancel') }}</AppButton>
       </div>
     </form>
 
@@ -387,10 +387,10 @@ async function onDelete(article: KnowledgeBaseArticle) {
                     </option>
                   </select>
                   <div class="form-actions">
-                    <button type="submit" :disabled="store.isLoading">
+                    <AppButton type="submit" size="sm" :disabled="store.isLoading">
                       {{ t('knowledgeBase.actions.save') }}
-                    </button>
-                    <button type="button" @click="cancelForm">{{ t('knowledgeBase.actions.cancel') }}</button>
+                    </AppButton>
+                    <AppButton type="button" variant="secondary" size="sm" @click="cancelForm">{{ t('knowledgeBase.actions.cancel') }}</AppButton>
                   </div>
                 </form>
               </td>

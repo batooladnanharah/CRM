@@ -138,7 +138,7 @@ describe('UsersAdminView', () => {
     const wrapper = mountView()
 
     const roleSelect = wrapper.find('tbody select')
-    const disableButton = wrapper.find('tbody button')
+    const disableButton = wrapper.findAll('tbody button').find((b) => b.text() === 'Disable')!
     expect(roleSelect.attributes('disabled')).toBeDefined()
     expect(disableButton.attributes('disabled')).toBeDefined()
   })
@@ -165,7 +165,8 @@ describe('UsersAdminView', () => {
     fakeStore = makeFakeStore({ users: [makeUser({ id: '2' })] })
     const wrapper = mountView()
 
-    await wrapper.find('tbody button').trigger('click')
+    const disableButton = wrapper.findAll('tbody button').find((b) => b.text() === 'Disable')!
+    await disableButton.trigger('click')
 
     expect(fakeStore.disable).toHaveBeenCalledWith('2')
   })
@@ -189,6 +190,37 @@ describe('UsersAdminView', () => {
       .findAll('tbody button')
       .find((b) => b.text() === 'Disable')!
     expect(disableButton.attributes('disabled')).toBeDefined()
+  })
+
+  it('shows a pluralized permissions summary and reveals the full list in a popover on click, without altering the summary', async () => {
+    fakeStore = makeFakeStore({ users: [makeUser({ id: '1' })] })
+    fakeStore.permissionsFor = vi
+      .fn<(role: string) => string[]>()
+      .mockReturnValue(['customers.manage', 'tickets.manage', 'tickets.escalate', 'kb.view', 'sla.manage'])
+    const wrapper = mountView()
+
+    expect(wrapper.find('.permissions-cell .permissions-text').text()).toBe('5 permissions')
+    const toggle = wrapper.find('.permissions-toggle')
+    expect(toggle.text()).toBe('Show all')
+    expect(document.querySelector('.permissions-popover')).toBeNull()
+
+    await toggle.trigger('click')
+
+    expect(wrapper.find('.permissions-cell .permissions-text').text()).toBe('5 permissions')
+    expect(document.querySelector('.permissions-popover')?.textContent).toContain('Customers: Manage')
+    expect(wrapper.find('.permissions-toggle').text()).toBe('Show less')
+
+    await wrapper.find('.permissions-toggle').trigger('click')
+
+    expect(document.querySelector('.permissions-popover')).toBeNull()
+  })
+
+  it('shows a singular permissions summary when the role has exactly 1 permission', () => {
+    fakeStore = makeFakeStore({ users: [makeUser({ id: '1', role: 'customer' })] })
+    fakeStore.permissionsFor = vi.fn<(role: string) => string[]>().mockReturnValue(['portal.access'])
+    const wrapper = mountView()
+
+    expect(wrapper.find('.permissions-cell .permissions-text').text()).toBe('1 permission')
   })
 })
 
@@ -235,7 +267,7 @@ describe('UsersAdminView create/edit dialogs', () => {
     fakeStore.update = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
     const wrapper = mountView()
 
-    const editButton = wrapper.findAll('tbody button').find((b) => b.text() === 'Edit User')!
+    const editButton = wrapper.findAll('tbody button').find((b) => b.text() === 'Edit')!
     await editButton.trigger('click')
 
     const emailInput = wrapper.find('input[type="email"]')

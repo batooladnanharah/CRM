@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
+import AppButton from '@/components/ui/AppButton.vue'
 import type { KnowledgeBaseArticle } from '@/types/knowledgeBase'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -56,9 +57,15 @@ function onSelect(article: KnowledgeBaseArticle) {
         @input="onInput"
         autofocus
       />
-      <button type="button" :aria-label="t('common.close')" @click="emit('close')">
+      <AppButton
+        type="button"
+        variant="ghost"
+        size="sm"
+        :aria-label="t('common.close')"
+        @click="emit('close')"
+      >
         {{ t('common.close') }}
-      </button>
+      </AppButton>
     </div>
 
     <p v-if="query.trim().length > 0 && query.trim().length < 2" class="kb-search-hint">

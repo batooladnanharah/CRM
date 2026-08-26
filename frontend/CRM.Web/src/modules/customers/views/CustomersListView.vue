@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCustomersStore } from '@/stores/customers'
 import { useAuthStore } from '@/stores/auth'
 import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import AppPagination from '@/components/ui/AppPagination.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
@@ -76,13 +77,12 @@ watch(
         <h1>{{ t('customers.title') }}</h1>
         <p>{{ t('customers.list.subtitle') }}</p>
       </div>
-      <router-link
+      <AppButton
         v-if="authStore.isAdmin || authStore.isAgent"
-        class="button"
         :to="{ name: 'customer-create' }"
       >
         {{ t('customers.list.addButton') }}
-      </router-link>
+      </AppButton>
     </div>
 
     <div class="surface toolbar">
@@ -132,16 +132,22 @@ watch(
           <td>{{ customer.company }}</td>
           <td>{{ customer.createdAtUtc }}</td>
           <td>{{ customer.phone }}</td>
-          <td>
-            <router-link :to="{ name: 'customer-profile', params: { id: customer.id } }">
+          <td class="row-actions">
+            <AppButton
+              variant="ghost"
+              size="sm"
+              :to="{ name: 'customer-profile', params: { id: customer.id } }"
+            >
               {{ t('customers.list.viewButton') }}
-            </router-link>
-            <router-link
+            </AppButton>
+            <AppButton
               v-if="authStore.isAdmin || authStore.isAgent"
+              variant="ghost"
+              size="sm"
               :to="{ name: 'customer-edit', params: { id: customer.id } }"
             >
               {{ t('customers.list.editButton') }}
-            </router-link>
+            </AppButton>
           </td>
         </tr>
       </tbody>
@@ -156,3 +162,11 @@ watch(
     />
   </div>
 </template>
+
+<style scoped>
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+</style>
