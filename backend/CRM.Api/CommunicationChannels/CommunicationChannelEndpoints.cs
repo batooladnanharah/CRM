@@ -20,7 +20,7 @@ public static class CommunicationChannelEndpoints
 
             return Results.Ok(items);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.CommunicationChannelsView)
         .WithName("ListCommunicationChannels")
         .WithTags("CommunicationChannels");
 
@@ -76,7 +76,7 @@ public static class CommunicationChannelEndpoints
                 entity.Id, entity.Name, entity.Type, entity.IsEnabled, entity.CreatedAtUtc, entity.UpdatedAtUtc);
             return Results.Created($"/api/channels/{entity.Id}", response);
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.CommunicationChannelsManage)
         .WithName("CreateCommunicationChannel")
         .WithTags("CommunicationChannels");
 
@@ -92,7 +92,7 @@ public static class CommunicationChannelEndpoints
                 entity.Id, entity.Name, entity.Type, entity.IsEnabled, entity.CreatedAtUtc, entity.UpdatedAtUtc);
             return Results.Ok(response);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.CommunicationChannelsView)
         .WithName("GetCommunicationChannel")
         .WithTags("CommunicationChannels");
 
@@ -130,7 +130,7 @@ public static class CommunicationChannelEndpoints
                 entity.Id, entity.Name, entity.Type, entity.IsEnabled, entity.CreatedAtUtc, entity.UpdatedAtUtc);
             return Results.Ok(response);
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.CommunicationChannelsManage)
         .WithName("UpdateCommunicationChannel")
         .WithTags("CommunicationChannels");
 
@@ -154,7 +154,7 @@ public static class CommunicationChannelEndpoints
 
             return Results.NoContent();
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.CommunicationChannelsManage)
         .WithName("DeleteCommunicationChannel")
         .WithTags("CommunicationChannels");
 
@@ -178,7 +178,7 @@ public static class CommunicationChannelEndpoints
 
             return Results.Ok(items);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.CommunicationChannelsView)
         .WithName("ListChannelEmails")
         .WithTags("CommunicationChannels");
 
@@ -225,7 +225,7 @@ public static class CommunicationChannelEndpoints
                 entity.ReceivedAtUtc, entity.TicketId);
             return Results.Created($"/api/channels/{id}/emails/{entity.Id}", response);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.CommunicationChannelsView)
         .WithName("IngestChannelEmail")
         .WithTags("CommunicationChannels");
     }

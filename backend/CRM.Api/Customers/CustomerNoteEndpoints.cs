@@ -13,7 +13,7 @@ public static class CustomerNoteEndpoints
         // Internal notes are never exposed to the customer role — reuse the
         // existing AgentOrAdmin policy (admin/agent only) rather than a new one.
         var notes = app.MapGroup("/api/customers/{customerId:guid}/notes")
-            .RequireAuthorization("AgentOrAdmin")
+            .RequireAuthorization(Permissions.CustomersManage)
             .WithTags("CustomerNotes");
 
         notes.MapGet("/", async (Guid customerId, CustomerDbContext db, AuthDbContext authDb) =>

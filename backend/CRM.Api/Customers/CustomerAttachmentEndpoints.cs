@@ -14,7 +14,7 @@ public static class CustomerAttachmentEndpoints
     {
         // Same policy as notes/interactions — admin/agent only, never the customer role.
         var attachments = app.MapGroup("/api/customers/{customerId:guid}/attachments")
-            .RequireAuthorization("AgentOrAdmin")
+            .RequireAuthorization(Permissions.CustomersManage)
             .WithTags("CustomerAttachments");
 
         attachments.MapGet("/", async (Guid customerId, CustomerDbContext db, AuthDbContext authDb) =>

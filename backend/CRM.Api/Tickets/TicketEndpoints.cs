@@ -63,7 +63,7 @@ public static class TicketEndpoints
             var items = await ToListItemsAsync(entities, customerDb);
             return Results.Ok(new PagedResult<TicketListItem>(items, page, pageSize, totalCount));
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.TicketsManage)
         .WithName("ListTickets")
         .WithTags("Tickets")
         .Produces<PagedResult<TicketListItem>>();
@@ -109,7 +109,7 @@ public static class TicketEndpoints
             var response = await ToResponseAsync(entity, customer.FullName, customer.Email, authDb);
             return Results.Created($"/api/tickets/{entity.Id}", response);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.TicketsManage)
         .WithName("CreateTicket")
         .WithTags("Tickets")
         .Produces<TicketResponse>(StatusCodes.Status201Created)
@@ -133,7 +133,7 @@ public static class TicketEndpoints
             var response = await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb);
             return Results.Ok(response);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.TicketsManage)
         .WithName("GetTicket")
         .WithTags("Tickets")
         .Produces<TicketResponse>()
@@ -188,7 +188,7 @@ public static class TicketEndpoints
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
             return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb));
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.TicketsManage)
         .WithName("AssignTicket")
         .WithTags("Tickets")
         .Produces<TicketResponse>()
@@ -255,7 +255,7 @@ public static class TicketEndpoints
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
             return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb));
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.TicketsManage)
         .WithName("ChangeTicketStatus")
         .WithTags("Tickets")
         .Produces<TicketResponse>()
@@ -358,7 +358,7 @@ public static class TicketEndpoints
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
             return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb));
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.TicketsManage)
         .WithName("ChangeTicketPriority")
         .WithTags("Tickets")
         .Produces<TicketResponse>()
@@ -401,7 +401,7 @@ public static class TicketEndpoints
 
             return Results.Ok(responses);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.TicketsManage)
         .WithName("GetTicketHistory")
         .WithTags("Tickets")
         .Produces<List<TicketHistoryEntryResponse>>()
@@ -418,7 +418,7 @@ public static class TicketEndpoints
 
             return Results.Ok(agents);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.TicketsManage)
         .WithName("GetEligibleAgents")
         .WithTags("Tickets")
         .Produces<List<EligibleAgentResponse>>();
@@ -468,7 +468,7 @@ public static class TicketEndpoints
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
             return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb));
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.TicketsEscalate)
         .WithName("EscalateTicket")
         .WithTags("Tickets")
         .Produces<TicketResponse>()

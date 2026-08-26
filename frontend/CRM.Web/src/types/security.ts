@@ -35,6 +35,11 @@ export interface AdminUpdateUserRequest {
   customerId?: string
 }
 
+export interface RoleSummary {
+  name: AdminRole
+  permissions: string[]
+}
+
 export interface AuditLogEntry {
   id: string
   occurredAtUtc: string

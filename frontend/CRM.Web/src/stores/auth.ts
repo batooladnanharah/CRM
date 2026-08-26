@@ -30,6 +30,15 @@ export const useAuthStore = defineStore('auth', () => {
   const isAgent = computed(() => hasRole(Roles.Agent))
   const isCustomer = computed(() => hasRole(Roles.Customer))
 
+  // Backend is authoritative — this only drives UI visibility (nav items,
+  // buttons, route guards). Every protected call is re-checked server-side
+  // regardless of what this reports.
+  const permissions = computed(() => new Set(user.value?.permissions ?? []))
+
+  function can(permission: string): boolean {
+    return permissions.value.has(permission)
+  }
+
   function persist() {
     try {
       if (token.value) {
@@ -118,6 +127,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isAgent,
     isCustomer,
+    permissions,
+    can,
     hasRole,
     login,
     logout,

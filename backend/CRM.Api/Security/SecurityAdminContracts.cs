@@ -15,6 +15,8 @@ public sealed record AdminUserListQuery(
 
 public sealed record AssignRoleRequest(string Role, Guid? CustomerId = null);
 
+public sealed record RoleSummary(string Name, IReadOnlyCollection<string> Permissions);
+
 public sealed record AdminCreateUserRequest(string Email, string Password, string Name, string Role, Guid? CustomerId = null);
 
 public sealed record AdminUpdateUserRequest(string Email, string Name, Guid? CustomerId = null);

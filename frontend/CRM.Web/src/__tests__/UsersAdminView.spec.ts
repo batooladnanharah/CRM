@@ -62,6 +62,11 @@ function makeFakeStore(overrides: Record<string, unknown> = {}) {
     enable: vi.fn<() => Promise<void>>(),
     create: vi.fn<() => Promise<void>>(),
     update: vi.fn<() => Promise<void>>(),
+    roles: [],
+    rolesLoading: false,
+    rolesError: null as string | null,
+    loadRoles: vi.fn<() => Promise<void>>(),
+    permissionsFor: vi.fn<(role: string) => string[]>().mockReturnValue([]),
     ...overrides,
   })
 }

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAiStore } from '@/stores/ai'
+import { Permissions } from '@/types/auth'
 import { useLocale } from '@/composables/useLocale'
 import KnowledgeBaseSearchDialog from '@/modules/knowledgeBase/components/KnowledgeBaseSearchDialog.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -69,27 +70,35 @@ const navigation = computed(() => {
       icon: '📖',
     })
   }
-  if (authStore.isAdmin) {
+  if (authStore.can(Permissions.QuickRepliesManage)) {
     items.push({
       label: t('quickReplies.title'),
       to: { name: 'quick-replies-management' },
       icon: '✎',
     })
+  }
+  if (authStore.can(Permissions.CommunicationChannelsManage)) {
     items.push({
       label: t('communicationChannels.title'),
       to: { name: 'communication-channels-management' },
       icon: '✉',
     })
+  }
+  if (authStore.can(Permissions.SlaManage)) {
     items.push({
       label: t('sla.policies.title'),
       to: { name: 'sla-policies-management' },
       icon: '⏱',
     })
+  }
+  if (authStore.can(Permissions.ReportsView)) {
     items.push({
       label: t('nav.reports'),
       to: { name: 'reports' },
       icon: '📊',
     })
+  }
+  if (authStore.can(Permissions.SecurityAdmin)) {
     items.push({
       label: t('security.nav.users'),
       to: { name: 'admin-users' },

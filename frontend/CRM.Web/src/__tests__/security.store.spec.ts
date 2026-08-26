@@ -8,10 +8,11 @@ import type {
   disableUser,
   enableUser,
   listAuditLog,
+  listRoles,
   listUsers,
   updateUser,
 } from '@/api/security'
-import type { AdminUserListItem, AuditLogEntry } from '@/types/security'
+import type { AdminUserListItem, AuditLogEntry, RoleSummary } from '@/types/security'
 
 const {
   listUsersMock,
@@ -21,6 +22,7 @@ const {
   listAuditLogMock,
   createUserMock,
   updateUserMock,
+  listRolesMock,
 } = vi.hoisted(() => ({
   listUsersMock: vi.fn<typeof listUsers>(),
   assignRoleMock: vi.fn<typeof assignRole>(),
@@ -29,6 +31,7 @@ const {
   listAuditLogMock: vi.fn<typeof listAuditLog>(),
   createUserMock: vi.fn<typeof createUser>(),
   updateUserMock: vi.fn<typeof updateUser>(),
+  listRolesMock: vi.fn<typeof listRoles>(),
 }))
 
 vi.mock('@/api/security', () => ({
@@ -39,6 +42,7 @@ vi.mock('@/api/security', () => ({
   listAuditLog: listAuditLogMock,
   createUser: createUserMock,
   updateUser: updateUserMock,
+  listRoles: listRolesMock,
 }))
 
 function makeUser(overrides: Partial<AdminUserListItem> = {}): AdminUserListItem {
@@ -77,6 +81,7 @@ beforeEach(() => {
   listAuditLogMock.mockReset()
   createUserMock.mockReset()
   updateUserMock.mockReset()
+  listRolesMock.mockReset()
 })
 
 describe('security store', () => {
@@ -270,5 +275,42 @@ describe('security store', () => {
     expect(listAuditLogMock).toHaveBeenCalledWith(
       expect.objectContaining({ page: 2, action: 'user.login.failed' }),
     )
+  })
+
+  it('loadRoles() populates roles on success', async () => {
+    const roles: RoleSummary[] = [
+      { name: 'admin', permissions: ['security.admin', 'tickets.manage'] },
+      { name: 'agent', permissions: ['tickets.manage'] },
+      { name: 'customer', permissions: ['portal.access'] },
+    ]
+    listRolesMock.mockResolvedValue(roles)
+
+    const store = useSecurityStore()
+    await store.loadRoles()
+
+    expect(store.roles).toEqual(roles)
+    expect(store.rolesLoading).toBe(false)
+    expect(store.rolesError).toBeNull()
+  })
+
+  it('loadRoles() sets errorLoad and does not throw on failure', async () => {
+    listRolesMock.mockRejectedValue(new Error('network down'))
+
+    const store = useSecurityStore()
+    await expect(store.loadRoles()).resolves.toBeUndefined()
+
+    expect(store.rolesError).toBe('errorLoad')
+    expect(store.roles).toEqual([])
+  })
+
+  it('permissionsFor() returns the permissions for a loaded role, or an empty array otherwise', async () => {
+    listRolesMock.mockResolvedValue([{ name: 'agent', permissions: ['tickets.manage'] }])
+
+    const store = useSecurityStore()
+    await store.loadRoles()
+
+    expect(store.permissionsFor('agent')).toEqual(['tickets.manage'])
+    expect(store.permissionsFor('admin')).toEqual([])
+    expect(store.permissionsFor('')).toEqual([])
   })
 })

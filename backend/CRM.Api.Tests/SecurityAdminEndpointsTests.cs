@@ -95,6 +95,69 @@ public class SecurityAdminUsersListTests : IClassFixture<CustomWebApplicationFac
     }
 }
 
+public class SecurityAdminRolesCatalogueTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly CustomWebApplicationFactory _factory;
+    private readonly HttpClient _client;
+
+    public SecurityAdminRolesCatalogueTests(CustomWebApplicationFactory factory)
+    {
+        _factory = factory;
+        factory.SeedUsers();
+        _client = factory.CreateClient();
+    }
+
+    private async Task<HttpClient> AuthenticatedClientAsync(string email, string password)
+    {
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password });
+        var body = await login.Content.ReadFromJsonAsync<LoginResponse>();
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body!.Token);
+        return client;
+    }
+
+    [Fact]
+    public async Task Get_Roles_Returns3Roles_WithNonEmptyPermissionArrays_ForAdmin()
+    {
+        var client = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await client.GetAsync("/api/admin/roles");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<RoleSummary>>();
+        Assert.Equal(3, body!.Count);
+        Assert.All(body, r => Assert.NotEmpty(r.Permissions));
+        Assert.Contains(body, r => r.Name == Roles.Admin && r.Permissions.Count == Permissions.All.Count);
+        Assert.Contains(body, r => r.Name == Roles.Customer && r.Permissions.SequenceEqual([Permissions.PortalAccess]));
+    }
+
+    [Fact]
+    public async Task Get_Permissions_ReturnsPermissionsAll_ForAdmin()
+    {
+        var client = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await client.GetAsync("/api/admin/permissions");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<string>>();
+        Assert.Equal(Permissions.All.OrderBy(p => p), body!.OrderBy(p => p));
+    }
+
+    [Fact]
+    public async Task Get_Roles_Returns403_ForAgent()
+    {
+        var client = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword);
+
+        var response = await client.GetAsync("/api/admin/roles");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+}
+
 public class SecurityAdminRoleChangeTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;

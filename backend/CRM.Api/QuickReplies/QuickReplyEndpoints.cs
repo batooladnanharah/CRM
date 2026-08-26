@@ -30,7 +30,7 @@ public static class QuickReplyEndpoints
 
             return Results.Ok(items);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.QuickRepliesView)
         .WithName("ListQuickReplies")
         .WithTags("QuickReplies");
 
@@ -78,7 +78,7 @@ public static class QuickReplyEndpoints
                 entity.Id, entity.Title, entity.Content, entity.IsActive, entity.CreatedAtUtc, entity.UpdatedAtUtc);
             return Results.Created($"/api/quick-replies/{entity.Id}", response);
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.QuickRepliesManage)
         .WithName("CreateQuickReply")
         .WithTags("QuickReplies");
 
@@ -121,7 +121,7 @@ public static class QuickReplyEndpoints
                 entity.Id, entity.Title, entity.Content, entity.IsActive, entity.CreatedAtUtc, entity.UpdatedAtUtc);
             return Results.Ok(response);
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.QuickRepliesManage)
         .WithName("UpdateQuickReply")
         .WithTags("QuickReplies");
 
@@ -140,7 +140,7 @@ public static class QuickReplyEndpoints
 
             return Results.NoContent();
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.QuickRepliesManage)
         .WithName("DeleteQuickReply")
         .WithTags("QuickReplies");
     }

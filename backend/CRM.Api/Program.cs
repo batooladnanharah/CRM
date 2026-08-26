@@ -154,6 +154,14 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", p => p.RequireRole(Roles.Admin));
     options.AddPolicy("AgentOrAdmin", p => p.RequireRole(Roles.Admin, Roles.Agent));
     options.AddPolicy("CustomerPortal", p => p.RequireRole(Roles.Customer));
+
+    // Named permission policies (RBAC — CRM-81). One policy per Permissions.All
+    // entry; a request must carry a "permission" claim (issued per the user's
+    // role via RolePermissions — see JwtTokenService.cs) with that exact value.
+    foreach (var permission in Permissions.All)
+    {
+        options.AddPolicy(permission, p => p.RequireClaim("permission", permission));
+    }
 });
 
 var app = builder.Build();
@@ -176,18 +184,24 @@ app.UseAuthentication();
 // authorization + endpoint execution — by the time control returns here,
 // Response.StatusCode already reflects whatever RequireAuthorization decided.
 // Only 403 is audited (401 is unauthenticated noise from crawlers/expired
-// tokens, not a meaningful access-denied event).
+// tokens, not a meaningful access-denied event). RBAC (CRM-81) broadened this
+// from /api/admin-only to every route, since permission policies now protect
+// most of the API surface, not just the admin group. Reuses the existing
+// AuditActions.AccessDenied constant rather than adding a duplicate
+// "PermissionDenied" constant for the same event.
 app.Use(async (context, next) =>
 {
     await next();
 
-    if (context.Response.StatusCode == StatusCodes.Status403Forbidden &&
-        context.Request.Path.StartsWithSegments("/api/admin"))
+    if (context.Response.StatusCode == StatusCodes.Status403Forbidden)
     {
+        // ActorUserId/ActorEmail are already captured by AuditLogger itself
+        // from the ambient HttpContext — only the route-specific detail
+        // (method) needs to be passed explicitly here.
         var auditLogger = context.RequestServices.GetRequiredService<IAuditLogger>();
         await auditLogger.WriteAsync(
             AuditActions.AccessDenied, targetType: "route", targetId: context.Request.Path,
-            ct: context.RequestAborted);
+            payload: new { method = context.Request.Method }, ct: context.RequestAborted);
     }
 });
 
@@ -382,7 +396,7 @@ auth.MapPost("/login", async (LoginRequest req, AuthDbContext db,
     await auditLogger.WriteAsync(
         AuditActions.LoginSucceeded, targetType: "user", targetId: user.Id.ToString(), payload: new { email });
     return Results.Ok(new LoginResponse(
-        new AuthUserDto(user.Id, user.Name, user.Email, user.Roles),
+        new AuthUserDto(user.Id, user.Name, user.Email, user.Roles, RolePermissions.ForRoles(user.Roles).ToList()),
         token));
 })
 .AllowAnonymous();
@@ -398,7 +412,8 @@ auth.MapGet("/me", (ClaimsPrincipal principal) =>
     var email = principal.FindFirstValue(ClaimTypes.Email)!;
     var name = principal.FindFirstValue("name")!;
     var roles = principal.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray();
-    return Results.Ok(new AuthUserDto(id, name, email, roles));
+    var permissions = principal.FindAll("permission").Select(c => c.Value).ToArray();
+    return Results.Ok(new AuthUserDto(id, name, email, roles, permissions));
 })
 .RequireAuthorization();
 

@@ -14,7 +14,7 @@ public static class CustomerPortalEndpoints
     public static void MapCustomerPortalEndpoints(this IEndpointRouteBuilder app)
     {
         var customer = app.MapGroup("/api/customer")
-            .RequireAuthorization("CustomerPortal")
+            .RequireAuthorization(Permissions.PortalAccess)
             .WithTags("CustomerPortal");
 
         customer.MapGet("/dashboard", async (

@@ -5,6 +5,20 @@ import { createRouter, createWebHistory, type Router } from 'vue-router'
 import AppShell from '@/components/AppShell.vue'
 import { i18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
+import { Permissions } from '@/types/auth'
+
+// Mirrors backend/CRM.Api/Auth/RolePermissions.cs for test fixtures — the
+// frontend has no independent copy of this map at runtime (permissions
+// always come from the login/[/me] response), so tests must supply it.
+const ADMIN_PERMISSIONS = Object.values(Permissions)
+const AGENT_PERMISSIONS = [
+  Permissions.CustomersManage,
+  Permissions.TicketsManage,
+  Permissions.QuickRepliesView,
+  Permissions.KnowledgeBaseView,
+  Permissions.CommunicationChannelsView,
+]
+const CUSTOMER_PERMISSIONS = [Permissions.PortalAccess]
 
 function makeRouter(): Router {
   return createRouter({
@@ -48,7 +62,7 @@ describe('AppShell navigation', () => {
   it('shows the Reports and Security links for an admin', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
 
     const wrapper = await mountShell()
 
@@ -60,7 +74,7 @@ describe('AppShell navigation', () => {
   it('hides the Reports and Security links for an agent', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const wrapper = await mountShell()
 
@@ -71,7 +85,7 @@ describe('AppShell navigation', () => {
   it('hides the Reports link (and all internal nav) for a customer, showing the portal nav instead', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Portal Customer', email: 'customer@crm.local', roles: ['customer'] }
+    authStore.user = { id: '1', name: 'Portal Customer', email: 'customer@crm.local', roles: ['customer'], permissions: CUSTOMER_PERMISSIONS }
 
     const wrapper = await mountShell()
 
@@ -84,7 +98,7 @@ describe('AppShell responsive behavior', () => {
   it('renders a menu-toggle button that opens the mobile drawer and a backdrop that closes it', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const wrapper = await mountShell()
 
@@ -107,7 +121,7 @@ describe('AppShell responsive behavior', () => {
   it('renders a tablet sidebar-toggle button that expands the collapsed rail', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const wrapper = await mountShell()
 

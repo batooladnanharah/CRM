@@ -43,7 +43,7 @@ public static class KnowledgeBaseEndpoints
 
             return Results.Ok(new KnowledgeBaseSearchResultResponse(items, total));
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.KnowledgeBaseView)
         .WithName("ListKnowledgeBaseArticles")
         .WithTags("KnowledgeBase");
 
@@ -93,7 +93,7 @@ public static class KnowledgeBaseEndpoints
 
             return Results.Ok(new KnowledgeBaseSearchResultResponse(items, total));
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.KnowledgeBaseView)
         .WithName("SearchKnowledgeBaseArticles")
         .WithTags("KnowledgeBase");
 
@@ -103,7 +103,7 @@ public static class KnowledgeBaseEndpoints
                 .FirstOrDefaultAsync(a => a.Slug == slug.Trim().ToLowerInvariant());
             return entity is null ? Results.NotFound() : Results.Ok(ToResponse(entity));
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.KnowledgeBaseView)
         .WithName("GetKnowledgeBaseArticleBySlug")
         .WithTags("KnowledgeBase");
 
@@ -112,7 +112,7 @@ public static class KnowledgeBaseEndpoints
             var entity = await db.Articles.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
             return entity is null ? Results.NotFound() : Results.Ok(ToResponse(entity));
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.KnowledgeBaseView)
         .WithName("GetKnowledgeBaseArticle")
         .WithTags("KnowledgeBase");
 
@@ -155,7 +155,7 @@ public static class KnowledgeBaseEndpoints
 
             return Results.Created($"/api/knowledge-base/articles/{entity.Id}", ToResponse(entity));
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.KnowledgeBaseManage)
         .WithName("CreateKnowledgeBaseArticle")
         .WithTags("KnowledgeBase");
 
@@ -201,7 +201,7 @@ public static class KnowledgeBaseEndpoints
             await db.SaveChangesAsync();
             return Results.Ok(ToResponse(entity));
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.KnowledgeBaseManage)
         .WithName("UpdateKnowledgeBaseArticle")
         .WithTags("KnowledgeBase");
 
@@ -218,7 +218,7 @@ public static class KnowledgeBaseEndpoints
 
             return Results.NoContent();
         })
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization(Permissions.KnowledgeBaseManage)
         .WithName("DeleteKnowledgeBaseArticle")
         .WithTags("KnowledgeBase");
     }

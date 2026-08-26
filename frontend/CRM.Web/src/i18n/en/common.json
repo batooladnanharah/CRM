@@ -661,6 +661,7 @@
         "name": "Name",
         "email": "Email",
         "role": "Role",
+        "permissions": "Permissions",
         "status": "Status"
       },
       "actions": {

@@ -12,13 +12,13 @@ public static class SlaPolicyEndpoints
         // SLA policy CRUD is admin-only — agents consume the computed SLA
         // snapshot on tickets but never manage the policies themselves.
         var policies = app.MapGroup("/api/sla/policies")
-            .RequireAuthorization("AdminOnly")
+            .RequireAuthorization(Permissions.SlaManage)
             .WithTags("SlaPolicies");
 
         // Separate group (not nested under /policies) — this is an
         // automation/ops control, not a policy resource.
         var sla = app.MapGroup("/api/sla")
-            .RequireAuthorization("AdminOnly")
+            .RequireAuthorization(Permissions.SlaManage)
             .WithTags("SlaPolicies");
 
         policies.MapGet("/", async (TicketDbContext db) =>

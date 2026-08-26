@@ -225,6 +225,7 @@ async function onEnable(user: AdminUserListItem) {
 
 onMounted(() => {
   void store.fetchUsers()
+  void store.loadRoles()
 })
 </script>
 
@@ -280,6 +281,7 @@ onMounted(() => {
             <th>{{ t('security.users.columns.name') }}</th>
             <th>{{ t('security.users.columns.email') }}</th>
             <th>{{ t('security.users.columns.role') }}</th>
+            <th>{{ t('security.users.columns.permissions') }}</th>
             <th>{{ t('security.users.columns.status') }}</th>
             <th></th>
           </tr>
@@ -296,6 +298,11 @@ onMounted(() => {
               >
                 <option v-for="role in ROLES" :key="role" :value="role">{{ role }}</option>
               </select>
+            </td>
+            <td class="permissions-cell">
+              <AppBadge v-for="permission in store.permissionsFor(user.role)" :key="permission" tone="neutral">
+                {{ permission }}
+              </AppBadge>
             </td>
             <td>
               <AppBadge :tone="user.isDisabled ? 'danger' : 'success'">
@@ -440,6 +447,13 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.permissions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  max-width: 16rem;
 }
 
 .user-form {

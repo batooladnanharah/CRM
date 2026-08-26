@@ -176,7 +176,7 @@ public static class CustomerEndpoints
             var response = new CustomerListItem(entity.Id, entity.FullName, entity.Email, entity.Phone, entity.Company, entity.CreatedAtUtc);
             return Results.Created($"/api/customers/{entity.Id}", response);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.CustomersManage)
         .WithName("CreateCustomer")
         .WithTags("Customers")
         .Produces<CustomerListItem>(StatusCodes.Status201Created)
@@ -276,7 +276,7 @@ public static class CustomerEndpoints
                 customer.Id, customer.FullName, customer.Email, customer.Phone, customer.Company, customer.CreatedAtUtc);
             return Results.Ok(response);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.CustomersManage)
         .WithName("UpdateCustomer")
         .WithTags("Customers")
         .Produces<CustomerListItem>()

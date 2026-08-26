@@ -1,3 +1,4 @@
+using CRM.Api.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
@@ -49,7 +50,7 @@ public static class AiEndpoints
 
             return Results.Ok(response);
         })
-        .RequireAuthorization("AgentOrAdmin")
+        .RequireAuthorization(Permissions.TicketsManage)
         .WithName("SummariseTicket")
         .Produces<AiResponse>()
         .Produces(StatusCodes.Status404NotFound)

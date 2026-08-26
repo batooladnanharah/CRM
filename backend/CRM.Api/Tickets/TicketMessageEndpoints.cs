@@ -19,7 +19,7 @@ public static class TicketMessageEndpoints
         // replies) — same AgentOrAdmin policy as the customer notes/attachments
         // groups, never the customer role.
         var messages = app.MapGroup("/api/tickets/{ticketId:guid}/messages")
-            .RequireAuthorization("AgentOrAdmin")
+            .RequireAuthorization(Permissions.TicketsManage)
             .WithTags("TicketMessages");
 
         messages.MapGet("/", async (

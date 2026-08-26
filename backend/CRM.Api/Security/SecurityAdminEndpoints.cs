@@ -8,11 +8,23 @@ namespace CRM.Api.Security;
 
 public static class SecurityAdminEndpoints
 {
-    private static readonly string[] AllowedRoles = [Roles.Admin, Roles.Agent, Roles.Customer];
+    private static readonly IReadOnlyCollection<string> AllowedRoles = Roles.All;
 
     public static void MapSecurityAdminEndpoints(this IEndpointRouteBuilder app)
     {
-        var admin = app.MapGroup("/api/admin").RequireAuthorization("AdminOnly").WithTags("SecurityAdmin");
+        var admin = app.MapGroup("/api/admin").RequireAuthorization(Permissions.SecurityAdmin).WithTags("SecurityAdmin");
+
+        admin.MapGet("/roles", () =>
+        {
+            var roles = Roles.All
+                .Select(role => new RoleSummary(role, RolePermissions.For(role).OrderBy(p => p).ToList()))
+                .ToList();
+            return Results.Ok(roles);
+        })
+        .WithName("ListRoles");
+
+        admin.MapGet("/permissions", () => Results.Ok(Permissions.All.OrderBy(p => p).ToList()))
+        .WithName("ListPermissions");
 
         admin.MapGet("/users", async ([AsParameters] AdminUserListQuery query, AuthDbContext db) =>
         {

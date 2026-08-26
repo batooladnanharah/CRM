@@ -29,6 +29,15 @@ public sealed class JwtTokenService(IConfiguration configuration)
 
         claims.AddRange(user.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
+        // "permission" claims drive the named authorization policies in
+        // Program.cs (see Permissions.cs / RolePermissions.cs) — one claim per
+        // permission the user's role(s) grant. ClaimTypes.Role is kept
+        // alongside for any remaining role-based checks; a role change only
+        // takes effect on the next login/token issue (existing tokens keep
+        // their baked-in claims until they expire).
+        claims.AddRange(
+            RolePermissions.ForRoles(user.Roles).Select(permission => new Claim("permission", permission)));
+
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 

@@ -8,6 +8,7 @@ import type {
   AdminUserListQuery,
   AuditLogEntry,
   AuditLogQuery,
+  RoleSummary,
 } from '@/types/security'
 
 export function listUsers(query: AdminUserListQuery = {}): Promise<PagedResult<AdminUserListItem>> {
@@ -56,6 +57,14 @@ export function disableUser(id: string): Promise<AdminUserDetail> {
 
 export function enableUser(id: string): Promise<AdminUserDetail> {
   return apiRequest<AdminUserDetail>(`/admin/users/${id}/enable`, { method: 'POST' })
+}
+
+export function listRoles(): Promise<RoleSummary[]> {
+  return apiRequest<RoleSummary[]>('/admin/roles', { method: 'GET' })
+}
+
+export function listPermissions(): Promise<string[]> {
+  return apiRequest<string[]>('/admin/permissions', { method: 'GET' })
 }
 
 export function listAuditLog(query: AuditLogQuery = {}): Promise<PagedResult<AuditLogEntry>> {

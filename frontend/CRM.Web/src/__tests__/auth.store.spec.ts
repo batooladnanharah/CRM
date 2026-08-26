@@ -137,4 +137,46 @@ describe('auth store', () => {
     expect(store.isAgent).toBe(false)
     expect(store.isCustomer).toBe(false)
   })
+
+  it('can() returns true only for permissions present on the hydrated user', () => {
+    sessionStorage.setItem(TOKEN_KEY, 'stored-token')
+    sessionStorage.setItem(
+      USER_KEY,
+      JSON.stringify({
+        id: '1',
+        name: 'Agent',
+        email: 'agent@crm.local',
+        roles: ['agent'],
+        permissions: ['tickets.manage', 'customers.manage'],
+      }),
+    )
+
+    const store = useAuthStore()
+    store.hydrate()
+
+    expect(store.can('tickets.manage')).toBe(true)
+    expect(store.can('security.admin')).toBe(false)
+    expect(store.permissions.has('customers.manage')).toBe(true)
+  })
+
+  it('permissions is empty and can() is false for a logged-out user', () => {
+    const store = useAuthStore()
+
+    expect(store.permissions.size).toBe(0)
+    expect(store.can('tickets.manage')).toBe(false)
+  })
+
+  it('permissions is empty when the user object has no permissions field (back-compat)', () => {
+    sessionStorage.setItem(TOKEN_KEY, 'stored-token')
+    sessionStorage.setItem(
+      USER_KEY,
+      JSON.stringify({ id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }),
+    )
+
+    const store = useAuthStore()
+    store.hydrate()
+
+    expect(store.permissions.size).toBe(0)
+    expect(store.can('tickets.manage')).toBe(false)
+  })
 })

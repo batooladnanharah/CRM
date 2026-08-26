@@ -6,6 +6,7 @@ import {
   disableUser,
   enableUser,
   listAuditLog,
+  listRoles,
   listUsers,
   updateUser,
 } from '@/api/security'
@@ -17,6 +18,7 @@ import type {
   AdminUserListItem,
   AuditLogEntry,
   AuditLogQuery,
+  RoleSummary,
 } from '@/types/security'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -179,6 +181,27 @@ export const useSecurityStore = defineStore('security', () => {
     return 'generic'
   }
 
+  const roles = ref<RoleSummary[]>([])
+  const rolesLoading = ref(false)
+  const rolesError = ref<string | null>(null)
+
+  async function loadRoles() {
+    rolesLoading.value = true
+    rolesError.value = null
+
+    try {
+      roles.value = await listRoles()
+    } catch {
+      rolesError.value = 'errorLoad'
+    } finally {
+      rolesLoading.value = false
+    }
+  }
+
+  function permissionsFor(role: AdminRole | ''): string[] {
+    return roles.value.find((r) => r.name === role)?.permissions ?? []
+  }
+
   async function fetchAuditLog(filters?: AuditLogQuery) {
     if (filters?.page !== undefined) auditPage.value = filters.page
 
@@ -239,5 +262,10 @@ export const useSecurityStore = defineStore('security', () => {
     auditError,
     fetchAuditLog,
     setAuditPage,
+    roles,
+    rolesLoading,
+    rolesError,
+    loadRoles,
+    permissionsFor,
   }
 })

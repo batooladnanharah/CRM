@@ -17,7 +17,7 @@ public static class TicketAttachmentEndpoints
         // ticket files are keyed under a "tickets/{ticketId}/" prefix so they
         // never collide with customer attachment keys in that shared root.
         var attachments = app.MapGroup("/api/tickets/{ticketId:guid}/attachments")
-            .RequireAuthorization("AgentOrAdmin")
+            .RequireAuthorization(Permissions.TicketsManage)
             .WithTags("TicketAttachments");
 
         attachments.MapGet("/", async (Guid ticketId, TicketDbContext db, AuthDbContext authDb) =>

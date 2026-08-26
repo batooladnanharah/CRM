@@ -33,7 +33,7 @@ export function createAppRouter() {
         path: '/customers/new',
         name: 'customer-create',
         component: () => import('@/modules/customers/views/CustomerCreateView.vue'),
-        meta: { requiresAuth: true, requiredRoles: ['admin', 'agent'], title: 'Create customer' },
+        meta: { requiresAuth: true, permission: 'customers.manage', title: 'Create customer' },
       },
       {
         path: '/customers/:id',
@@ -45,7 +45,7 @@ export function createAppRouter() {
         path: '/customers/:id/edit',
         name: 'customer-edit',
         component: () => import('@/modules/customers/views/CustomerEditView.vue'),
-        meta: { requiresAuth: true, requiredRoles: ['admin', 'agent'], title: 'Edit customer' },
+        meta: { requiresAuth: true, permission: 'customers.manage', title: 'Edit customer' },
       },
       {
         path: '/tickets',
@@ -69,13 +69,13 @@ export function createAppRouter() {
         path: '/settings/quick-replies',
         name: 'quick-replies-management',
         component: () => import('@/modules/quickReplies/views/QuickRepliesManagementView.vue'),
-        meta: { requiresAuth: true, requiredRoles: ['admin'], title: 'Quick replies' },
+        meta: { requiresAuth: true, permission: 'quickReplies.manage', title: 'Quick replies' },
       },
       {
         path: '/settings/sla',
         name: 'sla-policies-management',
         component: () => import('@/modules/sla/views/SlaPoliciesManagementView.vue'),
-        meta: { requiresAuth: true, requiredRoles: ['admin'], title: 'SLA policies' },
+        meta: { requiresAuth: true, permission: 'sla.manage', title: 'SLA policies' },
       },
       {
         path: '/knowledge-base',
@@ -93,26 +93,26 @@ export function createAppRouter() {
         path: '/admin/users',
         name: 'admin-users',
         component: () => import('@/modules/security/views/UsersAdminView.vue'),
-        meta: { requiresAuth: true, requiredRoles: ['admin'], title: 'Users' },
+        meta: { requiresAuth: true, permission: 'security.admin', title: 'Users' },
       },
       {
         path: '/admin/audit-log',
         name: 'admin-audit-log',
         component: () => import('@/modules/security/views/AuditLogView.vue'),
-        meta: { requiresAuth: true, requiredRoles: ['admin'], title: 'Audit log' },
+        meta: { requiresAuth: true, permission: 'security.admin', title: 'Audit log' },
       },
       {
         path: '/reports',
         name: 'reports',
         component: () => import('@/modules/reports/views/ReportsView.vue'),
-        meta: { requiresAuth: true, requiredRoles: ['admin'], title: 'Reports' },
+        meta: { requiresAuth: true, permission: 'reports.view', title: 'Reports' },
       },
       {
         path: '/communication-channels',
         name: 'communication-channels-management',
         component: () =>
           import('@/modules/communicationChannels/views/CommunicationChannelsManagementView.vue'),
-        meta: { requiresAuth: true, requiredRoles: ['admin'], title: 'Communication channels' },
+        meta: { requiresAuth: true, permission: 'channels.manage', title: 'Communication channels' },
       },
       {
         path: '/portal/dashboard',
@@ -165,8 +165,8 @@ export function createAppRouter() {
       }
     }
 
-    const requiredRoles = to.meta.requiredRoles as string[] | undefined
-    if (requiredRoles?.length && !requiredRoles.some((role) => authStore.hasRole(role))) {
+    const permission = to.meta.permission as string | undefined
+    if (permission && !authStore.can(permission)) {
       return { path: '/forbidden' }
     }
 

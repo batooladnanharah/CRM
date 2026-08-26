@@ -103,4 +103,67 @@ public class AuthorizationPolicyTests : IClassFixture<CustomWebApplicationFactor
 
         Assert.False(succeeded);
     }
+
+    private static ClaimsPrincipal PrincipalWithPermissions(params string[] permissions)
+    {
+        var identity = new ClaimsIdentity(
+            permissions.Select(p => new Claim("permission", p)),
+            authenticationType: "TestAuth");
+        return new ClaimsPrincipal(identity);
+    }
+
+    [Theory]
+    [MemberData(nameof(AllPermissions))]
+    public async Task PermissionPolicy_RequiresTheMatchingPermissionClaim(string permission)
+    {
+        var withClaim = PrincipalWithPermissions(permission);
+        var withoutClaim = PrincipalWithPermissions("some.other.permission");
+
+        Assert.True(await EvaluateAsync(permission, withClaim));
+        Assert.False(await EvaluateAsync(permission, withoutClaim));
+    }
+
+    public static IEnumerable<object[]> AllPermissions() => Permissions.All.Select(p => new object[] { p });
+
+    [Fact]
+    public void RolePermissions_AdminHasEveryPermission()
+    {
+        Assert.Equal(Permissions.All.OrderBy(p => p), RolePermissions.For(Roles.Admin).OrderBy(p => p));
+    }
+
+    [Fact]
+    public void RolePermissions_AgentHasTheExpectedSubset()
+    {
+        var expected = new[]
+        {
+            Permissions.CustomersManage,
+            Permissions.TicketsManage,
+            Permissions.QuickRepliesView,
+            Permissions.KnowledgeBaseView,
+            Permissions.CommunicationChannelsView,
+        };
+
+        Assert.Equal(expected.OrderBy(p => p), RolePermissions.For(Roles.Agent).OrderBy(p => p));
+    }
+
+    [Fact]
+    public void RolePermissions_AgentNeverHasAdminOnlyPermissions()
+    {
+        var agentPermissions = RolePermissions.For(Roles.Agent);
+
+        Assert.DoesNotContain(Permissions.TicketsEscalate, agentPermissions);
+        Assert.DoesNotContain(Permissions.SecurityAdmin, agentPermissions);
+        Assert.DoesNotContain(Permissions.ReportsView, agentPermissions);
+        Assert.DoesNotContain(Permissions.SlaManage, agentPermissions);
+        Assert.DoesNotContain(Permissions.QuickRepliesManage, agentPermissions);
+        Assert.DoesNotContain(Permissions.KnowledgeBaseManage, agentPermissions);
+        Assert.DoesNotContain(Permissions.CommunicationChannelsManage, agentPermissions);
+        Assert.DoesNotContain(Permissions.PortalAccess, agentPermissions);
+    }
+
+    [Fact]
+    public void RolePermissions_CustomerOnlyHasPortalAccess()
+    {
+        Assert.Equal(new[] { Permissions.PortalAccess }, RolePermissions.For(Roles.Customer));
+    }
 }

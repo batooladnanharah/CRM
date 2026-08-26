@@ -2,6 +2,19 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { createAppRouter } from '@/router'
 import { useAuthStore } from '@/stores/auth'
+import { Permissions } from '@/types/auth'
+
+// Mirrors backend/CRM.Api/Auth/RolePermissions.cs for test fixtures — the
+// frontend has no independent copy of this map at runtime (permissions
+// always come from the login/[/me] response), so tests must supply it.
+const ADMIN_PERMISSIONS = Object.values(Permissions)
+const AGENT_PERMISSIONS = [
+  Permissions.CustomersManage,
+  Permissions.TicketsManage,
+  Permissions.QuickRepliesView,
+  Permissions.KnowledgeBaseView,
+  Permissions.CommunicationChannelsView,
+]
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -78,7 +91,7 @@ describe('router guards', () => {
   it('allows an agent to visit /customers/new', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -125,7 +138,7 @@ describe('router guards', () => {
   it('allows an agent to visit /customers/:id (profile is not role-restricted)', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -160,7 +173,7 @@ describe('router guards', () => {
   it('allows an admin to visit /customers/:id/edit', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -206,7 +219,7 @@ describe('router guards — tickets', () => {
   it('allows an authenticated visit to /tickets/new (no role restriction)', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -264,7 +277,7 @@ describe('router guards — quick replies management', () => {
   it('redirects an agent visit to /settings/quick-replies to /forbidden', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -277,7 +290,7 @@ describe('router guards — quick replies management', () => {
   it('allows an admin to visit /settings/quick-replies', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -301,7 +314,7 @@ describe('router guards — communication channels', () => {
   it('redirects an agent visit to /communication-channels to /forbidden', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -314,7 +327,7 @@ describe('router guards — communication channels', () => {
   it('allows an admin to visit /communication-channels and resolves to the management view', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -339,7 +352,7 @@ describe('router guards — sla policies management', () => {
   it('redirects an agent visit to /settings/sla to /forbidden', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -352,7 +365,7 @@ describe('router guards — sla policies management', () => {
   it('allows an admin to visit /settings/sla', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -386,7 +399,7 @@ describe('router guards — knowledge base', () => {
   it('allows an authenticated agent to visit /knowledge-base', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -400,7 +413,7 @@ describe('router guards — knowledge base', () => {
   it('allows an authenticated agent to visit /knowledge-base/:id', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -418,14 +431,14 @@ describe('router guards — role gating', () => {
       path: '/admin-only',
       name: 'admin-only',
       component: { template: '<div />' },
-      meta: { requiresAuth: true, requiredRoles: ['admin'] },
+      meta: { requiresAuth: true, permission: Permissions.SecurityAdmin },
     })
   }
 
-  it('redirects to /forbidden when the user lacks a required role', async () => {
+  it('redirects to /forbidden when the user lacks the required permission', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
     addAdminOnlyRoute(router)
@@ -436,7 +449,7 @@ describe('router guards — role gating', () => {
     expect(router.currentRoute.value.path).toBe('/forbidden')
   })
 
-  it('allows navigation when the user holds a required role (including as one of several roles)', async () => {
+  it('allows navigation when the user holds the required permission (via one of several roles)', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
     authStore.user = {
@@ -444,6 +457,7 @@ describe('router guards — role gating', () => {
       name: 'Admin Agent',
       email: 'admin-agent@crm.local',
       roles: ['admin', 'agent'],
+      permissions: ADMIN_PERMISSIONS,
     }
 
     const router = createAppRouter()
@@ -512,7 +526,7 @@ describe('router guards — customer portal', () => {
   it('redirects an agent visit to /portal/dashboard to /dashboard', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -526,7 +540,7 @@ describe('router guards — customer portal', () => {
   it('redirects an admin visit to /portal/tickets to /dashboard', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -563,7 +577,7 @@ describe('router guards — reports', () => {
   it('redirects an agent visit to /reports to /forbidden', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -576,7 +590,7 @@ describe('router guards — reports', () => {
   it('allows an admin to visit /reports', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -601,7 +615,7 @@ describe('router guards — security administration', () => {
   it('redirects an agent visit to /admin/users to /forbidden', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -614,7 +628,7 @@ describe('router guards — security administration', () => {
   it('allows an admin to visit /admin/users', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -628,7 +642,7 @@ describe('router guards — security administration', () => {
   it('redirects an agent visit to /admin/audit-log to /forbidden', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'] }
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
 
     const router = createAppRouter()
 
@@ -641,7 +655,7 @@ describe('router guards — security administration', () => {
   it('allows an admin to visit /admin/audit-log', async () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
-    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
 
     const router = createAppRouter()
 
