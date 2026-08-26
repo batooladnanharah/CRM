@@ -4,6 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { ApiError } from '@/api/http'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import type { KnowledgeBaseArticle, KnowledgeBaseArticleStatus } from '@/types/knowledgeBase'
 
 const STATUSES: KnowledgeBaseArticleStatus[] = ['Draft', 'Published', 'Archived']
@@ -228,9 +232,9 @@ async function onDelete(article: KnowledgeBaseArticle) {
         <p class="eyebrow">{{ t('navigation.workspace') }}</p>
         <h1>{{ t('knowledgeBase.title') }}</h1>
       </div>
-      <button type="button" @click="openAddForm" :disabled="isAdding">
+      <AppButton type="button" @click="openAddForm" :disabled="isAdding">
         {{ t('knowledgeBase.newArticle') }}
-      </button>
+      </AppButton>
     </div>
 
     <div class="surface toolbar">
@@ -259,7 +263,7 @@ async function onDelete(article: KnowledgeBaseArticle) {
       </div>
     </div>
 
-    <p v-if="store.error" role="alert">{{ store.error }}</p>
+    <AppAlert v-if="store.error" tone="danger" role="alert">{{ store.error }}</AppAlert>
 
     <form v-if="isAdding" class="surface kb-article-form" @submit.prevent="submitAdd">
       <div class="field">
@@ -345,10 +349,8 @@ async function onDelete(article: KnowledgeBaseArticle) {
       </div>
     </form>
 
-    <p v-if="store.isLoading">{{ t('common.loading') }}</p>
-    <div v-else-if="displayedArticles.length === 0" class="surface empty-state">
-      <p>{{ t('knowledgeBase.messages.searchEmpty') }}</p>
-    </div>
+    <LoadingState v-if="store.isLoading" />
+    <EmptyState v-else-if="displayedArticles.length === 0" :description="t('knowledgeBase.messages.searchEmpty')" />
 
     <div v-else class="surface table-wrap">
       <table>
@@ -398,10 +400,10 @@ async function onDelete(article: KnowledgeBaseArticle) {
               <td>{{ article.slug }}</td>
               <td>{{ t(`knowledgeBase.status.${article.status.toLowerCase()}`) }}</td>
               <td>
-                <button type="button" @click="startEdit(article)">{{ t('knowledgeBase.actions.edit') }}</button>
-                <button type="button" @click="onDelete(article)">
+                <AppButton variant="ghost" size="sm" type="button" @click="startEdit(article)">{{ t('knowledgeBase.actions.edit') }}</AppButton>
+                <AppButton variant="ghost" size="sm" type="button" @click="onDelete(article)">
                   {{ t('knowledgeBase.actions.delete') }}
-                </button>
+                </AppButton>
               </td>
             </tr>
           </template>
@@ -414,44 +416,25 @@ async function onDelete(article: KnowledgeBaseArticle) {
 <style scoped>
 .knowledge-base-view {
   max-width: 72rem;
-  margin: 4rem auto;
-}
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  margin: var(--space-8) auto;
 }
 
 .kb-article-form,
 .kb-article-inline-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 20px;
-  margin-bottom: 18px;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
 }
 
 .field-error {
-  color: #a3231e;
-  font-size: 0.85rem;
+  color: var(--color-status-danger);
+  font-size: var(--font-size-sm);
 }
 
 .form-actions {
   display: flex;
-  gap: 0.5rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
+  gap: var(--space-2);
 }
 </style>

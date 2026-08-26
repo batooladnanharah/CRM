@@ -4,6 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useTicketsStore } from '@/stores/tickets'
 import { useCustomersStore } from '@/stores/customers'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
 import type { TicketPriority } from '@/types/tickets'
 
 const { t } = useI18n()
@@ -38,10 +41,10 @@ watch(customerSearchTerm, (term) => {
   }, 300)
 })
 
-function onCustomerInput(event: Event) {
+function onCustomerInput(value: string) {
   selectedCustomerId.value = ''
   selectedCustomerName.value = ''
-  customerSearchTerm.value = (event.target as HTMLInputElement).value
+  customerSearchTerm.value = value
 }
 
 function selectCustomer(id: string, fullName: string) {
@@ -115,13 +118,13 @@ function onCancel() {
     <form class="surface form-surface" novalidate @submit.prevent="onSubmit">
       <div class="form-grid">
         <div class="field customer-field">
-          <label for="ticket-customer">{{ t('tickets.create.fields.customer') }}</label>
-          <input
+          <AppInput
             id="ticket-customer"
+            :label="t('tickets.create.fields.customer')"
             type="text"
             autocomplete="off"
-            :value="customerSearchTerm"
-            @input="onCustomerInput"
+            :model-value="customerSearchTerm"
+            @update:model-value="onCustomerInput"
           />
           <ul
             v-if="!selectedCustomerId && customersStore.items.length > 0"
@@ -137,10 +140,14 @@ function onCancel() {
           </ul>
         </div>
 
-        <div class="field">
-          <label for="ticket-title">{{ t('tickets.create.fields.title') }}</label>
-          <input id="ticket-title" v-model="title" type="text" maxlength="200" required />
-        </div>
+        <AppInput
+          id="ticket-title"
+          v-model="title"
+          :label="t('tickets.create.fields.title')"
+          type="text"
+          maxlength="200"
+          required
+        />
 
         <div class="field">
           <label for="ticket-description">{{ t('tickets.create.fields.description') }}</label>
@@ -163,23 +170,23 @@ function onCancel() {
         </div>
       </div>
 
-      <p v-if="fieldError" role="alert" aria-live="polite" class="error">
+      <AppAlert v-if="fieldError" tone="danger" role="alert" aria-live="polite">
         {{ fieldError }}
-      </p>
-      <p v-else-if="store.createError === 'customerNotFound'" role="alert" aria-live="polite" class="error">
+      </AppAlert>
+      <AppAlert v-else-if="store.createError === 'customerNotFound'" tone="danger" role="alert" aria-live="polite">
         {{ t('tickets.create.errors.customerNotFound') }}
-      </p>
-      <p v-else-if="store.createError" role="alert" aria-live="polite" class="error">
+      </AppAlert>
+      <AppAlert v-else-if="store.createError" tone="danger" role="alert" aria-live="polite">
         {{ t('tickets.create.errors.generic') }}
-      </p>
+      </AppAlert>
 
       <div class="form-actions">
-        <button class="secondary-button" type="button" @click="onCancel">
+        <AppButton variant="secondary" type="button" @click="onCancel">
           {{ t('tickets.create.cancel') }}
-        </button>
-        <button type="submit" :disabled="store.creating">
+        </AppButton>
+        <AppButton type="submit" :loading="store.creating">
           {{ t('tickets.create.submit') }}
-        </button>
+        </AppButton>
       </div>
     </form>
   </div>
@@ -188,13 +195,7 @@ function onCancel() {
 <style scoped>
 .ticket-create-view {
   max-width: 30rem;
-  margin: 4rem auto;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  margin: var(--space-8) auto;
 }
 
 .customer-field {
@@ -205,27 +206,20 @@ form {
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   max-height: 12rem;
   overflow-y: auto;
+  box-shadow: var(--shadow-md);
 }
 
 .customer-suggestions li {
-  padding: 0.5rem;
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
 }
 
 .customer-suggestions li:hover {
-  background: #f5f5f5;
-}
-
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.error {
-  color: #b00020;
+  background: #f5fbf9;
 }
 </style>

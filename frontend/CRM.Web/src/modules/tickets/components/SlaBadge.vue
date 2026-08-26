@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRelativeTime } from '@/composables/useRelativeTime'
+import AppBadge from '@/components/ui/AppBadge.vue'
 import type { SlaStatus, TicketSla } from '@/types/tickets'
 
 const props = defineProps<{
@@ -34,12 +35,12 @@ const statusKeys: Record<SlaStatus, string> = {
   Met: 'sla.status.met',
 }
 
-const statusClasses: Record<SlaStatus, string> = {
-  NotApplicable: 'sla-badge--muted',
-  OnTrack: 'sla-badge--ok',
-  AtRisk: 'sla-badge--warn',
-  Breached: 'sla-badge--danger',
-  Met: 'sla-badge--ok',
+const statusTones: Record<SlaStatus, 'neutral' | 'success' | 'warning' | 'danger'> = {
+  NotApplicable: 'neutral',
+  OnTrack: 'success',
+  AtRisk: 'warning',
+  Breached: 'danger',
+  Met: 'success',
 }
 
 const label = computed(() => t(props.kind === 'firstResponse' ? 'sla.firstResponse' : 'sla.resolution'))
@@ -57,43 +58,13 @@ const dueLabel = computed(() => {
 </script>
 
 <template>
-  <span class="sla-badge" :class="statusClasses[status]" :title="label">
+  <AppBadge class="sla-badge" :tone="statusTones[status]" :title="label">
     {{ label }}: {{ statusLabel }}
     <span v-if="dueLabel" class="sla-badge__due">({{ dueLabel }})</span>
-  </span>
+  </AppBadge>
 </template>
 
 <style scoped>
-.sla-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.sla-badge--muted {
-  background: var(--color-surface-muted, #eee);
-  color: var(--color-text-muted, #666);
-}
-
-.sla-badge--ok {
-  background: #e3f6e8;
-  color: #1a7a3a;
-}
-
-.sla-badge--warn {
-  background: #fff4e0;
-  color: #9a6400;
-}
-
-.sla-badge--danger {
-  background: #fde2e1;
-  color: #a3231e;
-}
-
 .sla-badge__due {
   opacity: 0.8;
 }

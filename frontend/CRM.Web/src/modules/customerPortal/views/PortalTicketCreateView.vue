@@ -3,6 +3,9 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCustomerPortalStore } from '@/stores/customerPortal'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
 import type { TicketPriority } from '@/types/tickets'
 
 const { t } = useI18n()
@@ -74,10 +77,14 @@ function onCancel() {
 
     <form class="surface form-surface" novalidate @submit.prevent="onSubmit">
       <div class="form-grid">
-        <div class="field">
-          <label for="portal-ticket-title">{{ t('portal.ticket.submit.fields.subject') }}</label>
-          <input id="portal-ticket-title" v-model="title" type="text" maxlength="200" required />
-        </div>
+        <AppInput
+          id="portal-ticket-title"
+          v-model="title"
+          :label="t('portal.ticket.submit.fields.subject')"
+          type="text"
+          maxlength="200"
+          required
+        />
 
         <div class="field">
           <label for="portal-ticket-description">
@@ -102,18 +109,18 @@ function onCancel() {
         </div>
       </div>
 
-      <p v-if="fieldError" role="alert" aria-live="polite" class="error">{{ fieldError }}</p>
-      <p v-else-if="store.error" role="alert" aria-live="polite" class="error">
+      <AppAlert v-if="fieldError" tone="danger" role="alert" aria-live="polite">{{ fieldError }}</AppAlert>
+      <AppAlert v-else-if="store.error" tone="danger" role="alert" aria-live="polite">
         {{ t('portal.errors.generic') }}
-      </p>
+      </AppAlert>
 
       <div class="form-actions">
-        <button class="secondary-button" type="button" @click="onCancel">
+        <AppButton variant="secondary" type="button" @click="onCancel">
           {{ t('portal.ticket.submit.cancel') }}
-        </button>
-        <button type="submit" :disabled="store.creating">
+        </AppButton>
+        <AppButton type="submit" :loading="store.creating">
           {{ t('portal.ticket.submit.submit') }}
-        </button>
+        </AppButton>
       </div>
     </form>
   </div>
@@ -122,22 +129,6 @@ function onCancel() {
 <style scoped>
 .portal-ticket-create-view {
   max-width: 30rem;
-  margin: 4rem auto;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.error {
-  color: #b00020;
+  margin: var(--space-8) auto;
 }
 </style>

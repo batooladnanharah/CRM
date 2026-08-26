@@ -4,6 +4,11 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useCustomersStore } from '@/stores/customers'
 import { useAuthStore } from '@/stores/auth'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppPagination from '@/components/ui/AppPagination.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import ErrorState from '@/components/ui/ErrorState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import type { CustomerListQuery } from '@/types/customers'
 
 const { t } = useI18n()
@@ -11,8 +16,6 @@ const store = useCustomersStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-
-const totalPages = computed(() => Math.max(1, Math.ceil(store.totalCount / store.pageSize)))
 
 const columns: Array<{ key: NonNullable<CustomerListQuery['sortBy']>; labelKey: string }> = [
   { key: 'fullName', labelKey: 'customers.columns.fullName' },
@@ -34,29 +37,12 @@ function sortIndicator(column: NonNullable<CustomerListQuery['sortBy']>): string
   return store.sortDir === 'asc' ? '▲' : '▼'
 }
 
-function onSearchInput(event: Event) {
-  const value = (event.target as HTMLInputElement).value
-  store.setSearch(value)
-}
-
 function onCompanyChange(event: Event) {
   store.setCompany((event.target as HTMLSelectElement).value)
 }
 
 function queryStringValue(value: unknown): string {
   return typeof value === 'string' ? value : ''
-}
-
-function onPrev() {
-  if (store.page > 1) {
-    store.setPage(store.page - 1)
-  }
-}
-
-function onNext() {
-  if (store.page < totalPages.value) {
-    store.setPage(store.page + 1)
-  }
 }
 
 onMounted(() => {
@@ -84,31 +70,48 @@ watch(
 
 <template>
   <div class="customers-list-view">
-    <div class="page-heading"><div><p class="eyebrow">{{ t('navigation.workspace') }}</p><h1>{{ t('customers.title') }}</h1><p>{{ t('customers.list.subtitle') }}</p></div>
-    <router-link class="button"
-      v-if="authStore.isAdmin || authStore.isAgent"
-      :to="{ name: 'customer-create' }"
-    >
-      {{ t('customers.list.addButton') }}
-    >{{ t('customers.list.addButton') }}</router-link></div>
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">{{ t('navigation.workspace') }}</p>
+        <h1>{{ t('customers.title') }}</h1>
+        <p>{{ t('customers.list.subtitle') }}</p>
+      </div>
+      <router-link
+        v-if="authStore.isAdmin || authStore.isAgent"
+        class="button"
+        :to="{ name: 'customer-create' }"
+      >
+        {{ t('customers.list.addButton') }}
+      </router-link>
+    </div>
 
-    <div class="surface toolbar"><div class="toolbar-field"><label for="customer-search">{{ t('common.search') }}</label><input id="customer-search"
-      type="search"
-      :placeholder="t('customers.search.placeholder')"
-      :value="store.search"
-      @input="onSearchInput"
-    /></div>
+    <div class="surface toolbar">
+      <div class="toolbar-field">
+        <AppInput
+          id="customer-search"
+          :label="t('common.search')"
+          type="search"
+          :placeholder="t('customers.search.placeholder')"
+          :model-value="store.search"
+          @update:model-value="store.setSearch"
+        />
+      </div>
 
-    <div class="toolbar-field"><label for="company-filter">
-      {{ t('customers.filters.company.label') }}
-      </label><select id="company-filter" :value="store.company" @change="onCompanyChange">
-        <option value="">{{ t('customers.filters.company.options.all') }}</option>
-        <option v-for="option in companyOptions" :key="option" :value="option">{{ option }}</option>
-      </select></div></div>
+      <div class="toolbar-field">
+        <label for="company-filter">{{ t('customers.filters.company.label') }}</label>
+        <select id="company-filter" :value="store.company" @change="onCompanyChange">
+          <option value="">{{ t('customers.filters.company.options.all') }}</option>
+          <option v-for="option in companyOptions" :key="option" :value="option">{{ option }}</option>
+        </select>
+      </div>
+    </div>
 
-    <p v-if="store.loading">{{ t('customers.loading') }}</p>
-    <p v-else-if="store.error" role="alert">{{ t('customers.errorLoad') }}</p>
-    <div v-else-if="store.items.length === 0" class="surface empty-state"><p>{{ store.search.trim() || store.company ? t('customers.empty.noResults') : t('customers.empty.default') }}</p></div>
+    <LoadingState v-if="store.loading" :label="t('customers.loading')" />
+    <ErrorState v-else-if="store.error" :retryable="false" :message="t('customers.errorLoad')" />
+    <EmptyState
+      v-else-if="store.items.length === 0"
+      :description="store.search.trim() || store.company ? t('customers.empty.noResults') : t('customers.empty.default')"
+    />
 
     <div v-else class="surface table-wrap"><table>
       <thead>
@@ -144,39 +147,12 @@ watch(
       </tbody>
     </table></div>
 
-    <div class="pagination">
-      <button type="button" :disabled="store.page <= 1" @click="onPrev">
-        {{ t('customers.pagination.prev') }}
-      </button>
-      <span>{{ t('customers.pagination.pageOf', { page: store.page, totalPages }) }}</span>
-      <button type="button" :disabled="store.page >= totalPages" @click="onNext">
-        {{ t('customers.pagination.next') }}
-      </button>
-    </div>
+    <AppPagination
+      v-if="store.items.length > 0"
+      :page="store.page"
+      :page-size="store.pageSize"
+      :total-count="store.totalCount"
+      @update:page="store.setPage"
+    />
   </div>
 </template>
-
-<style scoped>
-.customers-list-view {
-  max-width: 60rem;
-  margin: 4rem auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
-}
-
-.pagination {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin-top: 1rem;
-}
-</style>

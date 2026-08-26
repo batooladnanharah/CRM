@@ -3,6 +3,10 @@ import { ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useCustomersStore } from '@/stores/customers'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -79,42 +83,59 @@ function onCancel() {
 <template>
   <div class="customer-edit-view"><div class="page-heading"><div><p class="eyebrow">{{ t('customers.title') }}</p><h1>{{ t('customers.edit.title') }}</h1></div></div>
 
-    <p v-if="store.loadingCurrent">{{ t('customers.edit.loading') }}</p>
+    <LoadingState v-if="store.loadingCurrent" :label="t('customers.edit.loading')" />
 
-    <div v-else-if="store.notFound">
+    <div v-else-if="store.notFound" class="surface empty-state">
       <p>{{ t('customers.edit.notFound') }}</p>
       <router-link :to="{ name: 'customers' }">{{ t('customers.edit.backToList') }}</router-link>
     </div>
 
-    <form v-else class="surface form-surface" novalidate @submit.prevent="onSubmit"><div class="form-grid">
-      <div class="field"><label for="customer-fullName">{{ t('customers.create.fields.fullName') }}</label>
-      <input id="customer-fullName" v-model="fullName" type="text" maxlength="200" required />
+    <form v-else class="surface form-surface" novalidate @submit.prevent="onSubmit">
+      <div class="form-grid">
+        <AppInput
+          id="customer-fullName"
+          v-model="fullName"
+          :label="t('customers.create.fields.fullName')"
+          type="text"
+          maxlength="200"
+          required
+        />
+        <AppInput
+          id="customer-email"
+          v-model="email"
+          :label="t('customers.create.fields.email')"
+          type="email"
+          maxlength="320"
+          required
+        />
+        <AppInput
+          id="customer-phone"
+          v-model="phone"
+          :label="t('customers.create.fields.phone')"
+          type="tel"
+          maxlength="32"
+        />
+        <AppInput
+          id="customer-company"
+          v-model="company"
+          :label="t('customers.create.fields.company')"
+          type="text"
+          maxlength="200"
+        />
       </div>
 
-      <div class="field"><label for="customer-email">{{ t('customers.create.fields.email') }}</label>
-      <input id="customer-email" v-model="email" type="email" maxlength="320" required />
-      </div>
-
-      <div class="field"><label for="customer-phone">{{ t('customers.create.fields.phone') }}</label>
-      <input id="customer-phone" v-model="phone" type="tel" maxlength="32" />
-      </div>
-
-      <div class="field"><label for="customer-company">{{ t('customers.create.fields.company') }}</label>
-      <input id="customer-company" v-model="company" type="text" maxlength="200" />
-      </div></div>
-
-      <p v-if="fieldError" role="alert" aria-live="polite" class="error">
+      <AppAlert v-if="fieldError" tone="danger" role="alert" aria-live="polite">
         {{ fieldError }}
-      </p>
-      <p v-else-if="store.updateError" role="alert" aria-live="polite" class="error">
+      </AppAlert>
+      <AppAlert v-else-if="store.updateError" tone="danger" role="alert" aria-live="polite">
         {{ t(`customers.errors.${store.updateError}`) }}
-      </p>
+      </AppAlert>
 
       <div class="form-actions">
-        <button class="secondary-button" type="button" @click="onCancel">{{ t('customers.edit.actions.cancel') }}</button>
-        <button type="submit" :disabled="store.updating">
+        <AppButton variant="secondary" type="button" @click="onCancel">{{ t('customers.edit.actions.cancel') }}</AppButton>
+        <AppButton type="submit" :loading="store.updating">
           {{ t('customers.edit.actions.submit') }}
-        </button>
+        </AppButton>
       </div>
     </form>
   </div>
@@ -123,22 +144,6 @@ function onCancel() {
 <style scoped>
 .customer-edit-view {
   max-width: 30rem;
-  margin: 4rem auto;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.error {
-  color: #b00020;
+  margin: var(--space-8) auto;
 }
 </style>

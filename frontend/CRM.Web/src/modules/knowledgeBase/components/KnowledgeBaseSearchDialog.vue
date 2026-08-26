@@ -89,13 +89,13 @@ function onSelect(article: KnowledgeBaseArticle) {
 <style scoped>
 .kb-search-dialog {
   max-width: 32rem;
-  padding: 1rem;
+  padding: var(--space-4);
 }
 
 .kb-search-header {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .kb-search-input {
@@ -103,7 +103,7 @@ function onSelect(article: KnowledgeBaseArticle) {
 }
 
 .kb-search-hint {
-  opacity: 0.75;
+  color: var(--muted);
 }
 
 .kb-search-results {
@@ -112,26 +112,30 @@ function onSelect(article: KnowledgeBaseArticle) {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .kb-search-result {
   cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.kb-search-result:hover {
+  background: #f5fbf9;
 }
 
 .kb-search-result-title {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .kb-search-result-snippet {
-  opacity: 0.8;
-  font-size: 0.9rem;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
 }
 
 .kb-search-result-tags {
-  font-size: 0.8rem;
-  opacity: 0.7;
+  color: var(--muted);
+  font-size: var(--font-size-xs);
 }
 </style>

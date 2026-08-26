@@ -10,6 +10,9 @@ import TicketMessagesSection from '@/modules/tickets/components/TicketMessagesSe
 import TicketAttachmentsSection from '@/modules/tickets/components/TicketAttachmentsSection.vue'
 import EscalateTicketDialog from '@/modules/tickets/components/EscalateTicketDialog.vue'
 import SlaBadge from '@/modules/tickets/components/SlaBadge.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
 import type { TicketPriority, TicketStatus } from '@/types/tickets'
 
 const { t, te } = useI18n()
@@ -171,20 +174,20 @@ function onHistoryToggle(event: Event) {
   <div class="ticket-details-view">
     <h1>{{ t('tickets.details.title') }}</h1>
 
-    <p v-if="store.loadingCurrent">{{ t('common.loading') }}</p>
+    <LoadingState v-if="store.loadingCurrent" :label="t('common.loading')" />
 
-    <div v-else-if="!id || store.notFound">
-      <p>{{ t('tickets.details.notFoundTitle') }}</p>
-      <button type="button" @click="onBack">{{ t('tickets.details.backToList') }}</button>
+    <div v-else-if="!id || store.notFound" class="surface state-card">
+      <p class="text-heading-3">{{ t('tickets.details.notFoundTitle') }}</p>
+      <AppButton variant="secondary" type="button" @click="onBack">{{ t('tickets.details.backToList') }}</AppButton>
     </div>
 
-    <div v-else-if="store.loadError" role="alert">
-      <p>{{ t('tickets.details.errorLoadTitle') }}</p>
-      <button type="button" @click="onRetry">{{ t('tickets.details.retry') }}</button>
+    <div v-else-if="store.loadError" class="surface state-card" role="alert">
+      <p class="text-heading-3">{{ t('tickets.details.errorLoadTitle') }}</p>
+      <AppButton variant="secondary" type="button" @click="onRetry">{{ t('tickets.details.retry') }}</AppButton>
     </div>
 
-    <div v-else-if="store.current">
-      <header class="ticket-header">
+    <div v-else-if="store.current" class="ticket-detail-body">
+      <header class="surface ticket-header">
         <h2>{{ store.current.title }}</h2>
         <div class="sla-badges">
           <SlaBadge :sla="store.current.sla" kind="firstResponse" />
@@ -193,9 +196,9 @@ function onHistoryToggle(event: Event) {
         <EscalateTicketDialog v-if="canEscalate" :ticket-id="id" />
       </header>
 
-      <p v-if="actionErrorText" role="alert">{{ actionErrorText }}</p>
+      <AppAlert v-if="actionErrorText" tone="danger" role="alert">{{ actionErrorText }}</AppAlert>
 
-      <section>
+      <section class="surface ticket-section">
         <p>
           {{ t('tickets.details.status') }}:
           <template v-if="canManage">
@@ -256,11 +259,11 @@ function onHistoryToggle(event: Event) {
         </p>
       </section>
 
-      <section>
+      <section class="surface ticket-section">
         <p>{{ store.current.description }}</p>
       </section>
 
-      <section>
+      <section class="surface ticket-section">
         <p>{{ t('tickets.details.createdAt') }}: {{ formatDate(store.current.createdAtUtc) }}</p>
         <p>{{ t('tickets.details.updatedAt') }}: {{ formatDate(store.current.updatedAtUtc) }}</p>
       </section>
@@ -269,7 +272,7 @@ function onHistoryToggle(event: Event) {
 
       <TicketAttachmentsSection :ticket-id="id" />
 
-      <details class="history-panel" @toggle="onHistoryToggle">
+      <details class="surface history-panel" @toggle="onHistoryToggle">
         <summary>{{ t('tickets.history.title') }}</summary>
 
         <p v-if="store.isLoadingHistory">{{ t('common.loading') }}</p>
@@ -281,7 +284,7 @@ function onHistoryToggle(event: Event) {
         </ul>
       </details>
 
-      <button type="button" @click="onBack">{{ t('tickets.details.backToList') }}</button>
+      <AppButton variant="ghost" type="button" @click="onBack">{{ t('tickets.details.backToList') }}</AppButton>
     </div>
   </div>
 </template>
@@ -289,20 +292,44 @@ function onHistoryToggle(event: Event) {
 <style scoped>
 .ticket-details-view {
   max-width: 40rem;
-  margin: 4rem auto;
+  margin: var(--space-8) auto;
+}
+
+.ticket-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6);
 }
 
 .ticket-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+}
+
+.ticket-section {
+  padding: var(--space-5) var(--space-6);
 }
 
 .sla-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
+}
+
+.history-panel {
+  padding: var(--space-5) var(--space-6);
 }
 
 .history-list {
@@ -310,6 +337,7 @@ function onHistoryToggle(event: Event) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 </style>

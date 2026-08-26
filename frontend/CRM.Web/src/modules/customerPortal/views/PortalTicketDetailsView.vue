@@ -4,6 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useCustomerPortalStore } from '@/stores/customerPortal'
 import { useLocale } from '@/composables/useLocale'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
 
 const { t } = useI18n()
 const { locale } = useLocale()
@@ -47,28 +50,28 @@ function historyLine(entry: NonNullable<typeof store.currentTicket>['history'][n
   <div class="portal-ticket-details-view">
     <h1>{{ t('portal.ticket.details.title') }}</h1>
 
-    <p v-if="justSubmitted && store.currentTicket" class="surface success-banner" role="status">
+    <AppAlert v-if="justSubmitted && store.currentTicket" tone="success" role="status">
       {{ t('portal.ticket.submit.success', { id: store.currentTicket.id }) }}
-    </p>
+    </AppAlert>
 
-    <p v-if="store.loading">{{ t('portal.tickets.loading') }}</p>
+    <LoadingState v-if="store.loading" :label="t('portal.tickets.loading')" />
 
-    <div v-else-if="!id || (!store.currentTicket && !store.error)">
-      <p>{{ t('portal.errors.notFound') }}</p>
-      <button type="button" @click="onBack">{{ t('portal.ticket.details.backToList') }}</button>
+    <div v-else-if="!id || (!store.currentTicket && !store.error)" class="surface state-card">
+      <p class="text-body">{{ t('portal.errors.notFound') }}</p>
+      <AppButton variant="secondary" type="button" @click="onBack">{{ t('portal.ticket.details.backToList') }}</AppButton>
     </div>
 
-    <div v-else-if="store.error" role="alert">
-      <p>{{ t('portal.tickets.error') }}</p>
-      <button type="button" @click="loadTicket">{{ t('portal.tickets.retry') }}</button>
+    <div v-else-if="store.error" class="surface state-card" role="alert">
+      <p class="text-body">{{ t('portal.tickets.error') }}</p>
+      <AppButton variant="secondary" type="button" @click="loadTicket">{{ t('portal.tickets.retry') }}</AppButton>
     </div>
 
-    <div v-else-if="store.currentTicket">
-      <header class="ticket-header">
+    <div v-else-if="store.currentTicket" class="ticket-detail-body">
+      <header class="surface ticket-header">
         <h2>{{ store.currentTicket.title }}</h2>
       </header>
 
-      <section>
+      <section class="surface ticket-section">
         <p>
           {{ t('portal.ticket.details.status') }}:
           {{ t(`tickets.statuses.${store.currentTicket.status}`) }}
@@ -79,11 +82,11 @@ function historyLine(entry: NonNullable<typeof store.currentTicket>['history'][n
         </p>
       </section>
 
-      <section>
+      <section class="surface ticket-section">
         <p>{{ store.currentTicket.description }}</p>
       </section>
 
-      <section>
+      <section class="surface ticket-section">
         <p>{{ t('tickets.details.createdAt') }}: {{ formatDate(store.currentTicket.createdAtUtc) }}</p>
         <p>{{ t('tickets.details.updatedAt') }}: {{ formatDate(store.currentTicket.updatedAtUtc) }}</p>
       </section>
@@ -107,7 +110,7 @@ function historyLine(entry: NonNullable<typeof store.currentTicket>['history'][n
         </ul>
       </section>
 
-      <button type="button" @click="onBack">{{ t('portal.ticket.details.backToList') }}</button>
+      <AppButton variant="ghost" type="button" @click="onBack">{{ t('portal.ticket.details.backToList') }}</AppButton>
     </div>
   </div>
 </template>
@@ -115,21 +118,28 @@ function historyLine(entry: NonNullable<typeof store.currentTicket>['history'][n
 <style scoped>
 .portal-ticket-details-view {
   max-width: 40rem;
-  margin: 4rem auto;
+  margin: var(--space-8) auto;
 }
 
-.success-banner {
-  padding: 12px 16px;
-  margin-bottom: 18px;
-  color: #1a7a3a;
-  background: #e3f6e8;
-  border-radius: 6px;
+.state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6);
 }
 
+.ticket-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.ticket-header,
+.ticket-section,
 .conversation,
 .history {
-  margin-top: 1rem;
-  padding: 1rem;
+  padding: var(--space-5) var(--space-6);
 }
 
 .message-list,
@@ -138,12 +148,13 @@ function historyLine(entry: NonNullable<typeof store.currentTicket>['history'][n
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 .message-meta {
   display: block;
-  opacity: 0.75;
-  font-size: 0.85rem;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
 }
 </style>

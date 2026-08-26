@@ -7,6 +7,8 @@ import { useLocale } from '@/composables/useLocale'
 import CustomerInteractionTimeline from '@/modules/customers/components/CustomerInteractionTimeline.vue'
 import CustomerNotesSection from '@/modules/customers/components/CustomerNotesSection.vue'
 import CustomerAttachmentsSection from '@/modules/customers/components/CustomerAttachmentsSection.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
 
 const { t } = useI18n()
 const { locale } = useLocale()
@@ -62,18 +64,18 @@ function onRetry() {
   <div class="customer-profile-view">
     <h1>{{ t('customers.profile.title') }}</h1>
 
-    <p v-if="store.loadingCurrent">{{ t('customers.loading') }}</p>
+    <LoadingState v-if="store.loadingCurrent" :label="t('customers.loading')" />
 
-    <div v-else-if="!id || store.notFound">
-      <p>{{ t('customers.profile.notFoundTitle') }}</p>
-      <p>{{ t('customers.profile.notFoundBody') }}</p>
-      <button type="button" @click="onBack">{{ t('customers.profile.back') }}</button>
+    <div v-else-if="!id || store.notFound" class="surface state-card">
+      <p class="text-heading-3">{{ t('customers.profile.notFoundTitle') }}</p>
+      <p class="text-body">{{ t('customers.profile.notFoundBody') }}</p>
+      <AppButton variant="secondary" type="button" @click="onBack">{{ t('customers.profile.back') }}</AppButton>
     </div>
 
-    <div v-else-if="store.loadError" role="alert">
-      <p>{{ t('customers.profile.errorLoadTitle') }}</p>
-      <p>{{ t('customers.profile.errorLoadBody') }}</p>
-      <button type="button" @click="onRetry">{{ t('customers.profile.retry') }}</button>
+    <div v-else-if="store.loadError" class="surface state-card" role="alert">
+      <p class="text-heading-3">{{ t('customers.profile.errorLoadTitle') }}</p>
+      <p class="text-body">{{ t('customers.profile.errorLoadBody') }}</p>
+      <AppButton variant="secondary" type="button" @click="onRetry">{{ t('customers.profile.retry') }}</AppButton>
     </div>
 
     <div v-else-if="store.current">
@@ -82,7 +84,7 @@ function onRetry() {
           <h2>{{ store.current.fullName }}</h2>
           <p>{{ store.current.email }}</p>
         </div>
-        <button type="button" @click="onEdit">{{ t('customers.profile.edit') }}</button>
+        <AppButton type="button" @click="onEdit">{{ t('customers.profile.edit') }}</AppButton>
       </header>
 
       <nav class="profile-tabs">
@@ -138,7 +140,7 @@ function onRetry() {
 
       <CustomerAttachmentsSection v-else-if="activeTab === 'attachments'" :customer-id="id" />
 
-      <button type="button" @click="onBack">{{ t('customers.profile.back') }}</button>
+      <AppButton variant="ghost" type="button" @click="onBack">{{ t('customers.profile.back') }}</AppButton>
     </div>
   </div>
 </template>
@@ -146,22 +148,20 @@ function onRetry() {
 <style scoped>
 .customer-profile-view {
   max-width: 40rem;
-  margin: 4rem auto;
+  margin: var(--space-8) auto;
+}
+
+.state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6);
 }
 
 .profile-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-}
-
-.profile-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin: 1rem 0;
-}
-
-.profile-tabs .active {
-  font-weight: bold;
 }
 </style>

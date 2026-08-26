@@ -300,44 +300,46 @@ function isMentionSegment(segment: string): boolean {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .message-item {
-  border-bottom: 1px solid #eee;
-  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-3);
   border-inline-start: 3px solid transparent;
-  padding-inline-start: 0.5rem;
+  padding-inline-start: var(--space-2);
 }
 
 .message-item.internal {
-  border-inline-start-color: #b8860b;
-  background: #fff8e6;
+  border-inline-start-color: var(--color-status-warning);
+  background: var(--color-status-warning-bg);
 }
 
 .message-meta {
   display: flex;
-  gap: 1rem;
-  font-weight: bold;
+  gap: var(--space-4);
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
 }
 
 .internal-badge {
-  color: #b8860b;
+  color: var(--color-status-warning);
 }
 
 .public-badge {
-  color: #2e7d32;
+  color: var(--color-status-success);
 }
 
 .mention-highlight {
-  color: var(--teal-dark, #08665f);
+  color: var(--teal-dark);
 }
 
 .message-form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin: 0.5rem 0;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
 }
 
 .composer-wrap {
@@ -346,7 +348,7 @@ function isMentionSegment(segment: string): boolean {
 
 .mention-dropdown {
   position: absolute;
-  z-index: 10;
+  z-index: var(--z-drawer);
   inset-inline-start: 0;
   top: 100%;
   width: 100%;
@@ -355,28 +357,30 @@ function isMentionSegment(segment: string): boolean {
   margin: 0;
   padding: 0;
   list-style: none;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .mention-option {
-  padding: 0.4rem 0.6rem;
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
 }
 
 .mention-option:hover {
-  background: #f5f5f5;
+  background: #f5fbf9;
 }
 
 .mention-empty {
-  padding: 0.4rem 0.6rem;
+  padding: var(--space-2) var(--space-3);
   color: var(--muted);
 }
 
 .mention-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: var(--space-2);
   list-style: none;
   padding: 0;
   margin: 0;
@@ -385,8 +389,8 @@ function isMentionSegment(segment: string): boolean {
 .mention-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0.5rem;
+  gap: var(--space-1);
+  padding: 0.2rem var(--space-2);
   background: #edf2f2;
   border-radius: 999px;
 }
@@ -400,17 +404,17 @@ function isMentionSegment(segment: string): boolean {
 .internal-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .char-warning {
-  color: #b00020;
+  color: var(--color-status-danger);
 }
 
 .message-form-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .quick-reply-control {
@@ -419,21 +423,21 @@ function isMentionSegment(segment: string): boolean {
 
 .quick-reply-popover {
   position: absolute;
-  z-index: 10;
+  z-index: var(--z-drawer);
   inset-inline-start: 0;
   bottom: 100%;
   width: 20rem;
-  padding: 0.75rem;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
 }
 
 .quick-reply-list {
   list-style: none;
   padding: 0;
-  margin: 0.5rem 0 0;
+  margin: var(--space-2) 0 0;
   max-height: 14rem;
   overflow-y: auto;
 }
@@ -441,12 +445,13 @@ function isMentionSegment(segment: string): boolean {
 .quick-reply-list li {
   display: flex;
   flex-direction: column;
-  padding: 0.4rem;
+  padding: var(--space-2);
   cursor: pointer;
+  border-radius: var(--radius-sm);
 }
 
 .quick-reply-list li:hover {
-  background: #f5f5f5;
+  background: #f5fbf9;
 }
 
 .quick-reply-list span {
@@ -462,7 +467,7 @@ function isMentionSegment(segment: string): boolean {
     inset: auto 0 0 0;
     width: 100%;
     max-height: 60vh;
-    border-radius: 12px 12px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 }
 
@@ -473,7 +478,8 @@ function isMentionSegment(segment: string): boolean {
 
 .skeleton li {
   height: 2rem;
-  margin-bottom: 0.5rem;
-  background: #eee;
+  margin-bottom: var(--space-2);
+  background: var(--canvas);
+  border-radius: var(--radius-sm);
 }
 </style>

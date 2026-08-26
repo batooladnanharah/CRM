@@ -90,13 +90,15 @@ function onNext() {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .timeline-meta {
   display: flex;
-  gap: 1rem;
-  font-weight: bold;
+  gap: var(--space-4);
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
 }
 
 .skeleton {
@@ -106,14 +108,8 @@ function onNext() {
 
 .skeleton li {
   height: 2rem;
-  margin-bottom: 0.5rem;
-  background: #eee;
-}
-
-.pagination {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin-top: 1rem;
+  margin-bottom: var(--space-2);
+  background: var(--canvas);
+  border-radius: var(--radius-sm);
 }
 </style>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { useId } from 'vue'
+import { computed, useId } from 'vue'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
+    id?: string
     label?: string
     modelValue?: string | number
     type?: string
@@ -10,6 +11,7 @@ withDefaults(
     help?: string
     disabled?: boolean
     placeholder?: string
+    autocomplete?: string
   }>(),
   {
     type: 'text',
@@ -17,8 +19,10 @@ withDefaults(
 )
 
 defineEmits<{ 'update:modelValue': [value: string] }>()
+defineOptions({ inheritAttrs: false })
 
-const inputId = useId()
+const generatedId = useId()
+const inputId = computed(() => props.id ?? generatedId)
 </script>
 
 <template>
@@ -26,12 +30,14 @@ const inputId = useId()
     <label v-if="label" :for="inputId">{{ label }}</label>
     <input
       :id="inputId"
+      v-bind="$attrs"
       class="ui-input"
       :class="{ 'ui-input--error': !!error }"
       :type="type"
       :value="modelValue"
       :disabled="disabled"
       :placeholder="placeholder"
+      :autocomplete="autocomplete"
       :aria-invalid="!!error"
       :aria-describedby="error ? `${inputId}-error` : help ? `${inputId}-help` : undefined"
       @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"

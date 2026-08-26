@@ -3,6 +3,11 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocale } from '@/composables/useLocale'
 import { useCommunicationChannelsStore } from '@/stores/communicationChannels'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import type { Channel } from '@/types/communicationChannels'
 
 const { t } = useI18n()
@@ -83,12 +88,12 @@ async function onSelect(channel: Channel) {
         <p class="eyebrow">{{ t('navigation.workspace') }}</p>
         <h1>{{ t('communicationChannels.title') }}</h1>
       </div>
-      <button type="button" @click="openAddForm" :disabled="isAdding">
+      <AppButton type="button" @click="openAddForm" :disabled="isAdding">
         {{ t('communicationChannels.new') }}
-      </button>
+      </AppButton>
     </div>
 
-    <p v-if="store.error" role="alert">{{ t(`communicationChannels.errors.${store.error}`) }}</p>
+    <AppAlert v-if="store.error" tone="danger" role="alert">{{ t(`communicationChannels.errors.${store.error}`) }}</AppAlert>
 
     <div class="channels-layout">
       <section class="surface channels-pane">
@@ -99,17 +104,15 @@ async function onSelect(channel: Channel) {
           <input id="channel-name" v-model="draftName" type="text" maxlength="200" />
           <p class="channel-type-hint">{{ t('communicationChannels.fields.typeEmailOnly') }}</p>
           <div class="form-actions">
-            <button type="submit" :disabled="store.saving || !draftName.trim()">
+            <AppButton type="submit" :loading="store.saving" :disabled="!draftName.trim()">
               {{ store.saving ? t('quickReplies.saving') : t('common.save') }}
-            </button>
-            <button type="button" @click="cancelAdd">{{ t('common.cancel') }}</button>
+            </AppButton>
+            <AppButton variant="secondary" type="button" @click="cancelAdd">{{ t('common.cancel') }}</AppButton>
           </div>
         </form>
 
-        <p v-if="store.loading">{{ t('common.loading') }}</p>
-        <div v-else-if="store.channels.length === 0 && !isAdding" class="empty-state">
-          <p>{{ t('communicationChannels.empty') }}</p>
-        </div>
+        <LoadingState v-if="store.loading" />
+        <EmptyState v-else-if="store.channels.length === 0 && !isAdding" :description="t('communicationChannels.empty')" />
 
         <ul v-else class="channels-list">
           <li
@@ -121,15 +124,15 @@ async function onSelect(channel: Channel) {
             <button type="button" class="channel-select" @click="onSelect(channel)">
               <strong>{{ channel.name }}</strong>
               <span>{{ channel.type }}</span>
-              <span v-if="!channel.isEnabled" class="disabled-badge">
+              <AppBadge v-if="!channel.isEnabled" tone="neutral">
                 {{ t('communicationChannels.disabledBadge') }}
-              </span>
+              </AppBadge>
             </button>
             <div class="channel-actions">
-              <button type="button" @click="onToggleEnabled(channel)">
+              <AppButton variant="ghost" size="sm" type="button" @click="onToggleEnabled(channel)">
                 {{ channel.isEnabled ? t('communicationChannels.disable') : t('communicationChannels.enable') }}
-              </button>
-              <button type="button" @click="onDelete(channel)">{{ t('quickReplies.delete') }}</button>
+              </AppButton>
+              <AppButton variant="ghost" size="sm" type="button" @click="onDelete(channel)">{{ t('quickReplies.delete') }}</AppButton>
             </div>
           </li>
         </ul>
@@ -138,17 +141,13 @@ async function onSelect(channel: Channel) {
       <section class="surface emails-pane">
         <h3>{{ t('communicationChannels.emailsHeading') }}</h3>
 
-        <div v-if="!selectedChannel" class="empty-state">
-          <p>{{ t('communicationChannels.selectChannelPrompt') }}</p>
-        </div>
+        <EmptyState v-if="!selectedChannel" :description="t('communicationChannels.selectChannelPrompt')" />
 
         <template v-else>
           <p class="selected-channel-name">{{ selectedChannel.name }}</p>
 
-          <p v-if="store.emailsLoading">{{ t('common.loading') }}</p>
-          <div v-else-if="store.emails.length === 0" class="empty-state">
-            <p>{{ t('communicationChannels.emptyEmails') }}</p>
-          </div>
+          <LoadingState v-if="store.emailsLoading" />
+          <EmptyState v-else-if="store.emails.length === 0" :description="t('communicationChannels.emptyEmails')" />
 
           <div v-else class="table-wrap">
             <table>
@@ -179,25 +178,25 @@ async function onSelect(channel: Channel) {
 <style scoped>
 .communication-channels-view {
   max-width: 70rem;
-  margin: 4rem auto;
+  margin: var(--space-8) auto;
 }
 
 .channels-layout {
   display: grid;
   grid-template-columns: 1fr 2fr;
-  gap: 18px;
+  gap: var(--space-5);
 }
 
 .channels-pane,
 .emails-pane {
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 .channel-form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
 
 .channel-type-hint {
@@ -206,7 +205,7 @@ async function onSelect(channel: Channel) {
 
 .form-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .channels-list {
@@ -214,54 +213,39 @@ async function onSelect(channel: Channel) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .channel-item {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  border: 1px solid #eee;
-  border-radius: 6px;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
 }
 
 .channel-item.selected {
-  border-color: var(--teal, #0d8b83);
+  border-color: var(--teal);
 }
 
 .channel-select {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.15rem;
+  gap: var(--space-1);
   padding: 0;
   color: inherit;
   background: transparent;
 }
 
-.disabled-badge {
-  color: var(--muted);
-}
-
 .channel-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .selected-channel-name {
-  font-weight: bold;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
+  font-weight: 700;
 }
 
 .truncate {

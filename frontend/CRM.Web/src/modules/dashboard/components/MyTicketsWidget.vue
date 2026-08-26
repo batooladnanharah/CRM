@@ -61,22 +61,19 @@ function onRowClick(id: string) {
 
 <style scoped>
 .widget {
-  padding: 20px;
+  padding: var(--space-5);
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
+.widget h3 {
+  margin: 0 0 var(--space-4);
 }
 
 .clickable-row {
   cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: #f5fbf9;
 }
 
 .truncate {
@@ -93,7 +90,8 @@ td {
 
 .skeleton li {
   height: 2rem;
-  margin-bottom: 0.5rem;
-  background: #eee;
+  margin-bottom: var(--space-2);
+  background: var(--canvas);
+  border-radius: var(--radius-sm);
 }
 </style>

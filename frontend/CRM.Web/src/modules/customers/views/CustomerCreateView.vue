@@ -3,6 +3,9 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCustomersStore } from '@/stores/customers'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -59,35 +62,52 @@ function onCancel() {
 <template>
   <div class="customer-create-view"><div class="page-heading"><div><p class="eyebrow">{{ t('customers.title') }}</p><h1>{{ t('customers.create.title') }}</h1></div></div>
 
-    <form class="surface form-surface" novalidate @submit.prevent="onSubmit"><div class="form-grid">
-      <div class="field"><label for="customer-fullName">{{ t('customers.create.fields.fullName') }}</label>
-      <input id="customer-fullName" v-model="fullName" type="text" maxlength="200" required />
+    <form class="surface form-surface" novalidate @submit.prevent="onSubmit">
+      <div class="form-grid">
+        <AppInput
+          id="customer-fullName"
+          v-model="fullName"
+          :label="t('customers.create.fields.fullName')"
+          type="text"
+          maxlength="200"
+          required
+        />
+        <AppInput
+          id="customer-email"
+          v-model="email"
+          :label="t('customers.create.fields.email')"
+          type="email"
+          maxlength="320"
+          required
+        />
+        <AppInput
+          id="customer-phone"
+          v-model="phone"
+          :label="t('customers.create.fields.phone')"
+          type="tel"
+          maxlength="32"
+        />
+        <AppInput
+          id="customer-company"
+          v-model="company"
+          :label="t('customers.create.fields.company')"
+          type="text"
+          maxlength="200"
+        />
       </div>
 
-      <div class="field"><label for="customer-email">{{ t('customers.create.fields.email') }}</label>
-      <input id="customer-email" v-model="email" type="email" maxlength="320" required />
-      </div>
-
-      <div class="field"><label for="customer-phone">{{ t('customers.create.fields.phone') }}</label>
-      <input id="customer-phone" v-model="phone" type="tel" maxlength="32" />
-      </div>
-
-      <div class="field"><label for="customer-company">{{ t('customers.create.fields.company') }}</label>
-      <input id="customer-company" v-model="company" type="text" maxlength="200" />
-      </div></div>
-
-      <p v-if="fieldError" role="alert" aria-live="polite" class="error">
+      <AppAlert v-if="fieldError" tone="danger" role="alert" aria-live="polite">
         {{ fieldError }}
-      </p>
-      <p v-else-if="store.createError" role="alert" aria-live="polite" class="error">
+      </AppAlert>
+      <AppAlert v-else-if="store.createError" tone="danger" role="alert" aria-live="polite">
         {{ t(`customers.errors.${store.createError}`) }}
-      </p>
+      </AppAlert>
 
       <div class="form-actions">
-        <button class="secondary-button" type="button" @click="onCancel">{{ t('customers.create.actions.cancel') }}</button>
-        <button type="submit" :disabled="store.creating">
+        <AppButton variant="secondary" type="button" @click="onCancel">{{ t('customers.create.actions.cancel') }}</AppButton>
+        <AppButton type="submit" :loading="store.creating">
           {{ t('customers.create.actions.submit') }}
-        </button>
+        </AppButton>
       </div>
     </form>
   </div>
@@ -96,22 +116,6 @@ function onCancel() {
 <style scoped>
 .customer-create-view {
   max-width: 30rem;
-  margin: 4rem auto;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.error {
-  color: #b00020;
+  margin: var(--space-8) auto;
 }
 </style>

@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomerPortalStore } from '@/stores/customerPortal'
 import { useLocale } from '@/composables/useLocale'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
 
 const { t } = useI18n()
 const { locale } = useLocale()
@@ -34,10 +36,10 @@ onMounted(loadDashboard)
       </div>
     </div>
 
-    <p v-if="store.error" role="alert" class="portal-error">
+    <AppAlert v-if="store.error" tone="danger" class="portal-error">
       {{ t('portal.tickets.error') }}
-      <button type="button" @click="loadDashboard">{{ t('portal.tickets.retry') }}</button>
-    </p>
+      <AppButton variant="secondary" size="sm" type="button" @click="loadDashboard">{{ t('portal.tickets.retry') }}</AppButton>
+    </AppAlert>
 
     <div v-if="store.loading" class="surface metrics-strip">
       <div class="metric-tile skeleton"></div>
@@ -91,53 +93,60 @@ onMounted(loadDashboard)
 <style scoped>
 .portal-dashboard-view {
   max-width: 60rem;
-  margin: 4rem auto;
+  margin: var(--space-8) auto;
 }
 
 .portal-error {
-  padding: 12px 16px;
-  margin-bottom: 18px;
-  color: #b00020;
-  background: #fdecea;
-  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
 }
 
 .metrics-strip {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin-bottom: 24px;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .metric-tile {
   display: block;
-  padding: 20px;
+  padding: var(--space-5);
   text-decoration: none;
   color: inherit;
+  transition: box-shadow 0.15s ease;
+}
+
+.metric-tile:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .metric-label {
   display: block;
+  color: var(--muted);
   text-transform: uppercase;
-  font-size: 0.7rem;
+  font-size: var(--font-size-xs);
   letter-spacing: 0.08em;
 }
 
 .metric-tile strong {
   display: block;
-  margin-top: 10px;
+  margin-top: var(--space-3);
+  color: var(--navy);
   font-size: 2rem;
 }
 
 .skeleton {
   height: 5.5rem;
-  background: #eee;
+  background: var(--canvas);
 }
 
 .portal-cta-row {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
 
 .recent-tickets-list {
@@ -145,13 +154,13 @@ onMounted(loadDashboard)
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .recent-ticket-meta {
   display: block;
-  opacity: 0.75;
-  font-size: 0.85rem;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
 }
 
 @media (max-width: 700px) {

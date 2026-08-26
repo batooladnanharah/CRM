@@ -4,6 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCustomerPortalStore } from '@/stores/customerPortal'
 import { useLocale } from '@/composables/useLocale'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 
 const { t } = useI18n()
 const { locale } = useLocale()
@@ -41,17 +45,16 @@ onMounted(loadTickets)
       </router-link>
     </div>
 
-    <p v-if="store.loading">{{ t('portal.tickets.loading') }}</p>
-    <p v-else-if="store.error" role="alert" class="portal-error">
+    <LoadingState v-if="store.loading" :label="t('portal.tickets.loading')" />
+    <AppAlert v-else-if="store.error" tone="danger" class="portal-error">
       {{ t('portal.tickets.error') }}
-      <button type="button" @click="loadTickets">{{ t('portal.tickets.retry') }}</button>
-    </p>
-    <div v-else-if="store.tickets.length === 0" class="surface empty-state">
-      <p>{{ t('portal.tickets.empty') }}</p>
+      <AppButton variant="secondary" size="sm" type="button" @click="loadTickets">{{ t('portal.tickets.retry') }}</AppButton>
+    </AppAlert>
+    <EmptyState v-else-if="store.tickets.length === 0" :title="t('portal.tickets.empty')">
       <router-link class="button" :to="{ name: 'portal-ticket-create' }">
         {{ t('portal.tickets.emptyCta') }}
       </router-link>
-    </div>
+    </EmptyState>
 
     <div v-else class="surface table-wrap">
       <table>
@@ -84,26 +87,14 @@ onMounted(loadTickets)
 <style scoped>
 .portal-tickets-view {
   max-width: 60rem;
-  margin: 4rem auto;
+  margin: var(--space-8) auto;
 }
 
 .portal-error {
-  padding: 12px 16px;
-  margin-bottom: 18px;
-  color: #b00020;
-  background: #fdecea;
-  border-radius: 6px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
 }
 
 .clickable-row {

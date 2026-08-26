@@ -2,6 +2,10 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSlaPoliciesStore } from '@/stores/sla'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import type { SlaPolicy, TicketPriority } from '@/types/tickets'
 
 const PRIORITIES: TicketPriority[] = ['Low', 'Normal', 'High', 'Urgent']
@@ -119,12 +123,12 @@ async function onDelete(policy: SlaPolicy) {
         <p class="eyebrow">{{ t('navigation.workspace') }}</p>
         <h1>{{ t('sla.policies.title') }}</h1>
       </div>
-      <button type="button" @click="openAddForm" :disabled="isAdding">
+      <AppButton type="button" @click="openAddForm" :disabled="isAdding">
         {{ t('sla.policies.new') }}
-      </button>
+      </AppButton>
     </div>
 
-    <p v-if="store.error" role="alert">{{ t(`sla.policies.errors.${store.error}`) }}</p>
+    <AppAlert v-if="store.error" tone="danger" role="alert">{{ t(`sla.policies.errors.${store.error}`) }}</AppAlert>
 
     <form v-if="isAdding" class="surface sla-policy-form" @submit.prevent="submitAdd">
       <div class="field">
@@ -165,17 +169,15 @@ async function onDelete(policy: SlaPolicy) {
         {{ t('sla.policies.fields.isDefault') }}
       </label>
       <div class="form-actions">
-        <button type="submit" :disabled="store.saving || !isDraftValid()">
+        <AppButton type="submit" :loading="store.saving" :disabled="!isDraftValid()">
           {{ store.saving ? t('sla.policies.saving') : t('common.save') }}
-        </button>
-        <button type="button" @click="cancelForm">{{ t('common.cancel') }}</button>
+        </AppButton>
+        <AppButton variant="secondary" type="button" @click="cancelForm">{{ t('common.cancel') }}</AppButton>
       </div>
     </form>
 
-    <p v-if="store.loading">{{ t('sla.policies.loading') }}</p>
-    <div v-else-if="store.items.length === 0 && !isAdding" class="surface empty-state">
-      <p>{{ t('sla.policies.empty') }}</p>
-    </div>
+    <LoadingState v-if="store.loading" :label="t('sla.policies.loading')" />
+    <EmptyState v-else-if="store.items.length === 0 && !isAdding" :description="t('sla.policies.empty')" />
 
     <div v-else class="surface table-wrap">
       <table>
@@ -219,10 +221,10 @@ async function onDelete(policy: SlaPolicy) {
                     {{ t('sla.policies.fields.isActive') }}
                   </label>
                   <div class="form-actions">
-                    <button type="submit" :disabled="store.saving">
+                    <AppButton type="submit" :loading="store.saving">
                       {{ store.saving ? t('sla.policies.saving') : t('common.save') }}
-                    </button>
-                    <button type="button" @click="cancelForm">{{ t('common.cancel') }}</button>
+                    </AppButton>
+                    <AppButton variant="secondary" type="button" @click="cancelForm">{{ t('common.cancel') }}</AppButton>
                   </div>
                 </form>
               </td>
@@ -236,8 +238,8 @@ async function onDelete(policy: SlaPolicy) {
               <td>{{ policy.isDefault ? '✓' : '' }}</td>
               <td>{{ policy.isActive ? '✓' : '' }}</td>
               <td>
-                <button type="button" @click="startEdit(policy)">{{ t('sla.policies.edit') }}</button>
-                <button type="button" @click="onDelete(policy)">{{ t('sla.policies.delete') }}</button>
+                <AppButton variant="ghost" size="sm" type="button" @click="startEdit(policy)">{{ t('sla.policies.edit') }}</AppButton>
+                <AppButton variant="ghost" size="sm" type="button" @click="onDelete(policy)">{{ t('sla.policies.delete') }}</AppButton>
               </td>
             </tr>
           </template>
@@ -250,37 +252,26 @@ async function onDelete(policy: SlaPolicy) {
 <style scoped>
 .sla-policies-view {
   max-width: 72rem;
-  margin: 4rem auto;
+  margin: var(--space-8) auto;
 }
 
 .sla-policy-form,
 .sla-policy-inline-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 20px;
-  margin-bottom: 18px;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
 }
 
 .active-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .form-actions {
   display: flex;
-  gap: 0.5rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
+  gap: var(--space-2);
 }
 </style>

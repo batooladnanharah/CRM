@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useLocale } from '@/composables/useLocale'
 import KnowledgeBaseSearchDialog from '@/modules/knowledgeBase/components/KnowledgeBaseSearchDialog.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -131,13 +132,14 @@ async function onLogout() {
   <div class="app-shell">
     <div v-if="sidebarOpen" class="sidebar-backdrop" @click="closeSidebar"></div>
     <aside class="sidebar" :class="{ 'is-open': sidebarOpen, 'is-expanded': sidebarExpanded }" @mouseenter="sidebarExpanded = true" @mouseleave="sidebarExpanded = false">
-      <button
+      <AppButton
         class="sidebar-toggle"
-        type="button"
+        variant="ghost"
+        size="sm"
         :aria-label="t('navigation.openMenu')"
         :aria-expanded="sidebarExpanded"
         @click="toggleSidebarExpanded"
-      >☰</button>
+      >☰</AppButton>
       <div class="brand-lockup">
         <span class="brand-mark">C</span>
         <div>
@@ -169,23 +171,24 @@ async function onLogout() {
 
     <div class="shell-content">
       <header class="topbar">
-        <button class="icon-button menu-toggle" type="button" :aria-label="t('navigation.openMenu')" @click="sidebarOpen = true">☰</button>
+        <AppButton class="icon-button menu-toggle" variant="ghost" size="sm" :aria-label="t('navigation.openMenu')" @click="sidebarOpen = true">☰</AppButton>
         <div class="breadcrumbs"><span>{{ t('app.name') }}</span><span aria-hidden="true">/</span><strong>{{ currentTitle() }}</strong></div>
         <div class="topbar-actions">
-          <button
+          <AppButton
             v-if="authStore.isAdmin || authStore.isAgent"
             class="icon-button"
-            type="button"
+            variant="ghost"
+            size="sm"
             :aria-label="t('knowledgeBase.searchPlaceholder')"
             :title="t('knowledgeBase.searchPlaceholder')"
             @click="knowledgeBaseSearchOpen = true"
-          >🔍</button>
-          <button class="language-button" type="button" @click="toggleLocale">{{ locale === 'en' ? 'عربي' : 'EN' }}</button>
+          >🔍</AppButton>
+          <AppButton class="language-button" variant="ghost" size="sm" @click="toggleLocale">{{ locale === 'en' ? 'عربي' : 'EN' }}</AppButton>
           <div class="user-chip">
             <span class="avatar">{{ authStore.user?.name?.charAt(0).toUpperCase() }}</span>
             <span class="user-details"><strong>{{ authStore.user?.name }}</strong><small>{{ authStore.user?.roles[0] }}</small></span>
           </div>
-          <button class="icon-button" type="button" :aria-label="t('dashboard.logout')" :title="t('dashboard.logout')" @click="onLogout">↪</button>
+          <AppButton class="icon-button" variant="ghost" size="sm" :aria-label="t('dashboard.logout')" :title="t('dashboard.logout')" @click="onLogout">↪</AppButton>
         </div>
       </header>
       <main class="page-content"><router-view /></main>

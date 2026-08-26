@@ -7,6 +7,8 @@ import MetricsStrip from '@/modules/dashboard/components/MetricsStrip.vue'
 import MyTicketsWidget from '@/modules/dashboard/components/MyTicketsWidget.vue'
 import MyTasksWidget from '@/modules/dashboard/components/MyTasksWidget.vue'
 import RecentCustomersWidget from '@/modules/dashboard/components/RecentCustomersWidget.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -29,12 +31,12 @@ function onRefresh() {
         <h1>{{ t('dashboard.title') }}</h1>
         <p>{{ t('dashboard.greeting', { name: authStore.user?.name ?? '' }) }}</p>
       </div>
-      <button type="button" @click="onRefresh">{{ t('dashboard.refresh') }}</button>
+      <AppButton variant="secondary" @click="onRefresh">{{ t('dashboard.refresh') }}</AppButton>
     </div>
 
-    <p v-if="store.error" role="alert" class="dashboard-error">
+    <AppAlert v-if="store.error" tone="danger" class="dashboard-error">
       {{ t('dashboard.errors.loadFailed') }}
-    </p>
+    </AppAlert>
 
     <MetricsStrip :summary="store.summary" :loading="store.loading" />
 
@@ -57,11 +59,7 @@ function onRefresh() {
 }
 
 .dashboard-error {
-  padding: 12px 16px;
-  margin-bottom: 18px;
-  color: #b00020;
-  background: #fdecea;
-  border-radius: 6px;
+  margin-bottom: var(--space-5);
 }
 
 .dashboard-row {

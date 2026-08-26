@@ -5,6 +5,11 @@ import { useRouter } from 'vue-router'
 import { useTicketsStore } from '@/stores/tickets'
 import { useLocale } from '@/composables/useLocale'
 import SlaBadge from '@/modules/tickets/components/SlaBadge.vue'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppPagination from '@/components/ui/AppPagination.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import ErrorState from '@/components/ui/ErrorState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import type { SlaStatus, TicketPriority, TicketSla, TicketStatus } from '@/types/tickets'
 
 const SLA_SEVERITY: Record<SlaStatus, number> = {
@@ -29,18 +34,12 @@ const store = useTicketsStore()
 const STATUSES: TicketStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed']
 const PRIORITIES: TicketPriority[] = ['Low', 'Normal', 'High', 'Urgent']
 
-const totalPages = computed(() => Math.max(1, Math.ceil(store.total / store.pageSize)))
-
 const dateFormatter = computed(
   () => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }),
 )
 
 function formatDate(value: string): string {
   return dateFormatter.value.format(new Date(value))
-}
-
-function onSearchInput(event: Event) {
-  store.setSearch((event.target as HTMLInputElement).value)
 }
 
 function onStatusChange(event: Event) {
@@ -51,18 +50,6 @@ function onStatusChange(event: Event) {
 function onPriorityChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value as TicketPriority | ''
   store.setFilters({ priority: value })
-}
-
-function onPrev() {
-  if (store.page > 1) {
-    store.setPage(store.page - 1)
-  }
-}
-
-function onNext() {
-  if (store.page < totalPages.value) {
-    store.setPage(store.page + 1)
-  }
 }
 
 function onRowClick(id: string) {
@@ -88,13 +75,13 @@ onMounted(() => {
 
     <div class="surface toolbar">
       <div class="toolbar-field">
-        <label for="ticket-search">{{ t('common.search') }}</label>
-        <input
+        <AppInput
           id="ticket-search"
+          :label="t('common.search')"
           type="search"
           :placeholder="t('tickets.list.search')"
-          :value="store.search"
-          @input="onSearchInput"
+          :model-value="store.search"
+          @update:model-value="store.setSearch"
         />
       </div>
 
@@ -119,11 +106,9 @@ onMounted(() => {
       </div>
     </div>
 
-    <p v-if="store.loading">{{ t('common.loading') }}</p>
-    <p v-else-if="store.error" role="alert">{{ t('tickets.errors.errorLoad') }}</p>
-    <div v-else-if="store.items.length === 0" class="surface empty-state">
-      <p>{{ t('tickets.list.empty') }}</p>
-    </div>
+    <LoadingState v-if="store.loading" />
+    <ErrorState v-else-if="store.error" :retryable="false" :message="t('tickets.errors.errorLoad')" />
+    <EmptyState v-else-if="store.items.length === 0" :description="t('tickets.list.empty')" />
 
     <div v-else class="surface table-wrap">
       <table>
@@ -155,43 +140,18 @@ onMounted(() => {
       </table>
     </div>
 
-    <div class="pagination">
-      <button type="button" :disabled="store.page <= 1" @click="onPrev">
-        {{ t('customers.pagination.prev') }}
-      </button>
-      <span>{{ t('customers.pagination.pageOf', { page: store.page, totalPages }) }}</span>
-      <button type="button" :disabled="store.page >= totalPages" @click="onNext">
-        {{ t('customers.pagination.next') }}
-      </button>
-    </div>
+    <AppPagination
+      v-if="store.items.length > 0"
+      :page="store.page"
+      :page-size="store.pageSize"
+      :total-count="store.total"
+      @update:page="store.setPage"
+    />
   </div>
 </template>
 
 <style scoped>
-.tickets-list-view {
-  max-width: 60rem;
-  margin: 4rem auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
-}
-
 .clickable-row {
   cursor: pointer;
-}
-
-.pagination {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin-top: 1rem;
 }
 </style>

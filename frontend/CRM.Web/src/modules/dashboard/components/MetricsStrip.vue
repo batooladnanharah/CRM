@@ -39,15 +39,20 @@ const { t } = useI18n()
 .metrics-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-bottom: 24px;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .metric-tile {
   display: block;
-  padding: 20px;
+  padding: var(--space-5);
   text-decoration: none;
   color: inherit;
+  transition: box-shadow 0.15s ease;
+}
+
+.metric-tile:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .metric-label {
@@ -60,19 +65,20 @@ const { t } = useI18n()
 
 .metric-tile strong {
   display: block;
-  margin-top: 10px;
+  margin-top: var(--space-3);
   color: var(--navy);
   font-size: 2rem;
 }
 
 .skeleton {
   height: 5.5rem;
-  background: #eee;
+  background: var(--canvas);
 }
 
 @media (max-width: 700px) {
   .metrics-strip {
     grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
   }
 }
 </style>

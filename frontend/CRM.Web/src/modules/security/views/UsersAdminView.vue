@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSecurityStore } from '@/stores/security'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
+import AppPagination from '@/components/ui/AppPagination.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import ErrorState from '@/components/ui/ErrorState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import type { AdminRole, AdminUserListItem } from '@/types/security'
 
 const ROLES: AdminRole[] = ['admin', 'agent', 'customer']
@@ -11,14 +19,8 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const store = useSecurityStore()
 
-const totalPages = computed(() => Math.max(1, Math.ceil(store.usersTotalCount / store.usersPageSize)))
-
 function isSelf(user: AdminUserListItem): boolean {
   return user.id === authStore.user?.id
-}
-
-function onSearchInput(event: Event) {
-  store.setUsersSearch((event.target as HTMLInputElement).value)
 }
 
 function onRoleFilterChange(event: Event) {
@@ -62,18 +64,6 @@ async function onEnable(user: AdminUserListItem) {
   }
 }
 
-function onPrev() {
-  if (store.usersPage > 1) {
-    store.setUsersPage(store.usersPage - 1)
-  }
-}
-
-function onNext() {
-  if (store.usersPage < totalPages.value) {
-    store.setUsersPage(store.usersPage + 1)
-  }
-}
-
 onMounted(() => {
   void store.fetchUsers()
 })
@@ -90,12 +80,12 @@ onMounted(() => {
 
     <div class="surface toolbar">
       <div class="toolbar-field">
-        <label for="users-search">{{ t('common.search') }}</label>
-        <input
+        <AppInput
           id="users-search"
+          :label="t('common.search')"
           type="search"
-          :value="store.usersSearch"
-          @input="onSearchInput"
+          :model-value="store.usersSearch"
+          @update:model-value="store.setUsersSearch"
         />
       </div>
       <div class="toolbar-field">
@@ -115,15 +105,13 @@ onMounted(() => {
       </div>
     </div>
 
-    <p v-if="store.mutateError" role="alert">
+    <AppAlert v-if="store.mutateError" tone="danger" role="alert">
       {{ store.mutateError === 'cannot_modify_self' ? t('security.users.confirmSelf') : store.mutateError }}
-    </p>
+    </AppAlert>
 
-    <p v-if="store.usersLoading">{{ t('common.loading') }}</p>
-    <p v-else-if="store.usersError" role="alert">{{ t('security.users.errorLoad') }}</p>
-    <div v-else-if="store.users.length === 0" class="surface empty-state">
-      <p>{{ t('security.users.empty') }}</p>
-    </div>
+    <LoadingState v-if="store.usersLoading" />
+    <ErrorState v-else-if="store.usersError" :retryable="false" :message="t('security.users.errorLoad')" />
+    <EmptyState v-else-if="store.users.length === 0" :description="t('security.users.empty')" />
 
     <div v-else class="surface table-wrap">
       <table>
@@ -149,71 +137,51 @@ onMounted(() => {
                 <option v-for="role in ROLES" :key="role" :value="role">{{ role }}</option>
               </select>
             </td>
-            <td>{{ user.isDisabled ? t('security.users.disabled') : t('security.users.enabled') }}</td>
             <td>
-              <button
+              <AppBadge :tone="user.isDisabled ? 'danger' : 'success'">
+                {{ user.isDisabled ? t('security.users.disabled') : t('security.users.enabled') }}
+              </AppBadge>
+            </td>
+            <td>
+              <AppButton
                 v-if="!user.isDisabled"
+                variant="ghost"
+                size="sm"
                 type="button"
                 :disabled="isSelf(user) || store.mutating"
                 @click="onDisable(user)"
               >
                 {{ t('security.users.actions.disable') }}
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 v-else
+                variant="ghost"
+                size="sm"
                 type="button"
                 :disabled="store.mutating"
                 @click="onEnable(user)"
               >
                 {{ t('security.users.actions.enable') }}
-              </button>
+              </AppButton>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="pagination">
-      <button type="button" :disabled="store.usersPage <= 1" @click="onPrev">
-        {{ t('customers.pagination.prev') }}
-      </button>
-      <span>{{ t('customers.pagination.pageOf', { page: store.usersPage, totalPages }) }}</span>
-      <button type="button" :disabled="store.usersPage >= totalPages" @click="onNext">
-        {{ t('customers.pagination.next') }}
-      </button>
-    </div>
+    <AppPagination
+      v-if="store.users.length > 0"
+      :page="store.usersPage"
+      :page-size="store.usersPageSize"
+      :total-count="store.usersTotalCount"
+      @update:page="store.setUsersPage"
+    />
   </div>
 </template>
 
 <style scoped>
 .users-admin-view {
   max-width: 60rem;
-  margin: 4rem auto;
-}
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
-}
-
-.pagination {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin-top: 1rem;
+  margin: var(--space-8) auto;
 }
 </style>

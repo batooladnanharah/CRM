@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTicketsStore } from '@/stores/tickets'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
 
 const props = defineProps<{ ticketId: string }>()
 
@@ -46,20 +48,20 @@ async function submit() {
 
 <template>
   <div class="escalate-ticket-dialog">
-    <button v-if="!isOpen" type="button" @click="open">{{ t('tickets.escalate.button') }}</button>
+    <AppButton v-if="!isOpen" variant="secondary" size="sm" type="button" @click="open">{{ t('tickets.escalate.button') }}</AppButton>
 
     <form v-else class="escalate-form" @submit.prevent="submit">
       <label for="escalate-reason">{{ t('tickets.escalate.reasonLabel') }}</label>
       <textarea id="escalate-reason" v-model="reason" maxlength="500" rows="3" required></textarea>
       <div class="escalate-actions">
-        <button type="submit" :disabled="store.escalating || !reason.trim()">
+        <AppButton type="submit" size="sm" :loading="store.escalating" :disabled="!reason.trim()">
           {{ t('tickets.escalate.submit') }}
-        </button>
-        <button type="button" @click="cancel">{{ t('tickets.escalate.cancel') }}</button>
+        </AppButton>
+        <AppButton variant="ghost" size="sm" type="button" @click="cancel">{{ t('tickets.escalate.cancel') }}</AppButton>
       </div>
     </form>
 
-    <p v-if="errorText" role="alert">{{ errorText }}</p>
+    <AppAlert v-if="errorText" tone="danger" role="alert">{{ errorText }}</AppAlert>
   </div>
 </template>
 
@@ -67,12 +69,12 @@ async function submit() {
 .escalate-form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .escalate-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 </style>

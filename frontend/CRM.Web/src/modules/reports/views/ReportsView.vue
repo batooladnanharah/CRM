@@ -2,6 +2,10 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useReportsStore } from '@/stores/reports'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
 import type { TicketStatus } from '@/types/tickets'
 
 // Mirrors backend/CRM.Api/Tickets/TicketStatusRules.cs's declaration order —
@@ -47,14 +51,14 @@ function formatResolutionTime(minutes: number | null): string {
         <p class="eyebrow">{{ t('navigation.workspace') }}</p>
         <h1>{{ t('reports.title') }}</h1>
       </div>
-      <button type="button" :disabled="store.loading" @click="loadSummary">
+      <AppButton variant="secondary" type="button" :loading="store.loading" @click="loadSummary">
         {{ store.loading ? t('common.loading') : t('reports.refresh') }}
-      </button>
+      </AppButton>
     </div>
 
-    <p v-if="store.error" role="alert" class="reports-error">
+    <AppAlert v-if="store.error" tone="danger" class="reports-error">
       {{ t('reports.errors.loadFailed') }}
-    </p>
+    </AppAlert>
 
     <template v-if="store.summary">
       <section class="metrics-strip">
@@ -112,18 +116,18 @@ function formatResolutionTime(minutes: number | null): string {
       <section class="surface report-section">
         <h2>{{ t('reports.sla.title') }}</h2>
         <ul class="sla-rows">
-          <li class="sla-badge sla-badge--ok">
+          <li><AppBadge tone="success">
             {{ t('reports.sla.withinSla') }}: {{ store.summary.slaPerformance.withinSla }}
             ({{ store.summary.slaPerformance.withinSlaPercent }}%)
-          </li>
-          <li class="sla-badge sla-badge--warn">
+          </AppBadge></li>
+          <li><AppBadge tone="warning">
             {{ t('reports.sla.atRisk') }}: {{ store.summary.slaPerformance.atRisk }}
             ({{ store.summary.slaPerformance.atRiskPercent }}%)
-          </li>
-          <li class="sla-badge sla-badge--danger">
+          </AppBadge></li>
+          <li><AppBadge tone="danger">
             {{ t('reports.sla.breached') }}: {{ store.summary.slaPerformance.breached }}
             ({{ store.summary.slaPerformance.breachedPercent }}%)
-          </li>
+          </AppBadge></li>
         </ul>
       </section>
 
@@ -136,62 +140,49 @@ function formatResolutionTime(minutes: number | null): string {
       </section>
     </template>
 
-    <p v-else-if="store.loading">{{ t('common.loading') }}</p>
+    <LoadingState v-else-if="store.loading" />
   </div>
 </template>
 
 <style scoped>
 .reports-view {
   max-width: 60rem;
-  margin: 4rem auto;
+  margin: var(--space-8) auto;
 }
 
 .reports-error {
-  padding: 12px 16px;
-  margin-bottom: 18px;
-  color: #b00020;
-  background: #fdecea;
-  border-radius: 6px;
+  margin-bottom: var(--space-5);
 }
 
 .metrics-strip {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin-bottom: 24px;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .metric-tile {
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 .metric-label {
   display: block;
+  color: var(--muted);
   text-transform: uppercase;
-  font-size: 0.7rem;
+  font-size: var(--font-size-xs);
   letter-spacing: 0.08em;
 }
 
 .metric-tile strong {
   display: block;
-  margin-top: 10px;
+  margin-top: var(--space-3);
+  color: var(--navy);
   font-size: 2rem;
 }
 
 .report-section {
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .sla-rows {
@@ -199,30 +190,8 @@ td {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-.sla-badge {
-  display: inline-flex;
-  padding: 0.4rem 0.8rem;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  width: fit-content;
-}
-
-.sla-badge--ok {
-  background: #e3f6e8;
-  color: #1a7a3a;
-}
-
-.sla-badge--warn {
-  background: #fff4e0;
-  color: #9a6400;
-}
-
-.sla-badge--danger {
-  background: #fde2e1;
-  color: #a3231e;
+  gap: var(--space-2);
+  align-items: flex-start;
 }
 
 @media (max-width: 700px) {

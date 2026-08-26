@@ -2,6 +2,10 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useQuickRepliesStore } from '@/stores/quickReplies'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import type { QuickReply } from '@/types/tickets'
 
 const { t } = useI18n()
@@ -88,12 +92,12 @@ async function onDelete(reply: QuickReply) {
         <p class="eyebrow">{{ t('navigation.workspace') }}</p>
         <h1>{{ t('quickReplies.title') }}</h1>
       </div>
-      <button type="button" @click="openAddForm" :disabled="isAdding">
+      <AppButton type="button" @click="openAddForm" :disabled="isAdding">
         {{ t('quickReplies.new') }}
-      </button>
+      </AppButton>
     </div>
 
-    <p v-if="store.error" role="alert">{{ t(`quickReplies.errors.${store.error}`) }}</p>
+    <AppAlert v-if="store.error" tone="danger" role="alert">{{ t(`quickReplies.errors.${store.error}`) }}</AppAlert>
 
     <form v-if="isAdding" class="surface quick-reply-form" @submit.prevent="submitAdd">
       <div class="field">
@@ -105,17 +109,15 @@ async function onDelete(reply: QuickReply) {
         <textarea id="quick-reply-content" v-model="draftContent" maxlength="4000" rows="4"></textarea>
       </div>
       <div class="form-actions">
-        <button type="submit" :disabled="store.saving || !draftTitle.trim() || !draftContent.trim()">
+        <AppButton type="submit" :loading="store.saving" :disabled="!draftTitle.trim() || !draftContent.trim()">
           {{ store.saving ? t('quickReplies.saving') : t('common.save') }}
-        </button>
-        <button type="button" @click="cancelForm">{{ t('common.cancel') }}</button>
+        </AppButton>
+        <AppButton variant="secondary" type="button" @click="cancelForm">{{ t('common.cancel') }}</AppButton>
       </div>
     </form>
 
-    <p v-if="store.loading">{{ t('common.loading') }}</p>
-    <div v-else-if="store.items.length === 0 && !isAdding" class="surface empty-state">
-      <p>{{ t('quickReplies.empty') }}</p>
-    </div>
+    <LoadingState v-if="store.loading" />
+    <EmptyState v-else-if="store.items.length === 0 && !isAdding" :description="t('quickReplies.empty')" />
 
     <div v-else class="surface table-wrap">
       <table>
@@ -138,10 +140,10 @@ async function onDelete(reply: QuickReply) {
                     {{ t('quickReplies.fields.isActive') }}
                   </label>
                   <div class="form-actions">
-                    <button type="submit" :disabled="store.saving">
+                    <AppButton type="submit" :loading="store.saving">
                       {{ store.saving ? t('quickReplies.saving') : t('common.save') }}
-                    </button>
-                    <button type="button" @click="cancelForm">{{ t('common.cancel') }}</button>
+                    </AppButton>
+                    <AppButton variant="secondary" type="button" @click="cancelForm">{{ t('common.cancel') }}</AppButton>
                   </div>
                 </form>
               </td>
@@ -150,8 +152,8 @@ async function onDelete(reply: QuickReply) {
               <td>{{ reply.title }}</td>
               <td class="truncate" :title="reply.content">{{ reply.content }}</td>
               <td>
-                <button type="button" @click="startEdit(reply)">{{ t('quickReplies.edit') }}</button>
-                <button type="button" @click="onDelete(reply)">{{ t('quickReplies.delete') }}</button>
+                <AppButton variant="ghost" size="sm" type="button" @click="startEdit(reply)">{{ t('quickReplies.edit') }}</AppButton>
+                <AppButton variant="ghost" size="sm" type="button" @click="onDelete(reply)">{{ t('quickReplies.delete') }}</AppButton>
               </td>
             </tr>
           </template>
@@ -164,38 +166,27 @@ async function onDelete(reply: QuickReply) {
 <style scoped>
 .quick-replies-view {
   max-width: 60rem;
-  margin: 4rem auto;
+  margin: var(--space-8) auto;
 }
 
 .quick-reply-form,
 .quick-reply-inline-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 20px;
-  margin-bottom: 18px;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
 }
 
 .active-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .form-actions {
   display: flex;
-  gap: 0.5rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
+  gap: var(--space-2);
 }
 
 .truncate {

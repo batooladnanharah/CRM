@@ -3,6 +3,9 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppAlert from '@/components/ui/AppAlert.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -73,34 +76,34 @@ function submitErrorKey(): string | null {
     </div>
 
     <form class="surface login-form" novalidate @submit.prevent="onSubmit">
-      <div class="field"><label for="login-email">{{ t('login.email') }}</label>
-      <input
+      <AppInput
         id="login-email"
         v-model="email"
+        :label="t('login.email')"
         type="email"
         autocomplete="username"
         required
-      /></div>
+      />
 
-      <div class="field"><label for="login-password">{{ t('login.password') }}</label>
-      <input
+      <AppInput
         id="login-password"
         v-model="password"
+        :label="t('login.password')"
         type="password"
         autocomplete="current-password"
         required
-      /></div>
+      />
 
-      <p v-if="fieldError" role="alert" aria-live="polite" class="error">
+      <AppAlert v-if="fieldError" tone="danger" role="alert" aria-live="polite">
         {{ fieldError }}
-      </p>
-      <p v-else-if="submitErrorKey()" role="alert" aria-live="polite" class="error">
+      </AppAlert>
+      <AppAlert v-else-if="submitErrorKey()" tone="danger" role="alert" aria-live="polite">
         {{ t(submitErrorKey()!) }}
-      </p>
+      </AppAlert>
 
-      <button type="submit" :disabled="authStore.status === 'loading'">
+      <AppButton type="submit" :loading="authStore.status === 'loading'">
         {{ authStore.status === 'loading' ? t('login.submitting') : t('login.submit') }}
-      </button>
+      </AppButton>
     </form>
   </div>
 </template>
@@ -112,26 +115,18 @@ function submitErrorKey(): string | null {
   padding: 8vh 0;
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: var(--space-7);
 }
 
 .login-brand { display: flex; align-items: center; gap: 11px; color: var(--navy); font: 700 1.15rem Arial, sans-serif; }
 .login-intro h1 { font-size: 2.7rem; }
 .login-intro p:last-child { color: var(--muted); }
-.login-form { display: flex; flex-direction: column; gap: 18px; padding: 28px; }
-.login-form button { width: 100%; margin-top: 4px; }
-.login-view .error { margin: 0; }
+.login-form { display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-7); }
+.login-form :deep(.ui-button) { width: 100%; margin-top: var(--space-1); }
 .login-view .brand-mark { color: var(--navy); background: #d2eee6; }
-@media (max-width: 480px) { .login-form { padding: 22px; } .login-intro h1 { font-size: 2.2rem; }
-}
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.error {
-  color: #b00020;
+@media (max-width: 480px) {
+  .login-form { padding: var(--space-5); }
+  .login-intro h1 { font-size: 2.2rem; }
 }
 </style>

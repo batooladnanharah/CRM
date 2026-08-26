@@ -168,34 +168,36 @@ async function onDelete(attachment: TicketAttachment) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .attachment-item {
-  border-bottom: 1px solid #eee;
-  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-3);
 }
 
 .attachment-name {
-  font-weight: bold;
+  font-weight: 700;
 }
 
 .attachment-meta {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4);
+  color: var(--muted);
+  font-size: var(--font-size-xs);
 }
 
 .upload-form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin: 0.5rem 0;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
 }
 
 .upload-form-actions,
 .attachment-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .skeleton {
@@ -205,7 +207,8 @@ async function onDelete(attachment: TicketAttachment) {
 
 .skeleton li {
   height: 2rem;
-  margin-bottom: 0.5rem;
-  background: #eee;
+  margin-bottom: var(--space-2);
+  background: var(--canvas);
+  border-radius: var(--radius-sm);
 }
 </style>

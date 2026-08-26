@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSecurityStore } from '@/stores/security'
+import AppButton from '@/components/ui/AppButton.vue'
+import AppPagination from '@/components/ui/AppPagination.vue'
+import LoadingState from '@/components/ui/LoadingState.vue'
+import ErrorState from '@/components/ui/ErrorState.vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
 import type { AuditLogEntry } from '@/types/security'
 
 const { t } = useI18n()
@@ -14,8 +19,6 @@ const fromFilter = ref('')
 const toFilter = ref('')
 
 const selectedEntry = ref<AuditLogEntry | null>(null)
-
-const totalPages = computed(() => Math.max(1, Math.ceil(store.auditTotalCount / store.auditPageSize)))
 
 function currentFilters() {
   return {
@@ -31,16 +34,8 @@ function applyFilters() {
   void store.fetchAuditLog({ ...currentFilters(), page: 1 })
 }
 
-function onPrev() {
-  if (store.auditPage > 1) {
-    store.setAuditPage(store.auditPage - 1, currentFilters())
-  }
-}
-
-function onNext() {
-  if (store.auditPage < totalPages.value) {
-    store.setAuditPage(store.auditPage + 1, currentFilters())
-  }
+function onPageChange(page: number) {
+  store.setAuditPage(page, currentFilters())
 }
 
 function openDetails(entry: AuditLogEntry) {
@@ -86,14 +81,12 @@ onMounted(() => {
         <label for="audit-to">{{ t('security.audit.filters.to') }}</label>
         <input id="audit-to" v-model="toFilter" type="date" />
       </div>
-      <button type="submit">{{ t('security.audit.filters.apply') }}</button>
+      <AppButton type="submit">{{ t('security.audit.filters.apply') }}</AppButton>
     </form>
 
-    <p v-if="store.auditLoading">{{ t('common.loading') }}</p>
-    <p v-else-if="store.auditError" role="alert">{{ t('security.audit.errorLoad') }}</p>
-    <div v-else-if="store.auditEntries.length === 0" class="surface empty-state">
-      <p>{{ t('security.audit.empty') }}</p>
-    </div>
+    <LoadingState v-if="store.auditLoading" />
+    <ErrorState v-else-if="store.auditError" :retryable="false" :message="t('security.audit.errorLoad')" />
+    <EmptyState v-else-if="store.auditEntries.length === 0" :description="t('security.audit.empty')" />
 
     <div v-else class="surface table-wrap">
       <table>
@@ -113,30 +106,28 @@ onMounted(() => {
             <td>{{ entry.action }}</td>
             <td>{{ entry.targetType }}: {{ entry.targetId }}</td>
             <td>
-              <button type="button" @click="openDetails(entry)">
+              <AppButton variant="ghost" size="sm" type="button" @click="openDetails(entry)">
                 {{ t('security.audit.viewPayload') }}
-              </button>
+              </AppButton>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="pagination">
-      <button type="button" :disabled="store.auditPage <= 1" @click="onPrev">
-        {{ t('customers.pagination.prev') }}
-      </button>
-      <span>{{ t('customers.pagination.pageOf', { page: store.auditPage, totalPages }) }}</span>
-      <button type="button" :disabled="store.auditPage >= totalPages" @click="onNext">
-        {{ t('customers.pagination.next') }}
-      </button>
-    </div>
+    <AppPagination
+      v-if="store.auditEntries.length > 0"
+      :page="store.auditPage"
+      :page-size="store.auditPageSize"
+      :total-count="store.auditTotalCount"
+      @update:page="onPageChange"
+    />
 
     <div v-if="selectedEntry" class="drawer-overlay" @click.self="closeDetails">
       <aside class="surface drawer">
         <div class="drawer-header">
           <h2>{{ t('security.audit.payloadDrawer.title') }}</h2>
-          <button type="button" @click="closeDetails">{{ t('common.close') }}</button>
+          <AppButton variant="ghost" size="sm" type="button" @click="closeDetails">{{ t('common.close') }}</AppButton>
         </div>
         <pre class="payload-json">{{ selectedEntry.payloadJson ?? t('security.audit.payloadDrawer.empty') }}</pre>
       </aside>
@@ -147,40 +138,13 @@ onMounted(() => {
 <style scoped>
 .audit-log-view {
   max-width: 72rem;
-  margin: 4rem auto;
-}
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: flex-end;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: start;
-  padding: 0.5rem;
-}
-
-.pagination {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin-top: 1rem;
+  margin: var(--space-8) auto;
 }
 
 .drawer-overlay {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: var(--z-modal);
   display: flex;
   justify-content: flex-end;
   background: rgba(24, 35, 45, 0.4);
@@ -190,18 +154,19 @@ td {
   width: min(28rem, 90vw);
   height: 100%;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: var(--space-6);
 }
 
 .drawer-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .payload-json {
   white-space: pre-wrap;
   word-break: break-word;
+  font-size: var(--font-size-sm);
 }
 </style>
