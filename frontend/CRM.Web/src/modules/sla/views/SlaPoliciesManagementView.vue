@@ -1,0 +1,286 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useSlaPoliciesStore } from '@/stores/sla'
+import type { SlaPolicy, TicketPriority } from '@/types/tickets'
+
+const PRIORITIES: TicketPriority[] = ['Low', 'Normal', 'High', 'Urgent']
+
+const { t } = useI18n()
+const store = useSlaPoliciesStore()
+
+const isAdding = ref(false)
+const editingId = ref<string | null>(null)
+const draftName = ref('')
+const draftChannel = ref('')
+const draftPriority = ref<TicketPriority>('Normal')
+const draftFirstResponseMinutes = ref(60)
+const draftResolutionMinutes = ref(480)
+const draftIsDefault = ref(false)
+const draftIsActive = ref(true)
+
+onMounted(() => {
+  void store.fetch()
+})
+
+function resetDraft() {
+  draftName.value = ''
+  draftChannel.value = ''
+  draftPriority.value = 'Normal'
+  draftFirstResponseMinutes.value = 60
+  draftResolutionMinutes.value = 480
+  draftIsDefault.value = false
+  draftIsActive.value = true
+}
+
+function openAddForm() {
+  isAdding.value = true
+  editingId.value = null
+  resetDraft()
+}
+
+function startEdit(policy: SlaPolicy) {
+  isAdding.value = false
+  editingId.value = policy.id
+  draftName.value = policy.name
+  draftChannel.value = policy.channel ?? ''
+  draftPriority.value = policy.priority
+  draftFirstResponseMinutes.value = policy.firstResponseMinutes
+  draftResolutionMinutes.value = policy.resolutionMinutes
+  draftIsDefault.value = policy.isDefault
+  draftIsActive.value = policy.isActive
+}
+
+function cancelForm() {
+  isAdding.value = false
+  editingId.value = null
+}
+
+function isDraftValid() {
+  return (
+    draftName.value.trim().length > 0 &&
+    draftFirstResponseMinutes.value > 0 &&
+    draftResolutionMinutes.value > 0
+  )
+}
+
+function buildPayload() {
+  return {
+    name: draftName.value.trim(),
+    channel: draftChannel.value.trim() || null,
+    priority: draftPriority.value,
+    firstResponseMinutes: draftFirstResponseMinutes.value,
+    resolutionMinutes: draftResolutionMinutes.value,
+    isDefault: draftIsDefault.value,
+    isActive: draftIsActive.value,
+  }
+}
+
+async function submitAdd() {
+  if (!isDraftValid()) {
+    return
+  }
+  try {
+    await store.create(buildPayload())
+    isAdding.value = false
+  } catch {
+    // error surfaced via store.error
+  }
+}
+
+async function submitEdit() {
+  if (!editingId.value || !isDraftValid()) {
+    return
+  }
+  try {
+    await store.update(editingId.value, buildPayload())
+    editingId.value = null
+  } catch {
+    // error surfaced via store.error
+  }
+}
+
+async function onDelete(policy: SlaPolicy) {
+  if (!window.confirm(t('sla.policies.deleteConfirm'))) {
+    return
+  }
+  try {
+    await store.remove(policy.id)
+  } catch {
+    // error surfaced via store.error
+  }
+}
+</script>
+
+<template>
+  <div class="sla-policies-view">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">{{ t('navigation.workspace') }}</p>
+        <h1>{{ t('sla.policies.title') }}</h1>
+      </div>
+      <button type="button" @click="openAddForm" :disabled="isAdding">
+        {{ t('sla.policies.new') }}
+      </button>
+    </div>
+
+    <p v-if="store.error" role="alert">{{ t(`sla.policies.errors.${store.error}`) }}</p>
+
+    <form v-if="isAdding" class="surface sla-policy-form" @submit.prevent="submitAdd">
+      <div class="field">
+        <label for="sla-policy-name">{{ t('sla.policies.fields.name') }}</label>
+        <input id="sla-policy-name" v-model="draftName" type="text" maxlength="200" />
+      </div>
+      <div class="field">
+        <label for="sla-policy-channel">{{ t('sla.policies.fields.channel') }}</label>
+        <input
+          id="sla-policy-channel"
+          v-model="draftChannel"
+          type="text"
+          maxlength="200"
+          :placeholder="t('sla.policies.fields.channelAny')"
+        />
+      </div>
+      <div class="field">
+        <label for="sla-policy-priority">{{ t('sla.policies.fields.priority') }}</label>
+        <select id="sla-policy-priority" v-model="draftPriority">
+          <option v-for="priority in PRIORITIES" :key="priority" :value="priority">{{ priority }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sla-policy-first-response">{{ t('sla.policies.fields.firstResponseMinutes') }}</label>
+        <input
+          id="sla-policy-first-response"
+          v-model.number="draftFirstResponseMinutes"
+          type="number"
+          min="1"
+        />
+      </div>
+      <div class="field">
+        <label for="sla-policy-resolution">{{ t('sla.policies.fields.resolutionMinutes') }}</label>
+        <input id="sla-policy-resolution" v-model.number="draftResolutionMinutes" type="number" min="1" />
+      </div>
+      <label class="active-toggle">
+        <input type="checkbox" v-model="draftIsDefault" />
+        {{ t('sla.policies.fields.isDefault') }}
+      </label>
+      <div class="form-actions">
+        <button type="submit" :disabled="store.saving || !isDraftValid()">
+          {{ store.saving ? t('sla.policies.saving') : t('common.save') }}
+        </button>
+        <button type="button" @click="cancelForm">{{ t('common.cancel') }}</button>
+      </div>
+    </form>
+
+    <p v-if="store.loading">{{ t('sla.policies.loading') }}</p>
+    <div v-else-if="store.items.length === 0 && !isAdding" class="surface empty-state">
+      <p>{{ t('sla.policies.empty') }}</p>
+    </div>
+
+    <div v-else class="surface table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('sla.policies.fields.name') }}</th>
+            <th>{{ t('sla.policies.fields.channel') }}</th>
+            <th>{{ t('sla.policies.fields.priority') }}</th>
+            <th>{{ t('sla.policies.fields.firstResponseMinutes') }}</th>
+            <th>{{ t('sla.policies.fields.resolutionMinutes') }}</th>
+            <th>{{ t('sla.policies.fields.isDefault') }}</th>
+            <th>{{ t('sla.policies.fields.isActive') }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-for="policy in store.items" :key="policy.id">
+            <tr v-if="editingId === policy.id">
+              <td colspan="8">
+                <form class="sla-policy-inline-form" @submit.prevent="submitEdit">
+                  <input v-model="draftName" type="text" maxlength="200" />
+                  <input
+                    v-model="draftChannel"
+                    type="text"
+                    maxlength="200"
+                    :placeholder="t('sla.policies.fields.channelAny')"
+                  />
+                  <select v-model="draftPriority">
+                    <option v-for="priority in PRIORITIES" :key="priority" :value="priority">
+                      {{ priority }}
+                    </option>
+                  </select>
+                  <input v-model.number="draftFirstResponseMinutes" type="number" min="1" />
+                  <input v-model.number="draftResolutionMinutes" type="number" min="1" />
+                  <label class="active-toggle">
+                    <input type="checkbox" v-model="draftIsDefault" />
+                    {{ t('sla.policies.fields.isDefault') }}
+                  </label>
+                  <label class="active-toggle">
+                    <input type="checkbox" v-model="draftIsActive" />
+                    {{ t('sla.policies.fields.isActive') }}
+                  </label>
+                  <div class="form-actions">
+                    <button type="submit" :disabled="store.saving">
+                      {{ store.saving ? t('sla.policies.saving') : t('common.save') }}
+                    </button>
+                    <button type="button" @click="cancelForm">{{ t('common.cancel') }}</button>
+                  </div>
+                </form>
+              </td>
+            </tr>
+            <tr v-else>
+              <td>{{ policy.name }}</td>
+              <td>{{ policy.channel ?? t('sla.policies.fields.channelAny') }}</td>
+              <td>{{ policy.priority }}</td>
+              <td>{{ policy.firstResponseMinutes }}</td>
+              <td>{{ policy.resolutionMinutes }}</td>
+              <td>{{ policy.isDefault ? '✓' : '' }}</td>
+              <td>{{ policy.isActive ? '✓' : '' }}</td>
+              <td>
+                <button type="button" @click="startEdit(policy)">{{ t('sla.policies.edit') }}</button>
+                <button type="button" @click="onDelete(policy)">{{ t('sla.policies.delete') }}</button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.sla-policies-view {
+  max-width: 72rem;
+  margin: 4rem auto;
+}
+
+.sla-policy-form,
+.sla-policy-inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.active-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: start;
+  padding: 0.5rem;
+}
+</style>

@@ -1,0 +1,18 @@
+@CRM.Api_HostAddress = http://localhost:5018
+
+GET {{CRM.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+@CRM.Api_HttpsHostAddress = https://localhost:7080
+
+POST {{CRM.Api_HttpsHostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "agent@crm.local",
+  "password": "<seeded dev password>"
+}
+
+###

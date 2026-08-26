@@ -1,0 +1,663 @@
+{
+  "app": {
+    "name": "CRM"
+  },
+  "navigation": {
+    "primary": "التنقل الرئيسي",
+    "menu": "مساحة العمل",
+    "workspace": "مساحة العمل",
+    "overview": "نظرة عامة",
+    "customers": "العملاء",
+    "tickets": "التذاكر",
+    "systemOnline": "جميع الأنظمة تعمل",
+    "openMenu": "فتح قائمة التنقل"
+  },
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "search": "بحث",
+    "loading": "جارٍ التحميل",
+    "error": "خطأ",
+    "retry": "إعادة المحاولة",
+    "dismiss": "إغلاق التنبيه",
+    "previous": "السابق",
+    "next": "التالي",
+    "pageOf": "صفحة {page} من {total}",
+    "emptyState": {
+      "title": "لا توجد بيانات بعد",
+      "description": "لا توجد بيانات لعرضها حاليًا."
+    }
+  },
+  "login": {
+    "title": "تسجيل الدخول",
+    "subtitle": "حافظ على تقدم كل محادثة مع العملاء.",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "submit": "تسجيل الدخول",
+    "submitting": "جارٍ تسجيل الدخول…",
+    "errors": {
+      "emailRequired": "البريد الإلكتروني مطلوب.",
+      "passwordRequired": "كلمة المرور مطلوبة.",
+      "emailFormat": "أدخل بريدًا إلكترونيًا صالحًا.",
+      "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+      "network": "تعذر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى."
+    }
+  },
+  "dashboard": {
+    "title": "مساحة عملي",
+    "overline": "ملخص اليوم",
+    "greeting": "مرحبًا، {name}",
+    "logout": "تسجيل الخروج",
+    "refresh": "تحديث",
+    "updatedAt": "آخر تحديث",
+    "metrics": {
+      "openAssigned": "التذاكر المفتوحة المعينة لي",
+      "needsAction": "يتطلب إجراءً",
+      "resolvedLast7Days": "محلولة (٧ أيام)",
+      "slaAtRisk": "معرضة لخطر اتفاقية الخدمة"
+    },
+    "widgets": {
+      "myTickets": "تذاكري المفتوحة",
+      "myTasks": "المهام والمتابعات",
+      "recentCustomers": "العملاء الأخيرون"
+    },
+    "empty": {
+      "myTickets": "لا توجد تذاكر مفتوحة.",
+      "myTasks": "لا توجد مهام معلقة.",
+      "recentCustomers": "لا يوجد نشاط عملاء حديث."
+    },
+    "errors": {
+      "loadFailed": "تعذر تحميل بعض العناصر. حاول مرة أخرى."
+    }
+  },
+  "forbidden": {
+    "title": "الوصول مرفوض",
+    "message": "ليس لديك صلاحية للوصول إلى هذه الصفحة."
+  },
+  "customers": {
+    "title": "العملاء",
+    "search": {
+      "placeholder": "بحث عن العملاء…"
+    },
+    "filters": {
+      "company": {
+        "label": "الشركة",
+        "options": {
+          "all": "كل الشركات"
+        }
+      }
+    },
+    "empty": {
+      "default": "لم يتم العثور على عملاء.",
+      "noResults": "لا يوجد عملاء يطابقون عوامل التصفية."
+    },
+    "searchPlaceholder": "بحث عن العملاء…",
+    "columns": {
+      "fullName": "الاسم الكامل",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "company": "الشركة",
+      "createdAt": "تاريخ الإنشاء"
+    },
+    "loading": "جارٍ تحميل العملاء…",
+    "errorLoad": "تعذر تحميل العملاء. حاول مرة أخرى.",
+    "pagination": {
+      "prev": "السابق",
+      "next": "التالي",
+      "pageOf": "صفحة {page} من {totalPages}"
+    },
+    "create": {
+      "title": "إنشاء عميل",
+      "fields": {
+        "fullName": "الاسم الكامل",
+        "email": "البريد الإلكتروني",
+        "phone": "الهاتف",
+        "company": "الشركة"
+      },
+      "actions": {
+        "submit": "إنشاء عميل",
+        "cancel": "إلغاء"
+      }
+    },
+    "errors": {
+      "fullNameRequired": "الاسم الكامل مطلوب.",
+      "emailInvalid": "أدخل بريدًا إلكترونيًا صالحًا.",
+      "duplicateEmail": "يوجد عميل بهذا البريد الإلكتروني بالفعل.",
+      "generic": "حدث خطأ ما. حاول مرة أخرى."
+    },
+    "list": {
+      "subtitle": "عرض واضح لعلاقاتك مع العملاء.",
+      "addButton": "إضافة عميل",
+      "editButton": "تعديل",
+      "viewButton": "عرض"
+    },
+    "edit": {
+      "title": "تعديل عميل",
+      "loading": "جارٍ تحميل العميل…",
+      "notFound": "لم يتم العثور على العميل.",
+      "backToList": "العودة إلى العملاء",
+      "actions": {
+        "submit": "حفظ",
+        "cancel": "إلغاء"
+      }
+    },
+    "profile": {
+      "title": "الملف الشخصي للعميل",
+      "edit": "تعديل",
+      "back": "العودة إلى العملاء",
+      "contactInformation": "معلومات الاتصال",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "company": "الشركة",
+      "customerSince": "عميل منذ",
+      "lastUpdated": "آخر تحديث",
+      "notFoundTitle": "لم يتم العثور على العميل.",
+      "notFoundBody": "تعذر العثور على العميل المطلوب.",
+      "errorLoadTitle": "تعذر تحميل معلومات العميل.",
+      "errorLoadBody": "حاول مرة أخرى.",
+      "retry": "إعادة المحاولة",
+      "comingSoon": "قريبًا",
+      "overview": "نظرة عامة",
+      "tabTickets": "التذاكر",
+      "tabInteractions": "التفاعلات",
+      "tabNotes": "الملاحظات",
+      "tabAttachments": "المرفقات",
+      "missing": "—"
+    },
+    "interactions": {
+      "tab": "التفاعلات",
+      "empty": "لا توجد تفاعلات بعد.",
+      "emptyHint": "سيظهر نشاط الدعم هنا عند حدوثه.",
+      "errorLoad": "تعذر تحميل سجل التفاعلات.",
+      "retry": "إعادة المحاولة",
+      "by": "بواسطة {name}",
+      "previous": "السابق",
+      "next": "التالي",
+      "pageOf": "صفحة {page} من {total}",
+      "types": {
+        "TicketCreated": "تم إنشاء التذكرة",
+        "CustomerMessage": "رسالة من العميل",
+        "AgentReply": "رد الوكيل",
+        "StatusChange": "تغيير الحالة",
+        "Assignment": "تعيين",
+        "InternalNote": "ملاحظة داخلية",
+        "Email": "بريد إلكتروني",
+        "WhatsApp": "واتساب",
+        "LiveChat": "دردشة مباشرة",
+        "Sms": "رسالة نصية",
+        "WebForm": "نموذج ويب"
+      }
+    },
+    "notes": {
+      "title": "الملاحظات",
+      "addButton": "إضافة ملاحظة",
+      "contentLabel": "الملاحظة",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "deleteConfirm": "هل تريد حذف هذه الملاحظة؟ لا يمكن التراجع عن هذا الإجراء.",
+      "authorLine": "بواسطة {name}",
+      "editedSuffix": "(تم التعديل)",
+      "empty": {
+        "title": "لا توجد ملاحظات بعد.",
+        "hint": "ستظهر هنا الملاحظات التي يضيفها الوكلاء والمسؤولون."
+      },
+      "errors": {
+        "errorLoad": "تعذر تحميل الملاحظات. حاول مرة أخرى.",
+        "errorSave": "تعذر حفظ الملاحظة. حاول مرة أخرى.",
+        "errorDelete": "تعذر حذف الملاحظة. حاول مرة أخرى.",
+        "errorForbidden": "يمكنك فقط تعديل أو حذف ملاحظاتك الخاصة."
+      }
+    },
+    "attachments": {
+      "title": "المرفقات",
+      "uploadButton": "رفع ملف",
+      "emptyState": "لا توجد مرفقات بعد.",
+      "download": "تنزيل",
+      "delete": "حذف",
+      "confirmDelete": "هل تريد حذف هذا المرفق؟ لا يمكن التراجع عن هذا الإجراء.",
+      "uploadedBy": "بواسطة {name}",
+      "fileSize": {
+        "kb": "{value} كيلوبايت",
+        "mb": "{value} ميجابايت"
+      },
+      "errors": {
+        "errorLoad": "تعذر تحميل المرفقات. حاول مرة أخرى.",
+        "errorUpload": "تعذر رفع الملف. حاول مرة أخرى.",
+        "errorDelete": "تعذر حذف المرفق. حاول مرة أخرى.",
+        "errorDownload": "تعذر تنزيل المرفق. حاول مرة أخرى."
+      }
+    }
+  },
+  "tickets": {
+    "title": "التذاكر",
+    "assignee": "المسؤول",
+    "unassigned": "غير معيّن",
+    "list": {
+      "newButton": "تذكرة جديدة",
+      "search": "بحث عن التذاكر…",
+      "status": "الحالة",
+      "priority": "الأولوية",
+      "allStatuses": "كل الحالات",
+      "allPriorities": "كل الأولويات",
+      "empty": "لم يتم العثور على تذاكر.",
+      "columns": {
+        "title": "العنوان",
+        "customer": "العميل",
+        "status": "الحالة",
+        "priority": "الأولوية",
+        "createdAt": "تاريخ الإنشاء"
+      }
+    },
+    "errors": {
+      "errorLoad": "تعذر تحميل التذاكر. حاول مرة أخرى.",
+      "invalid_agent": "هذا المستخدم ليس وكيل دعم مؤهلاً.",
+      "errorAction": "حدث خطأ ما. حاول مرة أخرى.",
+      "errorLoadHistory": "تعذر تحميل سجل التذكرة. حاول مرة أخرى.",
+      "errorLoadAgents": "تعذر تحميل الوكلاء المؤهلين. حاول مرة أخرى."
+    },
+    "create": {
+      "title": "إنشاء تذكرة",
+      "fields": {
+        "customer": "العميل",
+        "title": "العنوان",
+        "description": "الوصف",
+        "priority": "الأولوية"
+      },
+      "submit": "إنشاء تذكرة",
+      "cancel": "إلغاء",
+      "errors": {
+        "customerRequired": "اختر عميلاً.",
+        "titleRequired": "العنوان مطلوب.",
+        "titleTooLong": "يجب أن يكون العنوان 200 حرف أو أقل.",
+        "descriptionRequired": "الوصف مطلوب.",
+        "descriptionTooLong": "يجب أن يكون الوصف 4000 حرف أو أقل.",
+        "customerNotFound": "تعذر العثور على العميل المحدد.",
+        "generic": "حدث خطأ ما. حاول مرة أخرى."
+      }
+    },
+    "details": {
+      "title": "تفاصيل التذكرة",
+      "status": "الحالة",
+      "priority": "الأولوية",
+      "customer": "العميل",
+      "createdAt": "تاريخ الإنشاء",
+      "updatedAt": "آخر تحديث",
+      "backToList": "العودة إلى التذاكر",
+      "notFoundTitle": "لم يتم العثور على التذكرة.",
+      "errorLoadTitle": "تعذر تحميل معلومات التذكرة.",
+      "retry": "إعادة المحاولة"
+    },
+    "statuses": {
+      "Open": "مفتوحة",
+      "InProgress": "قيد المعالجة",
+      "Resolved": "محلولة",
+      "Closed": "مغلقة"
+    },
+    "priorities": {
+      "Low": "منخفضة",
+      "Normal": "عادية",
+      "High": "مرتفعة",
+      "Urgent": "عاجلة"
+    },
+    "history": {
+      "title": "السجل",
+      "empty": "لا توجد تغييرات بعد.",
+      "unknownActor": "شخص ما",
+      "systemActor": "النظام",
+      "assignment": "قام {name} بتعيين هذه التذكرة — {when}",
+      "unassignment": "قام {name} بإلغاء تعيين هذه التذكرة — {when}",
+      "statusChange": "غيّر {name} الحالة من {from} إلى {to} — {when}",
+      "priorityChange": "غيّر {name} الأولوية من {from} إلى {to} — {when}",
+      "messageAdded": "أضاف {name} رسالة — {when}",
+      "attachmentAdded": "أضاف {name} مرفقًا — {when}",
+      "attachmentRemoved": "أزال {name} مرفقًا — {when}",
+      "escalated": "صعّد {name} الأولوية من {from} إلى {to} (السبب: {reason}) — {when}",
+      "autoEscalated": "تصعيد تلقائي بواسطة سياسة اتفاقية مستوى الخدمة: رفعت الأولوية من {from} إلى {to} — {when}",
+      "slaRecalculated": "تمت إعادة حساب سياسة اتفاقية مستوى الخدمة لهذه التذكرة — {when}",
+      "slaBreached": "خرق اتفاقية مستوى الخدمة: {kind} — {when}",
+      "slaBreachKinds": {
+        "FirstResponse": "الاستجابة الأولى",
+        "Resolution": "الحل"
+      }
+    },
+    "messages": {
+      "title": "الرسائل",
+      "addButton": "إضافة رسالة",
+      "bodyLabel": "الرسالة",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "internalToggle": "ملاحظة داخلية (غير مرئية للعميل)",
+      "internalBadge": "داخلية",
+      "publicBadge": "عامة",
+      "charsRemaining": "{count} حرف متبقٍ",
+      "empty": "لا توجد رسائل بعد.",
+      "errors": {
+        "errorLoad": "تعذر تحميل الرسائل. حاول مرة أخرى.",
+        "errorSave": "تعذر حفظ الرسالة. حاول مرة أخرى."
+      }
+    },
+    "attachments": {
+      "title": "المرفقات",
+      "uploadButton": "رفع ملف",
+      "emptyState": "لا توجد مرفقات بعد.",
+      "download": "تنزيل",
+      "delete": "حذف",
+      "confirmDelete": "هل تريد حذف هذا المرفق؟ لا يمكن التراجع عن هذا الإجراء.",
+      "uploadedBy": "بواسطة {name}",
+      "fileSize": {
+        "kb": "{value} كيلوبايت",
+        "mb": "{value} ميجابايت"
+      },
+      "errors": {
+        "errorLoad": "تعذر تحميل المرفقات. حاول مرة أخرى.",
+        "errorUpload": "تعذر رفع الملف. حاول مرة أخرى.",
+        "errorDelete": "تعذر حذف المرفق. حاول مرة أخرى.",
+        "errorDownload": "تعذر تنزيل المرفق. حاول مرة أخرى."
+      }
+    },
+    "escalate": {
+      "button": "تصعيد",
+      "reasonLabel": "سبب التصعيد",
+      "submit": "تصعيد",
+      "cancel": "إلغاء"
+    }
+  },
+  "quickReplies": {
+    "title": "الردود السريعة",
+    "button": "رد سريع ▾",
+    "search": "بحث عن ردود سريعة…",
+    "empty": "لا توجد ردود سريعة بعد.",
+    "loading": "جارٍ تحميل الردود السريعة…",
+    "new": "+ رد سريع جديد",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "saving": "جارٍ الحفظ…",
+    "deleteConfirm": "هل تريد حذف هذا الرد السريع؟ لا يمكن التراجع عن هذا الإجراء.",
+    "fields": {
+      "title": "العنوان",
+      "content": "المحتوى",
+      "isActive": "نشط"
+    },
+    "errors": {
+      "errorLoad": "تعذر تحميل الردود السريعة. حاول مرة أخرى.",
+      "errorSave": "تعذر حفظ الرد السريع. حاول مرة أخرى.",
+      "errorDelete": "تعذر حذف الرد السريع. حاول مرة أخرى.",
+      "notFound": "الرد السريع غير موجود.",
+      "unauthorized": "ليس لديك صلاحية لإدارة الردود السريعة."
+    }
+  },
+  "mentions": {
+    "searching": "جارٍ البحث…",
+    "empty": "لا يوجد مستخدمون مطابقون.",
+    "errors": {
+      "invalid": "لا يمكن الإشارة إلى هذا المستخدم.",
+      "unauthorized": "ليس لديك صلاحية للإشارة إلى المستخدمين."
+    }
+  },
+  "communicationChannels": {
+    "title": "قنوات التواصل",
+    "new": "+ قناة جديدة",
+    "channelsHeading": "القنوات",
+    "emailsHeading": "الرسائل الأخيرة",
+    "selectChannelPrompt": "اختر قناة لعرض رسائلها الأخيرة.",
+    "empty": "لا توجد قنوات بعد.",
+    "emptyEmails": "لم يتم استلام رسائل بعد.",
+    "deleteConfirm": "هل تريد حذف هذه القناة؟ لا يمكن التراجع عن هذا الإجراء.",
+    "enable": "تفعيل",
+    "disable": "تعطيل",
+    "disabledBadge": "معطّلة",
+    "fields": {
+      "name": "الاسم",
+      "typeEmailOnly": "النوع: البريد الإلكتروني (النوع الوحيد المتاح)",
+      "fromAddress": "من",
+      "subject": "الموضوع",
+      "receivedAt": "تاريخ الاستلام",
+      "ticketId": "التذكرة المرتبطة"
+    },
+    "errors": {
+      "errorLoad": "تعذر تحميل القنوات. حاول مرة أخرى.",
+      "errorSave": "تعذر حفظ القناة. حاول مرة أخرى.",
+      "errorDelete": "تعذر حذف القناة. حاول مرة أخرى.",
+      "errorLoadEmails": "تعذر تحميل رسائل هذه القناة. حاول مرة أخرى.",
+      "errorIngest": "تعذر حفظ الرسالة الواردة. حاول مرة أخرى."
+    }
+  },
+  "sla": {
+    "policies": {
+      "title": "سياسات اتفاقية مستوى الخدمة",
+      "new": "+ سياسة جديدة",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "saving": "جارٍ الحفظ…",
+      "empty": "لا توجد سياسات اتفاقية مستوى الخدمة بعد.",
+      "loading": "جارٍ تحميل سياسات اتفاقية مستوى الخدمة…",
+      "deleteConfirm": "هل تريد حذف هذه السياسة؟ لا يمكن التراجع عن هذا الإجراء.",
+      "fields": {
+        "name": "الاسم",
+        "channel": "القناة",
+        "channelAny": "أي قناة",
+        "priority": "الأولوية",
+        "firstResponseMinutes": "الاستجابة الأولى (دقائق)",
+        "resolutionMinutes": "الحل (دقائق)",
+        "isDefault": "السياسة الافتراضية",
+        "isActive": "مفعّلة"
+      },
+      "errors": {
+        "errorLoad": "تعذر تحميل سياسات اتفاقية مستوى الخدمة. حاول مرة أخرى.",
+        "errorSave": "تعذر حفظ السياسة. حاول مرة أخرى.",
+        "errorDelete": "تعذر حذف السياسة. حاول مرة أخرى.",
+        "nameRequired": "الاسم مطلوب.",
+        "minutesPositive": "يجب أن تكون الدقائق أكبر من صفر."
+      }
+    },
+    "status": {
+      "notApplicable": "غير منطبق",
+      "onTrack": "على المسار الصحيح",
+      "atRisk": "معرّضة للخطر",
+      "breached": "متأخرة",
+      "met": "تم الالتزام"
+    },
+    "firstResponse": "الاستجابة الأولى",
+    "resolution": "الحل"
+  },
+  "knowledgeBase": {
+    "nav": "قاعدة المعرفة",
+    "title": "قاعدة المعرفة",
+    "newArticle": "+ مقالة جديدة",
+    "searchPlaceholder": "البحث في المقالات…",
+    "deleteConfirm": "هل تريد حذف هذه المقالة؟ لا يمكن التراجع عن هذا الإجراء.",
+    "filters": {
+      "status": "الحالة",
+      "tag": "الوسم",
+      "allStatuses": "جميع الحالات"
+    },
+    "fields": {
+      "title": "العنوان",
+      "slug": "المعرّف (Slug)",
+      "body": "المحتوى",
+      "tags": "الوسوم (مفصولة بفواصل)",
+      "status": "الحالة"
+    },
+    "status": {
+      "draft": "مسودة",
+      "published": "منشورة",
+      "archived": "مؤرشفة"
+    },
+    "actions": {
+      "edit": "تعديل",
+      "delete": "حذف",
+      "save": "حفظ",
+      "cancel": "إلغاء"
+    },
+    "validation": {
+      "titleRequired": "العنوان مطلوب.",
+      "slugFormat": "يجب أن يحتوي المعرّف على حروف إنجليزية صغيرة وأرقام وشرطات فقط.",
+      "slugConflict": "هذا المعرّف مستخدم بالفعل في مقالة أخرى."
+    },
+    "messages": {
+      "saved": "تم حفظ المقالة.",
+      "deleted": "تم حذف المقالة.",
+      "searchEmpty": "لم يتم العثور على مقالات."
+    }
+  },
+  "portal": {
+    "dashboard": {
+      "title": "لوحتي",
+      "overline": "بوابة العملاء",
+      "welcome": "مرحبًا بعودتك، {name}",
+      "metrics": {
+        "open": "مفتوحة",
+        "pending": "قيد المعالجة",
+        "resolved": "محلولة"
+      },
+      "recentTickets": "التذاكر الأخيرة",
+      "submitCta": "إرسال تذكرة جديدة",
+      "viewAllCta": "عرض تذاكري"
+    },
+    "tickets": {
+      "title": "تذاكري",
+      "empty": "لا توجد لديك تذاكر بعد.",
+      "emptyCta": "إرسال تذكرة",
+      "loading": "جارٍ تحميل تذاكرك…",
+      "error": "تعذر تحميل تذاكرك. حاول مرة أخرى.",
+      "retry": "إعادة المحاولة"
+    },
+    "ticket": {
+      "submit": {
+        "title": "إرسال تذكرة",
+        "fields": {
+          "subject": "الموضوع",
+          "description": "الوصف",
+          "priority": "الأولوية"
+        },
+        "submit": "إرسال",
+        "cancel": "إلغاء",
+        "success": "تم إرسال تذكرتك بنجاح. تذكرة رقم #{id}",
+        "errors": {
+          "titleRequired": "الموضوع مطلوب.",
+          "titleTooLong": "يجب أن يكون الموضوع 200 حرف أو أقل.",
+          "descriptionRequired": "الوصف مطلوب.",
+          "descriptionTooLong": "يجب أن يكون الوصف 4000 حرف أو أقل."
+        }
+      },
+      "details": {
+        "title": "تفاصيل التذكرة",
+        "status": "الحالة",
+        "conversation": "المحادثة",
+        "noMessages": "لا توجد ردود بعد.",
+        "statusChange": "تغيرت الحالة من {from} إلى {to} — {when}",
+        "none": "لا يوجد",
+        "backToList": "الرجوع إلى تذاكري"
+      }
+    },
+    "errors": {
+      "unauthorized": "حسابك غير مرتبط بسجل عميل بعد. يرجى التواصل مع الدعم.",
+      "notFound": "تعذر العثور على هذه التذكرة.",
+      "generic": "حدث خطأ ما. حاول مرة أخرى."
+    }
+  },
+  "nav": {
+    "reports": "التقارير"
+  },
+  "reports": {
+    "title": "التقارير والإدارة",
+    "refresh": "تحديث",
+    "volume": {
+      "total": "الإجمالي",
+      "open": "مفتوحة",
+      "resolved": "محلولة"
+    },
+    "agents": {
+      "title": "أداء الوكلاء",
+      "empty": "لا توجد تذاكر مخصصة لأي وكيل حتى الآن.",
+      "headers": {
+        "name": "الوكيل",
+        "count": "عدد التذاكر"
+      }
+    },
+    "sla": {
+      "title": "أداء اتفاقية مستوى الخدمة",
+      "withinSla": "ضمن الاتفاقية",
+      "atRisk": "معرّضة للخطر",
+      "breached": "متأخرة"
+    },
+    "resolution": {
+      "title": "الحل",
+      "averageLabel": "متوسط وقت الحل",
+      "none": "لا توجد تذاكر محلولة بعد"
+    },
+    "errors": {
+      "loadFailed": "تعذر تحميل التقرير. حاول مرة أخرى."
+    }
+  },
+  "security": {
+    "nav": {
+      "users": "المستخدمون",
+      "auditLog": "سجل التدقيق"
+    },
+    "users": {
+      "title": "أدوار المستخدمين",
+      "empty": "لا يوجد مستخدمون.",
+      "errorLoad": "تعذر تحميل المستخدمين. حاول مرة أخرى.",
+      "confirmSelf": "لا يمكنك تغيير دورك الخاص أو تعطيل حسابك الخاص.",
+      "confirmDisable": "تعطيل هذا المستخدم؟ لن يتمكن من تسجيل الدخول بعد ذلك.",
+      "enabled": "مفعّل",
+      "disabled": "معطّل",
+      "filters": {
+        "role": "الدور",
+        "status": "الحالة",
+        "allRoles": "جميع الأدوار",
+        "allStatuses": "جميع الحالات",
+        "enabledOnly": "المفعّلون فقط",
+        "disabledOnly": "المعطّلون فقط"
+      },
+      "columns": {
+        "name": "الاسم",
+        "email": "البريد الإلكتروني",
+        "role": "الدور",
+        "status": "الحالة"
+      },
+      "actions": {
+        "assignRole": "تعيين الدور",
+        "disable": "تعطيل",
+        "enable": "تفعيل"
+      }
+    },
+    "audit": {
+      "title": "سجل التدقيق",
+      "empty": "لا توجد أي إدخالات في سجل التدقيق.",
+      "errorLoad": "تعذر تحميل سجل التدقيق. حاول مرة أخرى.",
+      "systemActor": "النظام",
+      "viewPayload": "عرض التفاصيل",
+      "filters": {
+        "action": "الإجراء",
+        "actor": "الفاعل",
+        "target": "الهدف",
+        "from": "من",
+        "to": "إلى",
+        "apply": "تطبيق"
+      },
+      "columns": {
+        "occurredAt": "وقت الحدوث",
+        "actor": "الفاعل",
+        "action": "الإجراء",
+        "target": "الهدف"
+      },
+      "payloadDrawer": {
+        "title": "تفاصيل الحدث",
+        "empty": "لا توجد تفاصيل إضافية مسجّلة."
+      },
+      "action": {
+        "user.login.succeeded": "نجح تسجيل الدخول",
+        "user.login.failed": "فشل تسجيل الدخول",
+        "user.role.assigned": "تم تعيين الدور",
+        "user.disabled": "تم تعطيل المستخدم",
+        "user.enabled": "تم تفعيل المستخدم",
+        "security.access.denied": "تم رفض الوصول"
+      }
+    }
+  }
+}

@@ -1,0 +1,663 @@
+{
+  "app": {
+    "name": "CRM"
+  },
+  "navigation": {
+    "primary": "Primary navigation",
+    "menu": "Workspace",
+    "workspace": "Workspace",
+    "overview": "Overview",
+    "customers": "Customers",
+    "tickets": "Tickets",
+    "systemOnline": "All systems operational",
+    "openMenu": "Open navigation"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "search": "Search",
+    "loading": "Loading",
+    "error": "Error",
+    "retry": "Retry",
+    "dismiss": "Dismiss",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {total}",
+    "emptyState": {
+      "title": "Nothing here yet",
+      "description": "There is no data to show right now."
+    }
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Keep every customer conversation moving forward.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Log in",
+    "submitting": "Signing in…",
+    "errors": {
+      "emailRequired": "Email is required.",
+      "passwordRequired": "Password is required.",
+      "emailFormat": "Enter a valid email address.",
+      "invalidCredentials": "Invalid email or password.",
+      "network": "Cannot reach the server. Check your connection and try again."
+    }
+  },
+  "dashboard": {
+    "title": "My Workspace",
+    "overline": "Today at a glance",
+    "greeting": "Welcome, {name}",
+    "logout": "Log out",
+    "refresh": "Refresh",
+    "updatedAt": "Updated",
+    "metrics": {
+      "openAssigned": "Open tickets assigned to me",
+      "needsAction": "Needs action",
+      "resolvedLast7Days": "Resolved (7d)",
+      "slaAtRisk": "SLA at risk"
+    },
+    "widgets": {
+      "myTickets": "My open tickets",
+      "myTasks": "Tasks & follow-ups",
+      "recentCustomers": "Recent customers"
+    },
+    "empty": {
+      "myTickets": "You have no open tickets.",
+      "myTasks": "No tasks pending.",
+      "recentCustomers": "No recent customer activity."
+    },
+    "errors": {
+      "loadFailed": "Some widgets failed to load. Try again."
+    }
+  },
+  "forbidden": {
+    "title": "Access denied",
+    "message": "You don't have permission to view this page."
+  },
+  "customers": {
+    "title": "Customers",
+    "search": {
+      "placeholder": "Search customers…"
+    },
+    "filters": {
+      "company": {
+        "label": "Company",
+        "options": {
+          "all": "All companies"
+        }
+      }
+    },
+    "empty": {
+      "default": "No customers found.",
+      "noResults": "No customers match your filters."
+    },
+    "searchPlaceholder": "Search customers…",
+    "columns": {
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "createdAt": "Created"
+    },
+    "loading": "Loading customers…",
+    "errorLoad": "Could not load customers. Please try again.",
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {totalPages}"
+    },
+    "create": {
+      "title": "Create Customer",
+      "fields": {
+        "fullName": "Full name",
+        "email": "Email",
+        "phone": "Phone",
+        "company": "Company"
+      },
+      "actions": {
+        "submit": "Create Customer",
+        "cancel": "Cancel"
+      }
+    },
+    "errors": {
+      "fullNameRequired": "Full name is required.",
+      "emailInvalid": "Enter a valid email address.",
+      "duplicateEmail": "A customer with this email already exists.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "list": {
+      "subtitle": "A clear view of your customer relationships.",
+      "addButton": "Add customer",
+      "editButton": "Edit",
+      "viewButton": "View"
+    },
+    "edit": {
+      "title": "Edit Customer",
+      "loading": "Loading customer…",
+      "notFound": "Customer not found.",
+      "backToList": "Back to customers",
+      "actions": {
+        "submit": "Save",
+        "cancel": "Cancel"
+      }
+    },
+    "profile": {
+      "title": "Customer Profile",
+      "edit": "Edit",
+      "back": "Back to Customers",
+      "contactInformation": "Contact Information",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "customerSince": "Customer Since",
+      "lastUpdated": "Last Updated",
+      "notFoundTitle": "Customer not found.",
+      "notFoundBody": "The requested customer could not be found.",
+      "errorLoadTitle": "Unable to load customer information.",
+      "errorLoadBody": "Please try again.",
+      "retry": "Retry",
+      "comingSoon": "Coming soon",
+      "overview": "Overview",
+      "tabTickets": "Tickets",
+      "tabInteractions": "Interactions",
+      "tabNotes": "Notes",
+      "tabAttachments": "Attachments",
+      "missing": "—"
+    },
+    "interactions": {
+      "tab": "Interactions",
+      "empty": "No interactions yet.",
+      "emptyHint": "Customer activity will appear here as support activity occurs.",
+      "errorLoad": "Unable to load interaction history.",
+      "retry": "Retry",
+      "by": "by {name}",
+      "previous": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {total}",
+      "types": {
+        "TicketCreated": "Ticket created",
+        "CustomerMessage": "Customer message",
+        "AgentReply": "Agent reply",
+        "StatusChange": "Status change",
+        "Assignment": "Assignment",
+        "InternalNote": "Internal note",
+        "Email": "Email",
+        "WhatsApp": "WhatsApp",
+        "LiveChat": "Live chat",
+        "Sms": "SMS",
+        "WebForm": "Web form"
+      }
+    },
+    "notes": {
+      "title": "Notes",
+      "addButton": "Add Note",
+      "contentLabel": "Note",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this note? This cannot be undone.",
+      "authorLine": "by {name}",
+      "editedSuffix": "(edited)",
+      "empty": {
+        "title": "No notes yet.",
+        "hint": "Notes added by agents and admins will appear here."
+      },
+      "errors": {
+        "errorLoad": "Unable to load notes. Please try again.",
+        "errorSave": "Could not save the note. Please try again.",
+        "errorDelete": "Could not delete the note. Please try again.",
+        "errorForbidden": "You can only edit or delete your own notes."
+      }
+    },
+    "attachments": {
+      "title": "Attachments",
+      "uploadButton": "Upload File",
+      "emptyState": "No attachments yet.",
+      "download": "Download",
+      "delete": "Delete",
+      "confirmDelete": "Delete this attachment? This cannot be undone.",
+      "uploadedBy": "by {name}",
+      "fileSize": {
+        "kb": "{value} KB",
+        "mb": "{value} MB"
+      },
+      "errors": {
+        "errorLoad": "Unable to load attachments. Please try again.",
+        "errorUpload": "Could not upload the file. Please try again.",
+        "errorDelete": "Could not delete the attachment. Please try again.",
+        "errorDownload": "Could not download the attachment. Please try again."
+      }
+    }
+  },
+  "tickets": {
+    "title": "Tickets",
+    "assignee": "Assignee",
+    "unassigned": "Unassigned",
+    "list": {
+      "newButton": "New ticket",
+      "search": "Search tickets…",
+      "status": "Status",
+      "priority": "Priority",
+      "allStatuses": "All statuses",
+      "allPriorities": "All priorities",
+      "empty": "No tickets found.",
+      "columns": {
+        "title": "Title",
+        "customer": "Customer",
+        "status": "Status",
+        "priority": "Priority",
+        "createdAt": "Created"
+      }
+    },
+    "errors": {
+      "errorLoad": "Could not load tickets. Please try again.",
+      "invalid_agent": "That user is not an eligible support agent.",
+      "errorAction": "Something went wrong. Please try again.",
+      "errorLoadHistory": "Could not load ticket history. Please try again.",
+      "errorLoadAgents": "Could not load eligible agents. Please try again."
+    },
+    "create": {
+      "title": "Create Ticket",
+      "fields": {
+        "customer": "Customer",
+        "title": "Title",
+        "description": "Description",
+        "priority": "Priority"
+      },
+      "submit": "Create Ticket",
+      "cancel": "Cancel",
+      "errors": {
+        "customerRequired": "Select a customer.",
+        "titleRequired": "Title is required.",
+        "titleTooLong": "Title must be 200 characters or fewer.",
+        "descriptionRequired": "Description is required.",
+        "descriptionTooLong": "Description must be 4000 characters or fewer.",
+        "customerNotFound": "The selected customer could not be found.",
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "details": {
+      "title": "Ticket Details",
+      "status": "Status",
+      "priority": "Priority",
+      "customer": "Customer",
+      "createdAt": "Created",
+      "updatedAt": "Last updated",
+      "backToList": "Back to tickets",
+      "notFoundTitle": "Ticket not found.",
+      "errorLoadTitle": "Unable to load ticket information.",
+      "retry": "Retry"
+    },
+    "statuses": {
+      "Open": "Open",
+      "InProgress": "In Progress",
+      "Resolved": "Resolved",
+      "Closed": "Closed"
+    },
+    "priorities": {
+      "Low": "Low",
+      "Normal": "Normal",
+      "High": "High",
+      "Urgent": "Urgent"
+    },
+    "history": {
+      "title": "History",
+      "empty": "No changes yet.",
+      "unknownActor": "Someone",
+      "systemActor": "System",
+      "assignment": "{name} assigned this ticket — {when}",
+      "unassignment": "{name} unassigned this ticket — {when}",
+      "statusChange": "{name} changed status from {from} to {to} — {when}",
+      "priorityChange": "{name} changed priority from {from} to {to} — {when}",
+      "messageAdded": "{name} added a message — {when}",
+      "attachmentAdded": "{name} added an attachment — {when}",
+      "attachmentRemoved": "{name} removed an attachment — {when}",
+      "escalated": "{name} escalated priority from {from} to {to} (reason: {reason}) — {when}",
+      "autoEscalated": "Auto-escalated by SLA policy: priority raised from {from} to {to} — {when}",
+      "slaRecalculated": "SLA policy recalculated for this ticket — {when}",
+      "slaBreached": "SLA breached: {kind} — {when}",
+      "slaBreachKinds": {
+        "FirstResponse": "first response",
+        "Resolution": "resolution"
+      }
+    },
+    "messages": {
+      "title": "Messages",
+      "addButton": "Add Message",
+      "bodyLabel": "Message",
+      "save": "Save",
+      "cancel": "Cancel",
+      "internalToggle": "Internal note (not visible to the customer)",
+      "internalBadge": "Internal",
+      "publicBadge": "Public",
+      "charsRemaining": "{count} characters remaining",
+      "empty": "No messages yet.",
+      "errors": {
+        "errorLoad": "Could not load messages. Please try again.",
+        "errorSave": "Could not save the message. Please try again."
+      }
+    },
+    "attachments": {
+      "title": "Attachments",
+      "uploadButton": "Upload File",
+      "emptyState": "No attachments yet.",
+      "download": "Download",
+      "delete": "Delete",
+      "confirmDelete": "Delete this attachment? This cannot be undone.",
+      "uploadedBy": "by {name}",
+      "fileSize": {
+        "kb": "{value} KB",
+        "mb": "{value} MB"
+      },
+      "errors": {
+        "errorLoad": "Unable to load attachments. Please try again.",
+        "errorUpload": "Could not upload the file. Please try again.",
+        "errorDelete": "Could not delete the attachment. Please try again.",
+        "errorDownload": "Could not download the attachment. Please try again."
+      }
+    },
+    "escalate": {
+      "button": "Escalate",
+      "reasonLabel": "Reason for escalation",
+      "submit": "Escalate",
+      "cancel": "Cancel"
+    }
+  },
+  "quickReplies": {
+    "title": "Quick Replies",
+    "button": "Quick Reply ▾",
+    "search": "Search quick replies…",
+    "empty": "No quick replies yet.",
+    "loading": "Loading quick replies…",
+    "new": "+ New Quick Reply",
+    "edit": "Edit",
+    "delete": "Delete",
+    "saving": "Saving…",
+    "deleteConfirm": "Delete this quick reply? This cannot be undone.",
+    "fields": {
+      "title": "Title",
+      "content": "Content",
+      "isActive": "Active"
+    },
+    "errors": {
+      "errorLoad": "Could not load quick replies. Please try again.",
+      "errorSave": "Could not save the quick reply. Please try again.",
+      "errorDelete": "Could not delete the quick reply. Please try again.",
+      "notFound": "Quick reply not found.",
+      "unauthorized": "You do not have permission to manage quick replies."
+    }
+  },
+  "mentions": {
+    "searching": "Searching…",
+    "empty": "No matching users.",
+    "errors": {
+      "invalid": "That user cannot be mentioned.",
+      "unauthorized": "You do not have permission to mention users."
+    }
+  },
+  "communicationChannels": {
+    "title": "Communication Channels",
+    "new": "+ New Channel",
+    "channelsHeading": "Channels",
+    "emailsHeading": "Recent Emails",
+    "selectChannelPrompt": "Select a channel to see its recent emails.",
+    "empty": "No channels yet.",
+    "emptyEmails": "No emails received yet.",
+    "deleteConfirm": "Delete this channel? This cannot be undone.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "disabledBadge": "Disabled",
+    "fields": {
+      "name": "Name",
+      "typeEmailOnly": "Type: Email (only channel type available)",
+      "fromAddress": "From",
+      "subject": "Subject",
+      "receivedAt": "Received",
+      "ticketId": "Linked Ticket"
+    },
+    "errors": {
+      "errorLoad": "Could not load channels. Please try again.",
+      "errorSave": "Could not save the channel. Please try again.",
+      "errorDelete": "Could not delete the channel. Please try again.",
+      "errorLoadEmails": "Could not load emails for this channel. Please try again.",
+      "errorIngest": "Could not save the incoming email. Please try again."
+    }
+  },
+  "sla": {
+    "policies": {
+      "title": "SLA Policies",
+      "new": "+ New Policy",
+      "edit": "Edit",
+      "delete": "Delete",
+      "saving": "Saving…",
+      "empty": "No SLA policies yet.",
+      "loading": "Loading SLA policies…",
+      "deleteConfirm": "Delete this SLA policy? This cannot be undone.",
+      "fields": {
+        "name": "Name",
+        "channel": "Channel",
+        "channelAny": "Any channel",
+        "priority": "Priority",
+        "firstResponseMinutes": "First Response (minutes)",
+        "resolutionMinutes": "Resolution (minutes)",
+        "isDefault": "Default policy",
+        "isActive": "Active"
+      },
+      "errors": {
+        "errorLoad": "Could not load SLA policies. Please try again.",
+        "errorSave": "Could not save the SLA policy. Please try again.",
+        "errorDelete": "Could not delete the SLA policy. Please try again.",
+        "nameRequired": "Name is required.",
+        "minutesPositive": "Minutes must be greater than zero."
+      }
+    },
+    "status": {
+      "notApplicable": "N/A",
+      "onTrack": "On Track",
+      "atRisk": "At Risk",
+      "breached": "Breached",
+      "met": "Met"
+    },
+    "firstResponse": "First Response",
+    "resolution": "Resolution"
+  },
+  "knowledgeBase": {
+    "nav": "Knowledge Base",
+    "title": "Knowledge Base",
+    "newArticle": "+ New Article",
+    "searchPlaceholder": "Search articles…",
+    "deleteConfirm": "Delete this article? This cannot be undone.",
+    "filters": {
+      "status": "Status",
+      "tag": "Tag",
+      "allStatuses": "All statuses"
+    },
+    "fields": {
+      "title": "Title",
+      "slug": "Slug",
+      "body": "Body",
+      "tags": "Tags (comma-separated)",
+      "status": "Status"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "archived": "Archived"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "validation": {
+      "titleRequired": "Title is required.",
+      "slugFormat": "Slug must contain only lowercase letters, numbers, and hyphens.",
+      "slugConflict": "This slug is already used by another article."
+    },
+    "messages": {
+      "saved": "Article saved.",
+      "deleted": "Article deleted.",
+      "searchEmpty": "No articles found."
+    }
+  },
+  "portal": {
+    "dashboard": {
+      "title": "My Dashboard",
+      "overline": "Customer Portal",
+      "welcome": "Welcome back, {name}",
+      "metrics": {
+        "open": "Open",
+        "pending": "Pending",
+        "resolved": "Resolved"
+      },
+      "recentTickets": "Recent Tickets",
+      "submitCta": "Submit New Ticket",
+      "viewAllCta": "View My Tickets"
+    },
+    "tickets": {
+      "title": "My Tickets",
+      "empty": "You have no tickets yet.",
+      "emptyCta": "Submit a Ticket",
+      "loading": "Loading your tickets…",
+      "error": "Could not load your tickets. Please try again.",
+      "retry": "Retry"
+    },
+    "ticket": {
+      "submit": {
+        "title": "Submit a Ticket",
+        "fields": {
+          "subject": "Subject",
+          "description": "Description",
+          "priority": "Priority"
+        },
+        "submit": "Submit",
+        "cancel": "Cancel",
+        "success": "Your ticket has been submitted successfully. Ticket #{id}",
+        "errors": {
+          "titleRequired": "Subject is required.",
+          "titleTooLong": "Subject must be 200 characters or fewer.",
+          "descriptionRequired": "Description is required.",
+          "descriptionTooLong": "Description must be 4000 characters or fewer."
+        }
+      },
+      "details": {
+        "title": "Ticket Details",
+        "status": "Status",
+        "conversation": "Conversation",
+        "noMessages": "No replies yet.",
+        "statusChange": "Status changed from {from} to {to} — {when}",
+        "none": "None",
+        "backToList": "Back to my tickets"
+      }
+    },
+    "errors": {
+      "unauthorized": "Your account isn't linked to a customer record yet. Please contact support.",
+      "notFound": "We couldn't find that ticket.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "nav": {
+    "reports": "Reports"
+  },
+  "reports": {
+    "title": "Reports & Management",
+    "refresh": "Refresh",
+    "volume": {
+      "total": "Total",
+      "open": "Open",
+      "resolved": "Resolved"
+    },
+    "agents": {
+      "title": "Agent Performance",
+      "empty": "No agent has any tickets assigned yet.",
+      "headers": {
+        "name": "Agent",
+        "count": "Tickets"
+      }
+    },
+    "sla": {
+      "title": "SLA Performance",
+      "withinSla": "Within SLA",
+      "atRisk": "At Risk",
+      "breached": "Breached"
+    },
+    "resolution": {
+      "title": "Resolution",
+      "averageLabel": "Average Resolution Time",
+      "none": "No resolved tickets yet"
+    },
+    "errors": {
+      "loadFailed": "Could not load the report. Please try again."
+    }
+  },
+  "security": {
+    "nav": {
+      "users": "Users",
+      "auditLog": "Audit Log"
+    },
+    "users": {
+      "title": "User Roles",
+      "empty": "No users found.",
+      "errorLoad": "Could not load users. Please try again.",
+      "confirmSelf": "You cannot change your own role or disable your own account.",
+      "confirmDisable": "Disable this user? They will no longer be able to log in.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "filters": {
+        "role": "Role",
+        "status": "Status",
+        "allRoles": "All roles",
+        "allStatuses": "All statuses",
+        "enabledOnly": "Enabled only",
+        "disabledOnly": "Disabled only"
+      },
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "status": "Status"
+      },
+      "actions": {
+        "assignRole": "Assign Role",
+        "disable": "Disable",
+        "enable": "Enable"
+      }
+    },
+    "audit": {
+      "title": "Audit Log",
+      "empty": "No audit entries found.",
+      "errorLoad": "Could not load the audit log. Please try again.",
+      "systemActor": "System",
+      "viewPayload": "View Details",
+      "filters": {
+        "action": "Action",
+        "actor": "Actor",
+        "target": "Target",
+        "from": "From",
+        "to": "To",
+        "apply": "Apply"
+      },
+      "columns": {
+        "occurredAt": "Occurred At",
+        "actor": "Actor",
+        "action": "Action",
+        "target": "Target"
+      },
+      "payloadDrawer": {
+        "title": "Event Details",
+        "empty": "No additional details recorded."
+      },
+      "action": {
+        "user.login.succeeded": "Login succeeded",
+        "user.login.failed": "Login failed",
+        "user.role.assigned": "Role assigned",
+        "user.disabled": "User disabled",
+        "user.enabled": "User enabled",
+        "security.access.denied": "Access denied"
+      }
+    }
+  }
+}

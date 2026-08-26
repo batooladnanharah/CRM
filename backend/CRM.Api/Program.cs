@@ -1,0 +1,386 @@
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using System.Text;
+using CRM.Api.Auth;
+using CRM.Api.Customers;
+using CRM.Api.CommunicationChannels;
+using CRM.Api.CustomerPortal;
+using CRM.Api.Customers.Attachments;
+using CRM.Api.KnowledgeBase;
+using CRM.Api.QuickReplies;
+using CRM.Api.Reports;
+using CRM.Api.Security;
+using CRM.Api.Sla;
+using CRM.Api.Tickets;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddOpenApi();
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException(
+        "Jwt:Key is not configured. Set it via `dotnet user-secrets set \"Jwt:Key\" \"<32+ char secret>\"` in Development, " +
+        "or via the Jwt__Key environment variable in other environments.");
+}
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "crm-api";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "crm-web";
+
+builder.Services.AddDbContext<AuthDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("CrmDb")));
+builder.Services.AddDbContext<CustomerDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("CrmDb")));
+builder.Services.AddDbContext<TicketDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("CrmDb")));
+builder.Services.AddDbContext<QuickReplyDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("CrmDb")));
+builder.Services.AddDbContext<CommunicationChannelsDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("CrmDb")));
+builder.Services.AddDbContext<KnowledgeBaseDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("CrmDb")));
+
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddSingleton<JwtTokenService>();
+builder.Services.AddScoped<ISlaService, SlaService>();
+builder.Services.AddScoped<TicketEscalationService>();
+builder.Services.AddScoped<ISlaEvaluator, SlaEvaluator>();
+builder.Services.AddScoped<TicketCreationService>();
+builder.Services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
+builder.Services.AddScoped<ReportsService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuditLogger, AuditLogger>();
+
+builder.Services.Configure<SlaAutomationOptions>(
+    builder.Configuration.GetSection(SlaAutomationOptions.SectionName));
+if (builder.Configuration.GetValue("Sla:Enabled", true))
+{
+    builder.Services.AddHostedService<SlaAutomationHostedService>();
+}
+
+// Shared by both customer and ticket attachments: same physical storage root,
+// same size/type limits. Ticket attachment keys are prefixed "tickets/{ticketId}/"
+// (see TicketAttachmentEndpoints.cs) so they never collide with customer
+// attachment keys, which are prefixed by a bare customerId.
+builder.Services.Configure<AttachmentsOptions>(builder.Configuration.GetSection(AttachmentsOptions.SectionName));
+builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+
+// Kestrel's default MaxRequestBodySize (30MB) already comfortably covers the
+// configured attachment size limit plus multipart overhead; raise it only if
+// a deployment configures a larger MaxFileSizeBytes than that default allows.
+var maxAttachmentBytes = builder.Configuration.GetValue<long?>("Attachments:MaxFileSizeBytes");
+if (maxAttachmentBytes is > 0)
+{
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        var withOverhead = maxAttachmentBytes.Value + 1024 * 1024;
+        if (options.Limits.MaxRequestBodySize is null || options.Limits.MaxRequestBodySize < withOverhead)
+        {
+            options.Limits.MaxRequestBodySize = withOverhead;
+        }
+    });
+}
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+    });
+
+// Named role policies for minimal-API routes. No admin/agent-only business
+// endpoint exists yet; future stories gate their routes with
+// .RequireAuthorization("AdminOnly") / .RequireAuthorization("AgentOrAdmin").
+// A bare .RequireAuthorization() (no policy name) remains "any authenticated user".
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", p => p.RequireRole(Roles.Admin));
+    options.AddPolicy("AgentOrAdmin", p => p.RequireRole(Roles.Admin, Roles.Agent));
+    options.AddPolicy("CustomerPortal", p => p.RequireRole(Roles.Customer));
+});
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+// Also exposed in "Testing" (the environment CustomWebApplicationFactory
+// uses) so ExternalApiIntegrationTests can assert the document is served —
+// the schema carries no data, only route/type metadata, so this is safe to
+// widen beyond Development. Still gated off Production.
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+{
+    app.MapOpenApi();
+}
+
+app.UseHttpsRedirection();
+
+app.UseAuthentication();
+
+// Registered before UseAuthorization so its `await next()` wraps the
+// authorization + endpoint execution — by the time control returns here,
+// Response.StatusCode already reflects whatever RequireAuthorization decided.
+// Only 403 is audited (401 is unauthenticated noise from crawlers/expired
+// tokens, not a meaningful access-denied event).
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (context.Response.StatusCode == StatusCodes.Status403Forbidden &&
+        context.Request.Path.StartsWithSegments("/api/admin"))
+    {
+        var auditLogger = context.RequestServices.GetRequiredService<IAuditLogger>();
+        await auditLogger.WriteAsync(
+            AuditActions.AccessDenied, targetType: "route", targetId: context.Request.Path,
+            ct: context.RequestAborted);
+    }
+});
+
+app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+    db.Database.Migrate();
+
+    if (!db.Users.Any())
+    {
+        var seedPassword = app.Configuration["Seed:AgentPassword"];
+        if (string.IsNullOrWhiteSpace(seedPassword))
+        {
+            app.Logger.LogWarning(
+                "Skipping development seed user: set \"Seed:AgentPassword\" via `dotnet user-secrets` to seed agent@crm.local.");
+        }
+        else
+        {
+            var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
+            var seedUser = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = "agent@crm.local",
+                Name = "Demo Agent",
+                Roles = ["agent"],
+                IsActive = true,
+            };
+            seedUser.PasswordHash = hasher.HashPassword(seedUser, seedPassword);
+            db.Users.Add(seedUser);
+            db.SaveChanges();
+        }
+    }
+
+    if (!db.Users.Any(u => u.Roles.Contains(Roles.Admin)))
+    {
+        var adminEmail = app.Configuration["Seed:AdminEmail"];
+        var adminPassword = app.Configuration["Seed:AdminPassword"];
+        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+        {
+            app.Logger.LogWarning(
+                "Skipping development seed admin: set \"Seed:AdminEmail\" and \"Seed:AdminPassword\" via `dotnet user-secrets` to seed a default admin user.");
+        }
+        else
+        {
+            var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
+            var adminUser = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = adminEmail.Trim().ToLowerInvariant(),
+                Name = "Default Admin",
+                Roles = [Roles.Admin],
+                IsActive = true,
+            };
+            adminUser.PasswordHash = hasher.HashPassword(adminUser, adminPassword);
+            db.Users.Add(adminUser);
+            db.SaveChanges();
+        }
+    }
+
+    var customerDb = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
+    customerDb.Database.Migrate();
+
+    if (!customerDb.Customers.Any())
+    {
+        var now = DateTime.UtcNow;
+        customerDb.Customers.AddRange(
+            new Customer { Id = Guid.NewGuid(), FullName = "Alice Johnson", Email = "alice.johnson@example.com", Phone = "+1-555-0101", Company = "Acme Corp", CreatedAtUtc = now },
+            new Customer { Id = Guid.NewGuid(), FullName = "Bob Martinez", Email = "bob.martinez@example.com", Phone = "+1-555-0102", Company = "Globex", CreatedAtUtc = now },
+            new Customer { Id = Guid.NewGuid(), FullName = "Carla Nguyen", Email = "carla.nguyen@example.com", Phone = "+1-555-0103", Company = "Initech", CreatedAtUtc = now },
+            new Customer { Id = Guid.NewGuid(), FullName = "David Smith", Email = "david.smith@example.com", Phone = "+1-555-0104", Company = "Umbrella", CreatedAtUtc = now },
+            new Customer { Id = Guid.NewGuid(), FullName = "Elena Petrova", Email = "elena.petrova@example.com", Phone = "+1-555-0105", Company = "Soylent", CreatedAtUtc = now });
+        customerDb.SaveChanges();
+    }
+
+    if (!customerDb.CustomerInteractions.Any())
+    {
+        var now = DateTime.UtcNow;
+        foreach (var customer in customerDb.Customers)
+        {
+            customerDb.CustomerInteractions.AddRange(
+                new CustomerInteraction
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customer.Id,
+                    Type = CustomerInteractionType.TicketCreated,
+                    Summary = "Ticket created: \"Cannot access account\"",
+                    OccurredAt = now.AddDays(-4),
+                    ActorName = "Demo Agent",
+                    CreatedAtUtc = now,
+                },
+                new CustomerInteraction
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customer.Id,
+                    Type = CustomerInteractionType.CustomerMessage,
+                    Summary = "Customer replied with account details.",
+                    OccurredAt = now.AddDays(-3),
+                    ActorName = customer.FullName,
+                    CreatedAtUtc = now,
+                },
+                new CustomerInteraction
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customer.Id,
+                    Type = CustomerInteractionType.AgentReply,
+                    Summary = "Agent reset the password and confirmed access.",
+                    OccurredAt = now.AddDays(-2),
+                    ActorName = "Demo Agent",
+                    CreatedAtUtc = now,
+                },
+                new CustomerInteraction
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customer.Id,
+                    Type = CustomerInteractionType.Email,
+                    Summary = "Follow-up satisfaction survey sent.",
+                    OccurredAt = now.AddDays(-1),
+                    CreatedAtUtc = now,
+                });
+        }
+        customerDb.SaveChanges();
+    }
+
+    var ticketDb = scope.ServiceProvider.GetRequiredService<TicketDbContext>();
+    ticketDb.Database.Migrate();
+
+    var quickReplyDb = scope.ServiceProvider.GetRequiredService<QuickReplyDbContext>();
+    quickReplyDb.Database.Migrate();
+
+    var communicationChannelsDb = scope.ServiceProvider.GetRequiredService<CommunicationChannelsDbContext>();
+    communicationChannelsDb.Database.Migrate();
+
+    var knowledgeBaseDb = scope.ServiceProvider.GetRequiredService<KnowledgeBaseDbContext>();
+    knowledgeBaseDb.Database.Migrate();
+}
+
+var summaries = new[]
+{
+    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+};
+
+app.MapGet("/weatherforecast", () =>
+{
+    var forecast =  Enumerable.Range(1, 5).Select(index =>
+        new WeatherForecast
+        (
+            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+            Random.Shared.Next(-20, 55),
+            summaries[Random.Shared.Next(summaries.Length)]
+        ))
+        .ToArray();
+    return forecast;
+})
+.WithName("GetWeatherForecast");
+
+var auth = app.MapGroup("/api/auth");
+
+auth.MapPost("/login", async (LoginRequest req, AuthDbContext db,
+    IPasswordHasher<User> hasher, JwtTokenService tokens, ILogger<Program> log, IAuditLogger auditLogger) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Email))
+        return Results.BadRequest(new ErrorResponse("Email is required."));
+    if (string.IsNullOrWhiteSpace(req.Password))
+        return Results.BadRequest(new ErrorResponse("Password is required."));
+    if (!IsEmail(req.Email))
+        return Results.BadRequest(new ErrorResponse("Invalid email format."));
+
+    var email = req.Email.Trim().ToLowerInvariant();
+    var user = await db.Users.SingleOrDefaultAsync(u => u.Email == email);
+
+    // Single generic failure path — do not leak which check failed to the
+    // HTTP response. The audit log is admin-only and may safely record the
+    // specific reason (unknown_user / wrong_password / inactive).
+    if (user is null || !user.IsActive ||
+        hasher.VerifyHashedPassword(user, user.PasswordHash, req.Password)
+            == PasswordVerificationResult.Failed)
+    {
+        log.LogInformation("Failed login for {Email}", email); // never log password
+        var reason = user is null ? "unknown_user" : !user.IsActive ? "inactive" : "wrong_password";
+        await auditLogger.WriteAsync(
+            AuditActions.LoginFailed, targetType: "user", targetId: user?.Id.ToString() ?? email,
+            payload: new { email, reason });
+        return Results.Json(new ErrorResponse("Invalid email or password."),
+            statusCode: StatusCodes.Status401Unauthorized);
+    }
+
+    var token = tokens.Issue(user);
+    log.LogInformation("Successful login for {UserId}", user.Id);
+    await auditLogger.WriteAsync(
+        AuditActions.LoginSucceeded, targetType: "user", targetId: user.Id.ToString(), payload: new { email });
+    return Results.Ok(new LoginResponse(
+        new AuthUserDto(user.Id, user.Name, user.Email, user.Roles),
+        token));
+})
+.AllowAnonymous();
+
+// JWTs are stateless; server-side revocation is out of scope (see follow-up). This endpoint exists for client parity and future audit logging.
+auth.MapPost("/logout", () => Results.NoContent())
+    .RequireAuthorization()
+    .WithName("Logout");
+
+auth.MapGet("/me", (ClaimsPrincipal principal) =>
+{
+    var id = Guid.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    var email = principal.FindFirstValue(ClaimTypes.Email)!;
+    var name = principal.FindFirstValue("name")!;
+    var roles = principal.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray();
+    return Results.Ok(new AuthUserDto(id, name, email, roles));
+})
+.RequireAuthorization();
+
+app.MapCustomerEndpoints();
+app.MapCustomerNoteEndpoints();
+app.MapCustomerAttachmentEndpoints();
+app.MapTicketEndpoints();
+app.MapTicketMessageEndpoints();
+app.MapTicketAttachmentEndpoints();
+app.MapQuickReplyEndpoints();
+app.MapCommunicationChannelEndpoints();
+app.MapSlaPolicyEndpoints();
+app.MapKnowledgeBaseEndpoints();
+app.MapCustomerPortalEndpoints();
+app.MapReportsEndpoints();
+app.MapSecurityAdminEndpoints();
+
+app.Run();
+
+static bool IsEmail(string s) => new EmailAddressAttribute().IsValid(s);
+
+record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+{
+    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
