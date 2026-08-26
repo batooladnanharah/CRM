@@ -16,7 +16,9 @@ const authStore = useAuthStore()
 const aiStore = useAiStore()
 const { locale } = useLocale()
 const sidebarOpen = ref(false)
-const sidebarExpanded = ref(false)
+const sidebarPinned = ref(false)
+const sidebarHovered = ref(false)
+const sidebarExpanded = computed(() => sidebarPinned.value || sidebarHovered.value)
 const knowledgeBaseSearchOpen = ref(false)
 
 onMounted(() => {
@@ -117,7 +119,7 @@ function closeSidebar() {
 }
 
 function toggleSidebarExpanded() {
-  sidebarExpanded.value = !sidebarExpanded.value
+  sidebarPinned.value = !sidebarPinned.value
 }
 
 function toggleLocale() {
@@ -138,7 +140,7 @@ async function onLogout() {
 <template>
   <div class="app-shell">
     <div v-if="sidebarOpen" class="sidebar-backdrop" @click="closeSidebar"></div>
-    <aside class="sidebar" :class="{ 'is-open': sidebarOpen, 'is-expanded': sidebarExpanded }" @mouseenter="sidebarExpanded = true" @mouseleave="sidebarExpanded = false">
+    <aside class="sidebar" :class="{ 'is-open': sidebarOpen, 'is-expanded': sidebarExpanded }" @mouseenter="sidebarHovered = true" @mouseleave="sidebarHovered = false">
       <AppButton
         class="sidebar-toggle"
         variant="ghost"
@@ -181,22 +183,28 @@ async function onLogout() {
         <AppButton class="icon-button menu-toggle" variant="ghost" size="sm" :aria-label="t('navigation.openMenu')" @click="sidebarOpen = true">☰</AppButton>
         <div class="breadcrumbs"><span>{{ t('app.name') }}</span><span aria-hidden="true">/</span><strong>{{ currentTitle() }}</strong></div>
         <div class="topbar-actions">
-          <AppButton
-            v-if="authStore.isAdmin || authStore.isAgent"
-            class="icon-button"
-            variant="ghost"
-            size="sm"
-            :aria-label="t('knowledgeBase.searchPlaceholder')"
-            :title="t('knowledgeBase.searchPlaceholder')"
-            @click="knowledgeBaseSearchOpen = true"
-          >🔍</AppButton>
-          <AppButton class="language-button" variant="ghost" size="sm" @click="toggleLocale">{{ locale === 'en' ? 'عربي' : 'EN' }}</AppButton>
-          <AiAvailabilityBadge />
-          <div class="user-chip">
-            <span class="avatar">{{ authStore.user?.name?.charAt(0).toUpperCase() }}</span>
-            <span class="user-details"><strong>{{ authStore.user?.name }}</strong><small>{{ authStore.user?.roles[0] }}</small></span>
+          <div class="action-group">
+            <AppButton
+              v-if="authStore.isAdmin || authStore.isAgent"
+              class="icon-button"
+              variant="ghost"
+              size="sm"
+              :aria-label="t('knowledgeBase.searchPlaceholder')"
+              :title="t('knowledgeBase.searchPlaceholder')"
+              @click="knowledgeBaseSearchOpen = true"
+            >🔍</AppButton>
+            <AppButton class="language-button" variant="ghost" size="sm" @click="toggleLocale">{{ locale === 'en' ? 'عربي' : 'EN' }}</AppButton>
           </div>
-          <AppButton class="icon-button" variant="ghost" size="sm" :aria-label="t('dashboard.logout')" :title="t('dashboard.logout')" @click="onLogout">↪</AppButton>
+          <div class="action-divider" aria-hidden="true"></div>
+          <AiAvailabilityBadge />
+          <div class="action-divider" aria-hidden="true"></div>
+          <div class="profile-group">
+            <div class="user-chip">
+              <span class="avatar">{{ authStore.user?.name?.charAt(0).toUpperCase() }}</span>
+              <span class="user-details"><strong>{{ authStore.user?.name }}</strong><small>{{ authStore.user?.roles[0] }}</small></span>
+            </div>
+            <AppButton class="icon-button" variant="ghost" size="sm" :aria-label="t('dashboard.logout')" :title="t('dashboard.logout')" @click="onLogout">↪</AppButton>
+          </div>
         </div>
       </header>
       <main class="page-content"><router-view /></main>
