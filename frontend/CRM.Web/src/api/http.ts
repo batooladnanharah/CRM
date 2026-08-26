@@ -19,12 +19,38 @@ export class ApiError extends Error {
   }
 }
 
+const AUTH_USER_STORAGE_KEY = 'crm.auth.user'
+
 function getStoredToken(): string | null {
   try {
     return sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
   } catch {
     return null
   }
+}
+
+// A 401 means the session token is missing/expired/revoked — no retry can
+// fix that, so drop the local session and send the user back to login.
+// Skipped for /auth/login itself, where a 401 just means bad credentials.
+function handleUnauthorized(path: string) {
+  if (path.startsWith('/auth/login')) {
+    return
+  }
+
+  try {
+    sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    sessionStorage.removeItem(AUTH_USER_STORAGE_KEY)
+  } catch {
+    // sessionStorage may be unavailable — nothing to clear.
+  }
+
+  void import('@/router').then(({ default: router }) => {
+    const current = router.currentRoute.value
+    if (current.name === 'login') {
+      return
+    }
+    void router.push({ path: '/login', query: { redirect: current.fullPath, sessionExpired: '1' } })
+  })
 }
 
 // Exposed for callers that need a raw fetch (e.g. multipart upload, blob
@@ -73,6 +99,11 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     } catch {
       // response body was not JSON — fall back to the generic message.
     }
+
+    if (response.status === 401) {
+      handleUnauthorized(path)
+    }
+
     throw new ApiError(response.status, message)
   }
 
