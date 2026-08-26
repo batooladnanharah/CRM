@@ -2,6 +2,7 @@ using CRM.Api.Auth;
 using CRM.Api.CommunicationChannels;
 using CRM.Api.Customers;
 using CRM.Api.Customers.Attachments;
+using CRM.Api.Email;
 using CRM.Api.KnowledgeBase;
 using CRM.Api.QuickReplies;
 using CRM.Api.Tickets;
@@ -114,6 +115,12 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             // an in-memory double instead so attachment tests never touch disk.
             services.RemoveAll<IFileStorage>();
             services.AddSingleton<IFileStorage, InMemoryFileStorage>();
+
+            // Real DevelopmentEmailService only logs; tests use FakeEmailService
+            // (singleton, so tests can flip ShouldFail and inspect SentRequests)
+            // instead of asserting on log output.
+            services.RemoveAll<IEmailService>();
+            services.AddSingleton<IEmailService, FakeEmailService>();
         });
     }
 

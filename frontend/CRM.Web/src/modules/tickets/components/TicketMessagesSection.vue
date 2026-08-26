@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTicketMessagesStore } from '@/stores/ticketMessages'
 import { useQuickRepliesStore } from '@/stores/quickReplies'
 import { fetchEligibleAgents } from '@/api/tickets'
 import { useLocale } from '@/composables/useLocale'
-import type { EligibleAgent } from '@/types/tickets'
+import AppAlert from '@/components/ui/AppAlert.vue'
+import AppInput from '@/components/ui/AppInput.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
+import type { EligibleAgent, MessageChannel, Ticket } from '@/types/tickets'
 
-const props = defineProps<{ ticketId: string }>()
+const props = defineProps<{ ticketId: string; ticket?: Ticket | null }>()
 
 const { t } = useI18n()
 const { locale } = useLocale()
@@ -17,7 +20,35 @@ const quickReplyStore = useQuickRepliesStore()
 const isAdding = ref(false)
 const draftBody = ref('')
 const draftIsInternal = ref(false)
+const draftChannel = ref<MessageChannel>('Web')
+const draftSubject = ref('')
 const textarea = ref<HTMLTextAreaElement | null>(null)
+
+const hasCustomerEmail = computed(() => !!props.ticket?.customerEmail)
+
+const deliveryStatusTone: Record<string, 'neutral' | 'success' | 'warning' | 'danger'> = {
+  Pending: 'neutral',
+  Sent: 'success',
+  Failed: 'danger',
+}
+
+watch(
+  () => props.ticket?.title,
+  (title) => {
+    if (draftChannel.value === 'Email' && title) {
+      draftSubject.value = title.startsWith('Re: ') ? title : `Re: ${title}`
+    }
+  },
+)
+
+watch(draftChannel, (channel) => {
+  if (channel === 'Email' && props.ticket?.title) {
+    draftSubject.value = props.ticket.title.startsWith('Re: ')
+      ? props.ticket.title
+      : `Re: ${props.ticket.title}`
+    draftIsInternal.value = false
+  }
+})
 
 const isQuickReplyOpen = ref(false)
 const quickReplySearch = ref('')
@@ -63,6 +94,8 @@ function openAddForm() {
   isAdding.value = true
   draftBody.value = ''
   draftIsInternal.value = false
+  draftChannel.value = 'Web'
+  draftSubject.value = ''
   mentionedUserIds.value = []
   mentionedUsers.value = new Map()
   mentionQuery.value = null
@@ -71,6 +104,7 @@ function openAddForm() {
 function cancelAdd() {
   isAdding.value = false
   draftBody.value = ''
+  draftChannel.value = 'Web'
   isQuickReplyOpen.value = false
   mentionQuery.value = null
 }
@@ -80,19 +114,25 @@ async function submitAdd() {
   if (!body) {
     return
   }
+  if (draftChannel.value === 'Email' && !hasCustomerEmail.value) {
+    return
+  }
   try {
     await store.addMessage(
       props.ticketId,
       body,
       draftIsInternal.value,
       draftIsInternal.value ? mentionedUserIds.value : undefined,
+      draftChannel.value,
+      draftChannel.value === 'Email' ? draftSubject.value.trim() || undefined : undefined,
     )
     isAdding.value = false
     draftBody.value = ''
+    draftChannel.value = 'Web'
     mentionedUserIds.value = []
     mentionedUsers.value = new Map()
   } catch {
-    // error surfaced via store.error
+    // draft is intentionally preserved; error surfaced via store.error / store.sendError
   }
 }
 
@@ -177,6 +217,27 @@ function isMentionSegment(segment: string): boolean {
     <p v-if="store.error" role="alert">{{ t(`tickets.messages.errors.${store.error}`) }}</p>
 
     <form v-if="isAdding" class="message-form" @submit.prevent="submitAdd">
+      <div class="reply-via">
+        <label for="reply-via-select">{{ t('tickets.messages.email.replyVia') }}</label>
+        <select id="reply-via-select" v-model="draftChannel">
+          <option value="Web">{{ t('tickets.messages.email.channelWeb') }}</option>
+          <option value="Email">{{ t('tickets.messages.email.channelEmail') }}</option>
+        </select>
+      </div>
+
+      <template v-if="draftChannel === 'Email'">
+        <p class="email-to-line">
+          <strong>{{ t('tickets.messages.email.to') }}:</strong>
+          <span v-if="hasCustomerEmail">{{ ticket?.customerName }} &lt;{{ ticket?.customerEmail }}&gt;</span>
+          <span v-else class="email-to-missing">{{ t('tickets.messages.email.noCustomerEmail') }}</span>
+        </p>
+        <AppInput
+          v-model="draftSubject"
+          :label="t('tickets.messages.email.subject')"
+        />
+        <AppAlert v-if="store.sendError" tone="danger">{{ t('tickets.messages.email.failed') }}</AppAlert>
+      </template>
+
       <label for="new-message-body">{{ t('tickets.messages.bodyLabel') }}</label>
       <div class="composer-wrap">
         <textarea
@@ -214,7 +275,7 @@ function isMentionSegment(segment: string): boolean {
         </li>
       </ul>
 
-      <label class="internal-toggle">
+      <label v-if="draftChannel === 'Web'" class="internal-toggle">
         <input type="checkbox" v-model="draftIsInternal" />
         {{ t('tickets.messages.internalToggle') }}
       </label>
@@ -245,8 +306,17 @@ function isMentionSegment(segment: string): boolean {
           </div>
         </div>
 
-        <button type="submit" :disabled="store.saving || !draftBody.trim()">
-          {{ t('tickets.messages.save') }}
+        <button
+          type="submit"
+          :disabled="store.saving || !draftBody.trim() || (draftChannel === 'Email' && !hasCustomerEmail)"
+        >
+          {{
+            store.saving
+              ? t('tickets.messages.email.sending')
+              : draftChannel === 'Email'
+                ? t('tickets.messages.email.send')
+                : t('tickets.messages.save')
+          }}
         </button>
         <button type="button" @click="cancelAdd">{{ t('tickets.messages.cancel') }}</button>
       </div>
@@ -276,6 +346,12 @@ function isMentionSegment(segment: string): boolean {
             {{ t('tickets.messages.internalBadge') }}
           </span>
           <span v-else class="public-badge">{{ t('tickets.messages.publicBadge') }}</span>
+          <AppBadge
+            v-if="message.channel === 'Email' && message.emailDeliveryStatus"
+            :tone="deliveryStatusTone[message.emailDeliveryStatus] ?? 'neutral'"
+          >
+            {{ t(`tickets.messages.email.${message.emailDeliveryStatus.toLowerCase()}`) }}
+          </AppBadge>
         </p>
         <p class="message-body">
           <template v-for="(segment, index) in highlightMentions(message.body)" :key="index">
@@ -405,6 +481,26 @@ function isMentionSegment(segment: string): boolean {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.reply-via {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reply-via select {
+  width: auto;
+}
+
+.email-to-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.email-to-missing {
+  color: var(--color-status-danger);
 }
 
 .char-warning {

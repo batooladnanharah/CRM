@@ -35,4 +35,5 @@ public enum TicketChangeType
     Escalated = 6,
     SlaRecalculated = 7,
     SlaBreached = 8,
+    EmailSent = 9,
 }

@@ -12,6 +12,7 @@ public record TicketResponse(
     Guid Id,
     Guid CustomerId,
     string CustomerName,
+    string CustomerEmail,
     string Title,
     string Description,
     TicketStatus Status,
@@ -62,7 +63,12 @@ public record TicketHistoryEntryResponse(
     DateTime ChangedAtUtc,
     bool IsSystemActor);
 
-public record CreateTicketMessageRequest(string Body, bool IsInternal, IReadOnlyList<Guid>? MentionedUserIds);
+public record CreateTicketMessageRequest(
+    string Body,
+    bool IsInternal,
+    IReadOnlyList<Guid>? MentionedUserIds,
+    string? Channel,
+    string? SubjectOverride);
 
 public record TicketMessageResponse(
     Guid Id,
@@ -72,6 +78,8 @@ public record TicketMessageResponse(
     string Body,
     bool IsInternal,
     IReadOnlyList<Guid> MentionedUserIds,
+    string Channel,
+    string? EmailDeliveryStatus,
     DateTime CreatedAtUtc);
 
 // StorageKey is intentionally never included here.

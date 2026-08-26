@@ -8,6 +8,7 @@ Entry point for the **communication-channel** feature. Stories execute in order 
 |----|------|-------|------------|------------|
 | _add rows as stories are planned_ |
 | 21 | `21-story-crm-99.md` | Communication Channels & Email | CRM-99 | — |
+| 30 | `30-story-crm-50.md` | COM-002 — Email Communication | CRM-50 | — |
 
 ## Dependency notes
 

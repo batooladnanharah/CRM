@@ -21,6 +21,7 @@ export interface Ticket {
   id: string
   customerId: string
   customerName: string
+  customerEmail: string
   title: string
   description: string
   status: TicketStatus
@@ -78,6 +79,7 @@ export type TicketChangeType =
   | 'Escalated'
   | 'SlaRecalculated'
   | 'SlaBreached'
+  | 'EmailSent'
 
 export interface TicketHistoryEntry {
   id: string
@@ -91,6 +93,9 @@ export interface TicketHistoryEntry {
   isSystemActor: boolean
 }
 
+export type MessageChannel = 'Web' | 'Email'
+export type EmailDeliveryStatus = 'Pending' | 'Sent' | 'Failed'
+
 export interface TicketMessage {
   id: string
   ticketId: string
@@ -99,6 +104,8 @@ export interface TicketMessage {
   body: string
   isInternal: boolean
   mentionedUserIds: string[]
+  channel: MessageChannel
+  emailDeliveryStatus: EmailDeliveryStatus | null
   createdAtUtc: string
 }
 
@@ -106,6 +113,13 @@ export interface CreateTicketMessagePayload {
   body: string
   isInternal: boolean
   mentionedUserIds?: string[]
+  channel?: MessageChannel
+  subjectOverride?: string
+}
+
+export interface EmailDeliveryFailure {
+  message: string
+  messageId: string
 }
 
 export interface QuickReply {

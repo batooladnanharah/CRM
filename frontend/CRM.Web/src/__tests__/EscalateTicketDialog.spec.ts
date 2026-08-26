@@ -20,6 +20,7 @@ function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
     id: '1',
     customerId: 'customer-1',
     customerName: 'Alice Johnson',
+    customerEmail: 'alice@example.com',
     title: 'Cannot log in',
     description: 'Details',
     status: 'Open',

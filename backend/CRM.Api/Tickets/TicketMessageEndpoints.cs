@@ -1,9 +1,13 @@
+using System.Net.Mail;
 using System.Security.Claims;
 using CRM.Api.Auth;
+using CRM.Api.CommunicationChannels;
 using CRM.Api.Customers;
+using CRM.Api.Email;
 using CRM.Api.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace CRM.Api.Tickets;
 
@@ -19,7 +23,8 @@ public static class TicketMessageEndpoints
             .WithTags("TicketMessages");
 
         messages.MapGet("/", async (
-            Guid ticketId, [AsParameters] TicketMessagesQuery query, TicketDbContext db, AuthDbContext authDb) =>
+            Guid ticketId, [AsParameters] TicketMessagesQuery query, TicketDbContext db, AuthDbContext authDb,
+            CommunicationChannelsDbContext channelsDb) =>
         {
             var ticketExists = await db.Tickets.AsNoTracking().AnyAsync(t => t.Id == ticketId);
             if (!ticketExists)
@@ -40,13 +45,15 @@ public static class TicketMessageEndpoints
                 .Take(pageSize)
                 .ToListAsync();
 
-            var items = await ToResponsesAsync(entities, db, authDb);
+            var items = await ToResponsesAsync(entities, db, authDb, channelsDb);
             return Results.Ok(new PagedResult<TicketMessageResponse>(items, page, pageSize, totalCount));
         })
         .WithName("ListTicketMessages");
 
         messages.MapPost("/", async (
             Guid ticketId, CreateTicketMessageRequest request, TicketDbContext db, AuthDbContext authDb,
+            CustomerDbContext customerDb, CommunicationChannelsDbContext channelsDb, IEmailService emailService,
+            IOptions<EmailOptions> emailOptions,
             ClaimsPrincipal principal, ILogger<Program> log, IAuditLogger auditLogger) =>
         {
             var body = request.Body?.Trim() ?? string.Empty;
@@ -68,10 +75,43 @@ public static class TicketMessageEndpoints
                 return Results.BadRequest(new ErrorResponse("Mentions are only allowed on internal notes."));
             }
 
+            var channel = MessageChannel.Web;
+            if (!string.IsNullOrWhiteSpace(request.Channel) &&
+                !Enum.TryParse(request.Channel, ignoreCase: true, out channel))
+            {
+                return Results.BadRequest(new ErrorResponse("Unrecognized channel."));
+            }
+
+            if (channel == MessageChannel.Email && request.IsInternal)
+            {
+                return Results.BadRequest(new ErrorResponse("Internal notes cannot be sent via email."));
+            }
+
             var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
             if (ticket is null)
             {
                 return Results.NotFound();
+            }
+
+            Customer? customer = null;
+            string? emailSubject = null;
+            if (channel == MessageChannel.Email)
+            {
+                customer = await customerDb.Customers.AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == ticket.CustomerId);
+                if (customer is null)
+                {
+                    return Results.NotFound();
+                }
+
+                if (string.IsNullOrWhiteSpace(customer.Email) || !MailAddress.TryCreate(customer.Email, out _))
+                {
+                    return Results.BadRequest(new ErrorResponse("customer_email_missing_or_invalid"));
+                }
+
+                emailSubject = ticket.Title.StartsWith("Re: ", StringComparison.Ordinal)
+                    ? ticket.Title
+                    : $"Re: {ticket.Title}";
             }
 
             if (mentionedUserIds.Count > 0)
@@ -103,6 +143,7 @@ public static class TicketMessageEndpoints
                 AuthorUserId = authorId,
                 Body = body,
                 IsInternal = request.IsInternal,
+                Channel = channel,
                 CreatedAtUtc = now,
             };
 
@@ -142,20 +183,91 @@ public static class TicketMessageEndpoints
 
             await db.SaveChangesAsync();
 
+            if (channel == MessageChannel.Email)
+            {
+                var metadata = new EmailMessageMetadata
+                {
+                    Id = Guid.NewGuid(),
+                    TicketMessageId = entity.Id,
+                    FromAddress = emailOptions.Value.FromAddress,
+                    ToAddress = customer!.Email,
+                    Subject = emailSubject!,
+                    DeliveryStatus = EmailDeliveryStatus.Pending,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                };
+                channelsDb.EmailMessageMetadata.Add(metadata);
+                await channelsDb.SaveChangesAsync();
+
+                EmailSendResult sendResult;
+                try
+                {
+                    sendResult = await emailService.SendAsync(
+                        new EmailSendRequest(customer.Email, customer.FullName, emailSubject!, body, entity.Id),
+                        CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    log.LogError(ex, "Email provider failed for ticket {TicketId}", ticketId);
+                    sendResult = new EmailSendResult(false, null, "provider_exception", "The email provider failed.");
+                }
+
+                if (sendResult.Success)
+                {
+                    metadata.DeliveryStatus = EmailDeliveryStatus.Sent;
+                    metadata.ProviderMessageId = sendResult.ProviderMessageId;
+                    metadata.SentAt = DateTimeOffset.UtcNow;
+                    await channelsDb.SaveChangesAsync();
+
+                    db.TicketHistory.Add(new TicketHistoryEntry
+                    {
+                        Id = Guid.NewGuid(),
+                        TicketId = ticketId,
+                        ChangeType = TicketChangeType.EmailSent,
+                        OldValue = null,
+                        NewValue = $"Email sent to {customer.FullName}",
+                        ChangedByUserId = authorId,
+                        ChangedAtUtc = DateTimeOffset.UtcNow.UtcDateTime,
+                    });
+                    await db.SaveChangesAsync();
+
+                    log.LogInformation(
+                        "ticket_message create ticketId={TicketId} messageId={MessageId} actor={ActorId} mentions={MentionCount} channel={Channel}",
+                        ticketId, entity.Id, authorId, mentionedUserIds.Count, channel);
+                    await auditLogger.WriteAsync(
+                        AuditActions.TicketMessageAdded, targetType: "ticket", targetId: ticketId.ToString());
+
+                    var successResponse = (await ToResponsesAsync([entity], db, authDb, channelsDb))[0];
+                    return Results.Created($"/api/tickets/{ticketId}/messages/{entity.Id}", successResponse);
+                }
+
+                metadata.DeliveryStatus = EmailDeliveryStatus.Failed;
+                metadata.LastError = sendResult.ErrorMessage ?? sendResult.ErrorCode;
+                await channelsDb.SaveChangesAsync();
+
+                log.LogError(
+                    "email_delivery_failed ticketId={TicketId} messageId={MessageId} errorCode={ErrorCode}",
+                    ticketId, entity.Id, sendResult.ErrorCode);
+
+                return Results.Json(
+                    new EmailDeliveryFailureResponse("Unable to send email. Please try again.", entity.Id),
+                    statusCode: StatusCodes.Status502BadGateway);
+            }
+
             log.LogInformation(
-                "ticket_message create ticketId={TicketId} messageId={MessageId} actor={ActorId} mentions={MentionCount}",
-                ticketId, entity.Id, authorId, mentionedUserIds.Count);
+                "ticket_message create ticketId={TicketId} messageId={MessageId} actor={ActorId} mentions={MentionCount} channel={Channel}",
+                ticketId, entity.Id, authorId, mentionedUserIds.Count, channel);
             await auditLogger.WriteAsync(
                 AuditActions.TicketMessageAdded, targetType: "ticket", targetId: ticketId.ToString());
 
-            var response = (await ToResponsesAsync([entity], db, authDb))[0];
+            var response = (await ToResponsesAsync([entity], db, authDb, channelsDb))[0];
             return Results.Created($"/api/tickets/{ticketId}/messages/{entity.Id}", response);
         })
         .WithName("CreateTicketMessage");
     }
 
     private static async Task<List<TicketMessageResponse>> ToResponsesAsync(
-        IReadOnlyList<TicketMessage> messages, TicketDbContext db, AuthDbContext authDb)
+        IReadOnlyList<TicketMessage> messages, TicketDbContext db, AuthDbContext authDb,
+        CommunicationChannelsDbContext channelsDb)
     {
         var authorIds = messages.Select(m => m.AuthorUserId).Distinct().ToList();
         var authorNames = await authDb.Users
@@ -171,6 +283,11 @@ public static class TicketMessageEndpoints
             .GroupBy(m => m.MessageId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<Guid>)g.Select(m => m.UserId).ToList());
 
+        var deliveryStatusByMessageId = await channelsDb.EmailMessageMetadata
+            .AsNoTracking()
+            .Where(m => messageIds.Contains(m.TicketMessageId))
+            .ToDictionaryAsync(m => m.TicketMessageId, m => m.DeliveryStatus);
+
         return messages
             .Select(m => new TicketMessageResponse(
                 m.Id,
@@ -180,9 +297,13 @@ public static class TicketMessageEndpoints
                 m.Body,
                 m.IsInternal,
                 mentionsByMessageId.GetValueOrDefault(m.Id, Array.Empty<Guid>()),
+                m.Channel.ToString(),
+                deliveryStatusByMessageId.TryGetValue(m.Id, out var status) ? status.ToString() : null,
                 m.CreatedAtUtc))
             .ToList();
     }
 }
 
 public record TicketMessagesQuery(int Page = 1, int PageSize = 20);
+
+public record EmailDeliveryFailureResponse(string Message, Guid MessageId);

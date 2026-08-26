@@ -6,6 +6,7 @@ using CRM.Api.Customers;
 using CRM.Api.CommunicationChannels;
 using CRM.Api.CustomerPortal;
 using CRM.Api.Customers.Attachments;
+using CRM.Api.Email;
 using CRM.Api.KnowledgeBase;
 using CRM.Api.QuickReplies;
 using CRM.Api.Reports;
@@ -71,6 +72,17 @@ if (builder.Configuration.GetValue("Sla:Enabled", true))
 // attachment keys, which are prefixed by a bare customerId.
 builder.Services.Configure<AttachmentsOptions>(builder.Configuration.GetSection(AttachmentsOptions.SectionName));
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+var emailProvider = builder.Configuration["Email:Provider"] ?? "Development";
+if (string.Equals(emailProvider, "Smtp", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+}
+else
+{
+    builder.Services.AddScoped<IEmailService, DevelopmentEmailService>();
+}
 
 // Kestrel's default MaxRequestBodySize (30MB) already comfortably covers the
 // configured attachment size limit plus multipart overhead; raise it only if

@@ -7,7 +7,7 @@ import { i18n } from '@/i18n'
 import type { createTicketMessage, fetchEligibleAgents, listTicketMessages } from '@/api/tickets'
 import type { createQuickReply, deleteQuickReply, listQuickReplies, updateQuickReply } from '@/api/quickReplies'
 import type { PagedResult } from '@/types/customers'
-import type { EligibleAgent, QuickReply, TicketMessage } from '@/types/tickets'
+import type { EligibleAgent, QuickReply, Ticket, TicketMessage } from '@/types/tickets'
 
 const { listMock, createMock, fetchEligibleAgentsMock } = vi.hoisted(() => ({
   listMock: vi.fn<typeof listTicketMessages>(),
@@ -57,7 +57,40 @@ function makeMessage(overrides: Partial<TicketMessage> = {}): TicketMessage {
     body: 'Original message',
     isInternal: false,
     mentionedUserIds: [],
+    channel: 'Web',
+    emailDeliveryStatus: null,
     createdAtUtc: '2026-01-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
+  return {
+    id: 'ticket-1',
+    customerId: 'customer-1',
+    customerName: 'Alice Johnson',
+    customerEmail: 'alice@example.com',
+    title: 'Cannot log in',
+    description: 'Details',
+    status: 'Open',
+    priority: 'Normal',
+    assigneeUserId: null,
+    assigneeDisplayName: null,
+    createdAtUtc: '2026-01-01T00:00:00Z',
+    updatedAtUtc: '2026-01-01T00:00:00Z',
+    sla: {
+      policyId: null,
+      firstResponseDueAtUtc: null,
+      resolutionDueAtUtc: null,
+      firstRespondedAtUtc: null,
+      resolvedAtUtc: null,
+      firstResponseStatus: 'NotApplicable',
+      resolutionStatus: 'NotApplicable',
+      firstResponseBreachedAtUtc: null,
+      resolutionBreachedAtUtc: null,
+      slaLastEvaluatedAtUtc: null,
+      slaAutoEscalatedAtUtc: null,
+    },
     ...overrides,
   }
 }
@@ -75,9 +108,9 @@ beforeEach(() => {
   listQuickRepliesMock.mockResolvedValue([])
 })
 
-function mountSection() {
+function mountSection(ticket: Ticket | null = makeTicket()) {
   return mount(TicketMessagesSection, {
-    props: { ticketId: 'ticket-1' },
+    props: { ticketId: 'ticket-1', ticket },
     global: { plugins: [i18n] },
   })
 }
@@ -140,7 +173,13 @@ describe('TicketMessagesSection', () => {
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    expect(createMock).toHaveBeenCalledWith('ticket-1', { body: 'Hello there', isInternal: false })
+    expect(createMock).toHaveBeenCalledWith('ticket-1', {
+      body: 'Hello there',
+      isInternal: false,
+      mentionedUserIds: undefined,
+      channel: 'Web',
+      subjectOverride: undefined,
+    })
     expect(wrapper.text()).toContain('Hello there')
   })
 
@@ -162,6 +201,8 @@ describe('TicketMessagesSection', () => {
       body: 'Internal update',
       isInternal: true,
       mentionedUserIds: [],
+      channel: 'Web',
+      subjectOverride: undefined,
     })
   })
 
@@ -287,5 +328,93 @@ describe('TicketMessagesSection', () => {
 
     expect(wrapper.find('.mention-dropdown').exists()).toBe(false)
     expect(fetchEligibleAgentsMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('TicketMessagesSection email reply', () => {
+  it('renders the Reply Via selector with Web and Email options', async () => {
+    listMock.mockResolvedValue(makePage([]))
+
+    const wrapper = mountSection()
+    await flushPromises()
+    await wrapper.find('button').trigger('click')
+
+    const options = wrapper.find('#reply-via-select').findAll('option')
+    expect(options.map((o) => o.element.value)).toEqual(['Web', 'Email'])
+  })
+
+  it('shows read-only To with the customer email and prefills subject with Re: {ticket.subject} when Email is selected', async () => {
+    listMock.mockResolvedValue(makePage([]))
+
+    const wrapper = mountSection()
+    await flushPromises()
+    await wrapper.find('button').trigger('click')
+    await wrapper.find('#reply-via-select').setValue('Email')
+
+    expect(wrapper.find('.email-to-line').text()).toContain('alice@example.com')
+    const subjectInput = wrapper.find('.ui-input-field input')
+    expect((subjectInput.element as HTMLInputElement).value).toBe('Re: Cannot log in')
+  })
+
+  it('disables Send when customer has no email', async () => {
+    listMock.mockResolvedValue(makePage([]))
+
+    const wrapper = mountSection(makeTicket({ customerEmail: '' }))
+    await flushPromises()
+    await wrapper.find('button').trigger('click')
+    await wrapper.find('#reply-via-select').setValue('Email')
+    await wrapper.find('textarea').setValue('Following up')
+
+    const saveButton = wrapper
+      .findAll('.message-form button')
+      .find((b) => b.attributes('type') === 'submit')!
+    expect(saveButton.attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('This customer has no email address on file.')
+  })
+
+  it('calls createTicketMessage with channel=Email and the derived subject, showing loading state while sending', async () => {
+    listMock.mockResolvedValue(makePage([]))
+    let resolveCreate!: (value: TicketMessage) => void
+    createMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCreate = resolve
+      }),
+    )
+
+    const wrapper = mountSection()
+    await flushPromises()
+    await wrapper.find('button').trigger('click')
+    await wrapper.find('#reply-via-select').setValue('Email')
+    await wrapper.find('textarea').setValue('Following up by email')
+    await wrapper.find('form').trigger('submit')
+    await nextTick()
+
+    expect(wrapper.text()).toContain('Sending…')
+    expect(createMock).toHaveBeenCalledWith('ticket-1', {
+      body: 'Following up by email',
+      isInternal: false,
+      mentionedUserIds: undefined,
+      channel: 'Email',
+      subjectOverride: 'Re: Cannot log in',
+    })
+
+    resolveCreate!(makeMessage({ id: 'new-1', channel: 'Email', emailDeliveryStatus: 'Sent' }))
+    await flushPromises()
+  })
+
+  it('on failure, keeps the draft content and shows the failure alert', async () => {
+    listMock.mockResolvedValue(makePage([]))
+    createMock.mockRejectedValue(new Error('email delivery failed'))
+
+    const wrapper = mountSection()
+    await flushPromises()
+    await wrapper.find('button').trigger('click')
+    await wrapper.find('#reply-via-select').setValue('Email')
+    await wrapper.find('textarea').setValue('Following up by email')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('Following up by email')
+    expect(wrapper.text()).toContain('Unable to send email. Please try again.')
   })
 })

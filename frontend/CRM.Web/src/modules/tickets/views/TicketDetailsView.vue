@@ -268,7 +268,7 @@ function onHistoryToggle(event: Event) {
         <p>{{ t('tickets.details.updatedAt') }}: {{ formatDate(store.current.updatedAtUtc) }}</p>
       </section>
 
-      <TicketMessagesSection :ticket-id="id" />
+      <TicketMessagesSection :ticket-id="id" :ticket="store.current" />
 
       <TicketAttachmentsSection :ticket-id="id" />
 

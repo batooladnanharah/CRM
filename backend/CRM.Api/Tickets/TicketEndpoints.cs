@@ -106,7 +106,7 @@ public static class TicketEndpoints
             await auditLogger.WriteAsync(
                 AuditActions.TicketCreated, targetType: "ticket", targetId: entity.Id.ToString());
 
-            var response = await ToResponseAsync(entity, customer.FullName, authDb);
+            var response = await ToResponseAsync(entity, customer.FullName, customer.Email, authDb);
             return Results.Created($"/api/tickets/{entity.Id}", response);
         })
         .RequireAuthorization("AgentOrAdmin")
@@ -130,7 +130,7 @@ public static class TicketEndpoints
             var customer = await customerDb.Customers.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
 
-            var response = await ToResponseAsync(entity, customer?.FullName ?? string.Empty, authDb);
+            var response = await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb);
             return Results.Ok(response);
         })
         .RequireAuthorization("AgentOrAdmin")
@@ -186,7 +186,7 @@ public static class TicketEndpoints
 
             var customer = await customerDb.Customers.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
-            return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, authDb));
+            return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb));
         })
         .RequireAuthorization("AgentOrAdmin")
         .WithName("AssignTicket")
@@ -253,7 +253,7 @@ public static class TicketEndpoints
 
             var customer = await customerDb.Customers.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
-            return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, authDb));
+            return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb));
         })
         .RequireAuthorization("AgentOrAdmin")
         .WithName("ChangeTicketStatus")
@@ -356,7 +356,7 @@ public static class TicketEndpoints
 
             var customer = await customerDb.Customers.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
-            return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, authDb));
+            return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb));
         })
         .RequireAuthorization("AgentOrAdmin")
         .WithName("ChangeTicketPriority")
@@ -466,7 +466,7 @@ public static class TicketEndpoints
 
             var customer = await customerDb.Customers.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
-            return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, authDb));
+            return Results.Ok(await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb));
         })
         .RequireAuthorization("AdminOnly")
         .WithName("EscalateTicket")
@@ -477,7 +477,7 @@ public static class TicketEndpoints
     }
 
     private static async Task<TicketResponse> ToResponseAsync(
-        Ticket entity, string customerName, AuthDbContext authDb)
+        Ticket entity, string customerName, string customerEmail, AuthDbContext authDb)
     {
         string? assigneeName = null;
         if (entity.AssigneeUserId is not null)
@@ -492,6 +492,7 @@ public static class TicketEndpoints
             entity.Id,
             entity.CustomerId,
             customerName,
+            customerEmail,
             entity.Title,
             entity.Description,
             entity.Status,

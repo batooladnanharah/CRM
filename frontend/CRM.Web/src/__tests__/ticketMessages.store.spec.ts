@@ -24,6 +24,8 @@ function makeMessage(overrides: Partial<TicketMessage> = {}): TicketMessage {
     body: 'Original message',
     isInternal: false,
     mentionedUserIds: [],
+    channel: 'Web',
+    emailDeliveryStatus: null,
     createdAtUtc: '2026-01-01T00:00:00Z',
     ...overrides,
   }
@@ -85,7 +87,13 @@ describe('ticketMessages store', () => {
     expect(store.items).toEqual([created])
     expect(store.saving).toBe(false)
     expect(store.error).toBeNull()
-    expect(createMock).toHaveBeenCalledWith('ticket-1', { body: 'New message', isInternal: true })
+    expect(createMock).toHaveBeenCalledWith('ticket-1', {
+      body: 'New message',
+      isInternal: true,
+      mentionedUserIds: undefined,
+      channel: 'Web',
+      subjectOverride: undefined,
+    })
   })
 
   it('addMessage() sets errorSave and rethrows on failure', async () => {
@@ -114,7 +122,38 @@ describe('ticketMessages store', () => {
       body: 'Please review',
       isInternal: true,
       mentionedUserIds: ['agent-1', 'agent-2'],
+      channel: 'Web',
+      subjectOverride: undefined,
     })
     expect(store.items[0]).toEqual(created)
+  })
+
+  it('addMessage() sends channel=Email and derived subject, tracked via sendError on failure', async () => {
+    const created = makeMessage({ id: 'new-3', channel: 'Email', emailDeliveryStatus: 'Sent' })
+    createMock.mockResolvedValue(created)
+
+    const store = useTicketMessagesStore()
+    await store.addMessage('ticket-1', 'Following up by email', false, undefined, 'Email', 'Re: Cannot log in')
+
+    expect(createMock).toHaveBeenCalledWith('ticket-1', {
+      body: 'Following up by email',
+      isInternal: false,
+      mentionedUserIds: undefined,
+      channel: 'Email',
+      subjectOverride: 'Re: Cannot log in',
+    })
+    expect(store.sendError).toBeNull()
+  })
+
+  it('addMessage() email failure sets sendError but does not clear content and does not set error', async () => {
+    createMock.mockRejectedValue(new Error('email delivery failed'))
+
+    const store = useTicketMessagesStore()
+    await expect(
+      store.addMessage('ticket-1', 'Following up by email', false, undefined, 'Email', 'Re: Cannot log in'),
+    ).rejects.toThrow('email delivery failed')
+
+    expect(store.sendError).toBe('errorSave')
+    expect(store.error).toBeNull()
   })
 })

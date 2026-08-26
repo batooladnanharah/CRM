@@ -337,6 +337,19 @@
       "errors": {
         "errorLoad": "Could not load messages. Please try again.",
         "errorSave": "Could not save the message. Please try again."
+      },
+      "email": {
+        "replyVia": "Reply via",
+        "channelWeb": "Web",
+        "channelEmail": "Email",
+        "to": "To",
+        "subject": "Subject",
+        "send": "Send Email",
+        "sending": "Sending…",
+        "sent": "Email sent",
+        "pending": "Sending…",
+        "failed": "Unable to send email. Please try again.",
+        "noCustomerEmail": "This customer has no email address on file."
       }
     },
     "attachments": {

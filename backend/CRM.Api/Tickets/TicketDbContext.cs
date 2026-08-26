@@ -69,6 +69,8 @@ public sealed class TicketDbContext(DbContextOptions<TicketDbContext> options) :
                 .IsRequired()
                 .HasMaxLength(5000);
 
+            entity.Property(m => m.Channel).HasConversion<string>().HasMaxLength(16);
+
             entity.HasIndex(m => new { m.TicketId, m.CreatedAtUtc });
 
             // Unlike CustomerId on Ticket, TicketId here is a same-context FK
