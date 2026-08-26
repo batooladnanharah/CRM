@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useQuickRepliesStore } from '@/stores/quickReplies'
+import { confirm } from '@/composables/useConfirm'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
@@ -74,7 +75,7 @@ async function submitEdit() {
 }
 
 async function onDelete(reply: QuickReply) {
-  if (!window.confirm(t('quickReplies.deleteConfirm'))) {
+  if (!(await confirm({ message: t('quickReplies.deleteConfirm'), tone: 'danger', confirmLabel: t('common.delete') }))) {
     return
   }
   try {

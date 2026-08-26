@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocale } from '@/composables/useLocale'
 import { useCommunicationChannelsStore } from '@/stores/communicationChannels'
+import { confirm } from '@/composables/useConfirm'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
@@ -66,7 +67,7 @@ async function onToggleEnabled(channel: Channel) {
 }
 
 async function onDelete(channel: Channel) {
-  if (!window.confirm(t('communicationChannels.deleteConfirm'))) {
+  if (!(await confirm({ message: t('communicationChannels.deleteConfirm'), tone: 'danger', confirmLabel: t('common.delete') }))) {
     return
   }
   try {

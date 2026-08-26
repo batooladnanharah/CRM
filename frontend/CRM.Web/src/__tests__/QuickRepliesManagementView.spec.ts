@@ -11,11 +11,12 @@ import type {
 } from '@/api/quickReplies'
 import type { QuickReply } from '@/types/tickets'
 
-const { listMock, createMock, updateMock, deleteMock } = vi.hoisted(() => ({
+const { listMock, createMock, updateMock, deleteMock, confirmMock } = vi.hoisted(() => ({
   listMock: vi.fn<typeof listQuickReplies>(),
   createMock: vi.fn<typeof createQuickReply>(),
   updateMock: vi.fn<typeof updateQuickReply>(),
   deleteMock: vi.fn<typeof deleteQuickReply>(),
+  confirmMock: vi.fn<() => Promise<boolean>>(),
 }))
 
 vi.mock('@/api/quickReplies', () => ({
@@ -24,6 +25,8 @@ vi.mock('@/api/quickReplies', () => ({
   updateQuickReply: updateMock,
   deleteQuickReply: deleteMock,
 }))
+
+vi.mock('@/composables/useConfirm', () => ({ confirm: confirmMock }))
 
 function makeQuickReply(overrides: Partial<QuickReply> = {}): QuickReply {
   return {
@@ -43,6 +46,7 @@ beforeEach(() => {
   createMock.mockReset()
   updateMock.mockReset()
   deleteMock.mockReset()
+  confirmMock.mockReset()
 })
 
 function mountView() {
@@ -90,7 +94,7 @@ describe('QuickRepliesManagementView', () => {
   it('deletes a quick reply after confirmation', async () => {
     listMock.mockResolvedValue([makeQuickReply({ id: '1', title: 'Greeting' })])
     deleteMock.mockResolvedValue(undefined)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    confirmMock.mockResolvedValue(true)
 
     const wrapper = mountView()
     await flushPromises()
@@ -104,7 +108,7 @@ describe('QuickRepliesManagementView', () => {
 
   it('does not delete when confirmation is declined', async () => {
     listMock.mockResolvedValue([makeQuickReply({ id: '1', title: 'Greeting' })])
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    confirmMock.mockResolvedValue(false)
 
     const wrapper = mountView()
     await flushPromises()

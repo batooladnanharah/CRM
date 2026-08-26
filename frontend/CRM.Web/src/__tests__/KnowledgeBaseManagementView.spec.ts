@@ -14,13 +14,14 @@ import type {
 } from '@/api/knowledgeBase'
 import type { KnowledgeBaseArticle } from '@/types/knowledgeBase'
 
-const { listArticlesMock, createArticleMock, updateArticleMock, deleteArticleMock, getArticleMock } =
+const { listArticlesMock, createArticleMock, updateArticleMock, deleteArticleMock, getArticleMock, confirmMock } =
   vi.hoisted(() => ({
     listArticlesMock: vi.fn<typeof listArticles>(),
     createArticleMock: vi.fn<typeof createArticle>(),
     updateArticleMock: vi.fn<typeof updateArticle>(),
     deleteArticleMock: vi.fn<typeof deleteArticle>(),
     getArticleMock: vi.fn<typeof getArticle>(),
+    confirmMock: vi.fn<() => Promise<boolean>>(),
   }))
 
 vi.mock('@/api/knowledgeBase', () => ({
@@ -32,6 +33,8 @@ vi.mock('@/api/knowledgeBase', () => ({
   updateArticle: updateArticleMock,
   deleteArticle: deleteArticleMock,
 }))
+
+vi.mock('@/composables/useConfirm', () => ({ confirm: confirmMock }))
 
 function makeArticle(overrides: Partial<KnowledgeBaseArticle> = {}): KnowledgeBaseArticle {
   return {
@@ -75,6 +78,7 @@ beforeEach(() => {
   updateArticleMock.mockReset()
   deleteArticleMock.mockReset()
   getArticleMock.mockReset()
+  confirmMock.mockReset()
   listArticlesMock.mockResolvedValue({ items: [], total: 0 })
 })
 
@@ -148,7 +152,7 @@ describe('KnowledgeBaseManagementView', () => {
   it('deletes an article after confirmation', async () => {
     listArticlesMock.mockResolvedValue({ items: [makeArticle({ id: '1' })], total: 1 })
     deleteArticleMock.mockResolvedValue(undefined)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    confirmMock.mockResolvedValue(true)
 
     const wrapper = await mountView()
     await flushPromises()

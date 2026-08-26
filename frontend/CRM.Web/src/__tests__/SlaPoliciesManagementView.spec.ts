@@ -6,11 +6,12 @@ import { i18n } from '@/i18n'
 import type { createSlaPolicy, deleteSlaPolicy, listSlaPolicies, updateSlaPolicy } from '@/api/sla'
 import type { SlaPolicy } from '@/types/tickets'
 
-const { listMock, createMock, updateMock, deleteMock } = vi.hoisted(() => ({
+const { listMock, createMock, updateMock, deleteMock, confirmMock } = vi.hoisted(() => ({
   listMock: vi.fn<typeof listSlaPolicies>(),
   createMock: vi.fn<typeof createSlaPolicy>(),
   updateMock: vi.fn<typeof updateSlaPolicy>(),
   deleteMock: vi.fn<typeof deleteSlaPolicy>(),
+  confirmMock: vi.fn<() => Promise<boolean>>(),
 }))
 
 vi.mock('@/api/sla', () => ({
@@ -19,6 +20,8 @@ vi.mock('@/api/sla', () => ({
   updateSlaPolicy: updateMock,
   deleteSlaPolicy: deleteMock,
 }))
+
+vi.mock('@/composables/useConfirm', () => ({ confirm: confirmMock }))
 
 function makeSlaPolicy(overrides: Partial<SlaPolicy> = {}): SlaPolicy {
   return {
@@ -42,6 +45,7 @@ beforeEach(() => {
   createMock.mockReset()
   updateMock.mockReset()
   deleteMock.mockReset()
+  confirmMock.mockReset()
 })
 
 function mountView() {
@@ -96,7 +100,7 @@ describe('SlaPoliciesManagementView', () => {
   it('deletes a policy after confirmation', async () => {
     listMock.mockResolvedValue([makeSlaPolicy({ id: '1' })])
     deleteMock.mockResolvedValue(undefined)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    confirmMock.mockResolvedValue(true)
 
     const wrapper = mountView()
     await flushPromises()
@@ -110,7 +114,7 @@ describe('SlaPoliciesManagementView', () => {
 
   it('does not delete when confirmation is declined', async () => {
     listMock.mockResolvedValue([makeSlaPolicy({ id: '1' })])
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    confirmMock.mockResolvedValue(false)
 
     const wrapper = mountView()
     await flushPromises()

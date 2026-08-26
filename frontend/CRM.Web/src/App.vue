@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppShell from '@/components/AppShell.vue'
+import ConfirmDialogHost from '@/components/ui/ConfirmDialogHost.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -12,6 +13,7 @@ const showShell = computed(() => authStore.isAuthenticated && route.name !== 'lo
 <template>
   <AppShell v-if="showShell" />
   <router-view v-else />
+  <ConfirmDialogHost />
 </template>
 
 <style scoped></style>

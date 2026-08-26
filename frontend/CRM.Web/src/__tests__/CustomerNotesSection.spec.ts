@@ -13,11 +13,12 @@ import type {
 } from '@/api/customers'
 import type { CustomerNote } from '@/types/customers'
 
-const { listMock, createMock, updateMock, deleteMock } = vi.hoisted(() => ({
+const { listMock, createMock, updateMock, deleteMock, confirmMock } = vi.hoisted(() => ({
   listMock: vi.fn<typeof listCustomerNotes>(),
   createMock: vi.fn<typeof createCustomerNote>(),
   updateMock: vi.fn<typeof updateCustomerNote>(),
   deleteMock: vi.fn<typeof deleteCustomerNote>(),
+  confirmMock: vi.fn<() => Promise<boolean>>(),
 }))
 
 vi.mock('@/api/customers', () => ({
@@ -26,6 +27,8 @@ vi.mock('@/api/customers', () => ({
   updateCustomerNote: updateMock,
   deleteCustomerNote: deleteMock,
 }))
+
+vi.mock('@/composables/useConfirm', () => ({ confirm: confirmMock }))
 
 function makeNote(overrides: Partial<CustomerNote> = {}): CustomerNote {
   return {
@@ -46,6 +49,7 @@ beforeEach(() => {
   createMock.mockReset()
   updateMock.mockReset()
   deleteMock.mockReset()
+  confirmMock.mockReset()
   vi.restoreAllMocks()
 })
 
@@ -186,7 +190,7 @@ describe('CustomerNotesSection', () => {
   it('deletes a note after confirmation', async () => {
     listMock.mockResolvedValue([makeNote({ id: '1', authorId: 'author-1' })])
     deleteMock.mockResolvedValue(undefined)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    confirmMock.mockResolvedValue(true)
 
     const wrapper = mountSection('author-1', ['agent'])
     await flushPromises()
@@ -201,7 +205,7 @@ describe('CustomerNotesSection', () => {
 
   it('does not delete when confirmation is declined', async () => {
     listMock.mockResolvedValue([makeNote({ id: '1', authorId: 'author-1' })])
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    confirmMock.mockResolvedValue(false)
 
     const wrapper = mountSection('author-1', ['agent'])
     await flushPromises()

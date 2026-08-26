@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSecurityStore } from '@/stores/security'
 import { useCustomersStore } from '@/stores/customers'
+import { confirm } from '@/composables/useConfirm'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
@@ -298,7 +299,7 @@ async function onRoleChange(user: AdminUserListItem, event: Event) {
 }
 
 async function onDisable(user: AdminUserListItem) {
-  if (!window.confirm(t('security.users.confirmDisable'))) {
+  if (!(await confirm({ message: t('security.users.confirmDisable'), tone: 'danger', confirmLabel: t('security.users.actions.disable') }))) {
     return
   }
   try {

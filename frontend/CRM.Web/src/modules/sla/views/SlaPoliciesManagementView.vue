@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSlaPoliciesStore } from '@/stores/sla'
+import { confirm } from '@/composables/useConfirm'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
@@ -105,7 +106,7 @@ async function submitEdit() {
 }
 
 async function onDelete(policy: SlaPolicy) {
-  if (!window.confirm(t('sla.policies.deleteConfirm'))) {
+  if (!(await confirm({ message: t('sla.policies.deleteConfirm'), tone: 'danger', confirmLabel: t('common.delete') }))) {
     return
   }
   try {

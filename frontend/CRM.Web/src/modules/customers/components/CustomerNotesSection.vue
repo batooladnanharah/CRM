@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useCustomerNotesStore } from '@/stores/customerNotes'
 import { useAuthStore } from '@/stores/auth'
 import { useLocale } from '@/composables/useLocale'
+import { confirm } from '@/composables/useConfirm'
 import AppButton from '@/components/ui/AppButton.vue'
 import type { CustomerNote } from '@/types/customers'
 
@@ -84,7 +85,7 @@ async function submitEdit(noteId: string) {
 }
 
 async function onDelete(noteId: string) {
-  if (!window.confirm(t('customers.notes.deleteConfirm'))) {
+  if (!(await confirm({ message: t('customers.notes.deleteConfirm'), tone: 'danger', confirmLabel: t('common.delete') }))) {
     return
   }
   try {

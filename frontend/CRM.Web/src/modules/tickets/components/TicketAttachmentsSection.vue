@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTicketAttachmentsStore } from '@/stores/ticketAttachments'
 import { useLocale } from '@/composables/useLocale'
+import { confirm } from '@/composables/useConfirm'
 import AppButton from '@/components/ui/AppButton.vue'
 import type { TicketAttachment } from '@/types/tickets'
 
@@ -83,7 +84,7 @@ async function onDownload(attachment: TicketAttachment) {
 }
 
 async function onDelete(attachment: TicketAttachment) {
-  if (!window.confirm(t('tickets.attachments.confirmDelete'))) {
+  if (!(await confirm({ message: t('tickets.attachments.confirmDelete'), tone: 'danger', confirmLabel: t('common.delete') }))) {
     return
   }
   try {

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCustomerAttachmentsStore } from '@/stores/customerAttachments'
 import { useLocale } from '@/composables/useLocale'
+import { confirm } from '@/composables/useConfirm'
 import AppButton from '@/components/ui/AppButton.vue'
 import type { CustomerAttachment } from '@/types/customers'
 
@@ -83,7 +84,7 @@ async function onDownload(attachment: CustomerAttachment) {
 }
 
 async function onDelete(attachment: CustomerAttachment) {
-  if (!window.confirm(t('customers.attachments.confirmDelete'))) {
+  if (!(await confirm({ message: t('customers.attachments.confirmDelete'), tone: 'danger', confirmLabel: t('common.delete') }))) {
     return
   }
   try {

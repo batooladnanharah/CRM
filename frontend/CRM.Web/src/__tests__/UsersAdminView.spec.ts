@@ -9,13 +9,16 @@ import type { AdminUserListItem } from '@/types/security'
 import type { listCustomers } from '@/api/customers'
 import type { Customer } from '@/types/customers'
 
-const { listCustomersMock } = vi.hoisted(() => ({
+const { listCustomersMock, confirmMock } = vi.hoisted(() => ({
   listCustomersMock: vi.fn<typeof listCustomers>(),
+  confirmMock: vi.fn<() => Promise<boolean>>(),
 }))
 
 vi.mock('@/api/customers', () => ({
   listCustomers: listCustomersMock,
 }))
+
+vi.mock('@/composables/useConfirm', () => ({ confirm: confirmMock }))
 
 function makeCustomer(overrides: Partial<Customer> = {}): Customer {
   return {
@@ -85,6 +88,7 @@ beforeEach(() => {
   setActivePinia(createPinia())
   fakeStore = makeFakeStore()
   listCustomersMock.mockReset()
+  confirmMock.mockReset()
   listCustomersMock.mockResolvedValue({ items: [], page: 1, pageSize: 10, totalCount: 0 })
 })
 
@@ -160,7 +164,7 @@ describe('UsersAdminView', () => {
     const authStore = useAuthStore()
     authStore.token = 'a-valid-token'
     authStore.user = { id: 'admin-1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    confirmMock.mockResolvedValue(true)
 
     fakeStore = makeFakeStore({ users: [makeUser({ id: '2' })] })
     const wrapper = mountView()

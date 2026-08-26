@@ -13,12 +13,13 @@ import type {
 } from '@/api/communicationChannels'
 import type { Channel, EmailMessage } from '@/types/communicationChannels'
 
-const { listMock, createMock, updateMock, deleteMock, listEmailsMock } = vi.hoisted(() => ({
+const { listMock, createMock, updateMock, deleteMock, listEmailsMock, confirmMock } = vi.hoisted(() => ({
   listMock: vi.fn<typeof listChannels>(),
   createMock: vi.fn<typeof createChannel>(),
   updateMock: vi.fn<typeof updateChannel>(),
   deleteMock: vi.fn<typeof deleteChannel>(),
   listEmailsMock: vi.fn<typeof listChannelEmails>(),
+  confirmMock: vi.fn<() => Promise<boolean>>(),
 }))
 
 vi.mock('@/api/communicationChannels', () => ({
@@ -29,6 +30,8 @@ vi.mock('@/api/communicationChannels', () => ({
   listChannelEmails: listEmailsMock,
   ingestChannelEmail: vi.fn<typeof ingestChannelEmail>(),
 }))
+
+vi.mock('@/composables/useConfirm', () => ({ confirm: confirmMock }))
 
 function makeChannel(overrides: Partial<Channel> = {}): Channel {
   return {
@@ -63,6 +66,7 @@ beforeEach(() => {
   updateMock.mockReset()
   deleteMock.mockReset()
   listEmailsMock.mockReset()
+  confirmMock.mockReset()
 })
 
 function mountView() {
@@ -129,7 +133,7 @@ describe('CommunicationChannelsManagementView', () => {
   it('deletes a channel after confirmation', async () => {
     listMock.mockResolvedValue([makeChannel({ id: '1', name: 'Deletable Inbox' })])
     deleteMock.mockResolvedValue(undefined)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    confirmMock.mockResolvedValue(true)
 
     const wrapper = mountView()
     await flushPromises()
