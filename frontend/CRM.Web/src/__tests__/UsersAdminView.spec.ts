@@ -207,7 +207,9 @@ describe('UsersAdminView', () => {
     await toggle.trigger('click')
 
     expect(wrapper.find('.permissions-cell .permissions-text').text()).toBe('5 permissions')
-    expect(document.querySelector('.permissions-popover')?.textContent).toContain('Customers: Manage')
+    const popoverText = document.querySelector('.permissions-popover')?.textContent ?? ''
+    expect(popoverText).toContain('Customers')
+    expect(popoverText).toContain('Manage')
     expect(wrapper.find('.permissions-toggle').text()).toBe('Show less')
 
     await wrapper.find('.permissions-toggle').trigger('click')

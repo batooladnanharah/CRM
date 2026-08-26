@@ -91,21 +91,25 @@ function actionLabel(permission: string): string {
   return action.charAt(0).toUpperCase() + action.slice(1)
 }
 
-// "customers.manage" -> "Customers: Manage"
-function formatPermission(permission: string): string {
-  return `${moduleLabel(permission)}: ${actionLabel(permission)}`
-}
-
 function permissionsSummary(user: AdminUserListItem): string {
   const count = store.permissionsFor(user.role).length
   return t('security.users.permissionsCount', { count }, count)
 }
 
-function permissionsList(user: AdminUserListItem): string {
-  return store.permissionsFor(user.role).map(formatPermission).join(', ')
-}
-
 const popoverUser = computed(() => store.users.find((user) => user.id === popoverUserId.value) ?? null)
+
+type PermissionGroup = { module: string; actions: string[] }
+
+function permissionGroups(user: AdminUserListItem): PermissionGroup[] {
+  const groups = new Map<string, string[]>()
+  for (const permission of store.permissionsFor(user.role)) {
+    const module = moduleLabel(permission)
+    const actions = groups.get(module) ?? []
+    actions.push(actionLabel(permission))
+    groups.set(module, actions)
+  }
+  return [...groups.entries()].map(([module, actions]) => ({ module, actions }))
+}
 
 const isCreateOpen = ref(false)
 const createForm = reactive({
@@ -392,31 +396,33 @@ onMounted(() => {
                 {{ user.isDisabled ? t('security.users.disabled') : t('security.users.enabled') }}
               </AppBadge>
             </td>
-            <td class="row-actions">
-              <AppButton
-                v-if="!user.isDisabled"
-                variant="ghost"
-                size="sm"
-                type="button"
-                :disabled="isSelf(user) || store.mutating"
-                :title="isSelf(user) ? t('security.users.cannotDeactivateSelf') : undefined"
-                @click="onDisable(user)"
-              >
-                {{ t('security.users.actions.disable') }}
-              </AppButton>
-              <AppButton
-                v-else
-                variant="ghost"
-                size="sm"
-                type="button"
-                :disabled="store.mutating"
-                @click="onEnable(user)"
-              >
-                {{ t('security.users.actions.enable') }}
-              </AppButton>
-              <AppButton variant="ghost" size="sm" type="button" @click="openEdit(user)">
-                {{ t('security.users.actions.edit') }}
-              </AppButton>
+            <td>
+              <div class="row-actions">
+                <AppButton
+                  v-if="!user.isDisabled"
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  :disabled="isSelf(user) || store.mutating"
+                  :title="isSelf(user) ? t('security.users.cannotDeactivateSelf') : undefined"
+                  @click="onDisable(user)"
+                >
+                  {{ t('security.users.actions.disable') }}
+                </AppButton>
+                <AppButton
+                  v-else
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  :disabled="store.mutating"
+                  @click="onEnable(user)"
+                >
+                  {{ t('security.users.actions.enable') }}
+                </AppButton>
+                <AppButton variant="ghost" size="sm" type="button" @click="openEdit(user)">
+                  {{ t('security.users.actions.edit') }}
+                </AppButton>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -433,7 +439,12 @@ onMounted(() => {
 
     <Teleport to="body">
       <div v-if="popoverUser" class="permissions-popover" :style="popoverStyle">
-        {{ permissionsList(popoverUser) }}
+        <div v-for="group in permissionGroups(popoverUser)" :key="group.module" class="permissions-group">
+          <p class="permissions-group-title">{{ group.module }}</p>
+          <div class="permissions-chips">
+            <AppBadge v-for="action in group.actions" :key="action" tone="info">{{ action }}</AppBadge>
+          </div>
+        </div>
       </div>
     </Teleport>
 
@@ -527,11 +538,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.users-admin-view {
-  max-width: 60rem;
-  margin: var(--space-8) auto;
-}
-
 .role-select {
   width: auto;
   min-width: 8rem;
@@ -577,17 +583,40 @@ onMounted(() => {
 .permissions-popover {
   position: fixed;
   z-index: var(--z-toast, 30);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   width: max-content;
-  max-width: 22rem;
-  padding: var(--space-3);
+  max-width: 26rem;
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: var(--space-4);
   color: var(--text-primary, var(--ink));
   background: var(--surface, white);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  font: 400 13px var(--font-sans, Arial, sans-serif);
   white-space: normal;
-  overflow-wrap: anywhere;
+}
+
+.permissions-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.permissions-group-title {
+  margin: 0;
+  color: var(--text-secondary, var(--muted));
+  font: 600 11px var(--font-sans, Arial, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.permissions-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .user-form {
