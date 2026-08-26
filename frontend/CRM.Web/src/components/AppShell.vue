@@ -1,20 +1,27 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAiStore } from '@/stores/ai'
 import { useLocale } from '@/composables/useLocale'
 import KnowledgeBaseSearchDialog from '@/modules/knowledgeBase/components/KnowledgeBaseSearchDialog.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import AiAvailabilityBadge from '@/components/ai/AiAvailabilityBadge.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const aiStore = useAiStore()
 const { locale } = useLocale()
 const sidebarOpen = ref(false)
 const sidebarExpanded = ref(false)
 const knowledgeBaseSearchOpen = ref(false)
+
+onMounted(() => {
+  void aiStore.loadStatus()
+})
 
 const routeTitleKeys: Record<string, string> = {
   dashboard: 'dashboard.title',
@@ -184,6 +191,7 @@ async function onLogout() {
             @click="knowledgeBaseSearchOpen = true"
           >🔍</AppButton>
           <AppButton class="language-button" variant="ghost" size="sm" @click="toggleLocale">{{ locale === 'en' ? 'عربي' : 'EN' }}</AppButton>
+          <AiAvailabilityBadge />
           <div class="user-chip">
             <span class="avatar">{{ authStore.user?.name?.charAt(0).toUpperCase() }}</span>
             <span class="user-details"><strong>{{ authStore.user?.name }}</strong><small>{{ authStore.user?.roles[0] }}</small></span>

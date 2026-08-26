@@ -29,6 +29,22 @@
       "description": "There is no data to show right now."
     }
   },
+  "ai": {
+    "status": {
+      "label": "AI Assistant",
+      "available": "Available",
+      "notConfigured": "Not configured"
+    },
+    "feature": {
+      "generate": "Generate",
+      "cancel": "Cancel",
+      "retry": "Try again",
+      "loading": "Generating…",
+      "error": "AI summary could not be generated. Please try again later.",
+      "unavailable": "AI assistance is not configured. Contact an administrator to enable it.",
+      "developmentDisclaimer": "Development / mock response — not from a real AI model."
+    }
+  },
   "login": {
     "title": "Sign in",
     "subtitle": "Keep every customer conversation moving forward.",

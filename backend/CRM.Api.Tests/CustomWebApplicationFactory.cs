@@ -1,3 +1,4 @@
+using CRM.Api.Ai;
 using CRM.Api.Auth;
 using CRM.Api.CommunicationChannels;
 using CRM.Api.Customers;
@@ -121,6 +122,12 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             // instead of asserting on log output.
             services.RemoveAll<IEmailService>();
             services.AddSingleton<IEmailService, FakeEmailService>();
+
+            // Always swap in FakeAiService regardless of which branch Program.cs's
+            // AI:Provider factory picked, so tests control IsAvailable/ShouldThrow
+            // deterministically the same way FakeEmailService overrides IEmailService.
+            services.RemoveAll<IAiService>();
+            services.AddSingleton<IAiService, FakeAiService>();
         });
     }
 

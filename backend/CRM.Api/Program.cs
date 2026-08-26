@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using CRM.Api.Auth;
 using CRM.Api.Customers;
+using CRM.Api.Ai;
 using CRM.Api.CommunicationChannels;
 using CRM.Api.CustomerPortal;
 using CRM.Api.Customers.Attachments;
@@ -83,6 +84,32 @@ else
 {
     builder.Services.AddScoped<IEmailService, DevelopmentEmailService>();
 }
+
+builder.Services.Configure<AiOptions>(builder.Configuration.GetSection(AiOptions.SectionName));
+var aiEnabled = builder.Configuration.GetValue("AI:Enabled", false);
+var aiProvider = builder.Configuration["AI:Provider"];
+if (aiEnabled && string.IsNullOrWhiteSpace(aiProvider))
+{
+    // Must not throw — the application always has to start. Fall back to the
+    // safe, no-external-dependency development provider.
+    Console.Error.WriteLine(
+        "Warning: AI:Enabled is true but AI:Provider is not set; falling back to the Development provider.");
+    builder.Services.AddSingleton<IAiService, DevelopmentAiService>();
+}
+else if (aiEnabled && !string.Equals(aiProvider, "Development", StringComparison.OrdinalIgnoreCase))
+{
+    // No real provider SDK exists yet — report the configured name so /api/ai/status
+    // is honest about what was requested, but never attempt to call it.
+    Console.Error.WriteLine(
+        $"Warning: AI provider '{aiProvider}' is configured but no implementation is available; " +
+        "falling back to Development provider with IsAvailable=false.");
+    builder.Services.AddSingleton<IAiService>(new UnimplementedProviderAiService(aiProvider!));
+}
+else
+{
+    builder.Services.AddSingleton<IAiService, DevelopmentAiService>();
+}
+builder.Services.AddScoped<AiApplicationService>();
 
 // Kestrel's default MaxRequestBodySize (30MB) already comfortably covers the
 // configured attachment size limit plus multipart overhead; raise it only if
@@ -387,6 +414,7 @@ app.MapKnowledgeBaseEndpoints();
 app.MapCustomerPortalEndpoints();
 app.MapReportsEndpoints();
 app.MapSecurityAdminEndpoints();
+app.MapAiEndpoints();
 
 app.Run();
 
