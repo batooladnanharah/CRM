@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CRM.Api.Auth;
+using CRM.Api.Customers;
 using CRM.Api.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -128,6 +129,65 @@ public class SecurityAdminRoleChangeTests : IClassFixture<CustomWebApplicationFa
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
         return db.AuditLogs.Count(a => a.Action == action && a.TargetId == targetId);
+    }
+
+    private Guid CreateFreshAgentUser(string email)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
+        var user = new User { Id = Guid.NewGuid(), Email = email, Name = "Fresh Agent", IsActive = true, Roles = ["agent"] };
+        user.PasswordHash = hasher.HashPassword(user, "Correct#Passw0rd!");
+        db.Users.Add(user);
+        db.SaveChanges();
+        return user.Id;
+    }
+
+    private Guid CreateCustomer(string fullName, string email)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            FullName = fullName,
+            Email = email,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+        db.Customers.Add(customer);
+        db.SaveChanges();
+        return customer.Id;
+    }
+
+    [Fact]
+    public async Task Put_Role_ToCustomer_RequiresCustomerId()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var targetId = CreateFreshAgentUser("role-to-customer-no-link@crm.local");
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/users/{targetId}/role", new { role = "customer" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("customer_id_required", body!.Message);
+    }
+
+    [Fact]
+    public async Task Put_Role_ToCustomer_WithCustomerId_LinksTheCustomerRecord()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var targetId = CreateFreshAgentUser("role-to-customer-linked@crm.local");
+        var customerId = CreateCustomer("Role Change Customer Co", "role-change@example.com");
+
+        var response = await admin.PutAsJsonAsync(
+            $"/api/admin/users/{targetId}/role", new { role = "customer", customerId });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AdminUserDetail>();
+        Assert.Equal("customer", body!.Role);
+        Assert.Equal(customerId, body.CustomerId);
     }
 
     [Fact]
@@ -433,6 +493,93 @@ public class SecurityAdminCreateUserTests : IClassFixture<CustomWebApplicationFa
         return db.AuditLogs.Count(a => a.Action == action && a.TargetId == targetId);
     }
 
+    private Guid CreateCustomer(string fullName, string email)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            FullName = fullName,
+            Email = email,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+        db.Customers.Add(customer);
+        db.SaveChanges();
+        return customer.Id;
+    }
+
+    [Fact]
+    public async Task Post_CreateUser_WithCustomerRole_RequiresCustomerId()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PostAsJsonAsync("/api/admin/users", new
+        {
+            email = "portal.nolink@crm.local",
+            password = "Correct#Passw0rd!",
+            name = "No Link",
+            role = "customer",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("customer_id_required", body!.Message);
+    }
+
+    [Fact]
+    public async Task Post_CreateUser_WithCustomerRole_Returns400_WhenCustomerIdDoesNotExist()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PostAsJsonAsync("/api/admin/users", new
+        {
+            email = "portal.badlink@crm.local",
+            password = "Correct#Passw0rd!",
+            name = "Bad Link",
+            role = "customer",
+            customerId = Guid.NewGuid(),
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("customer_not_found", body!.Message);
+    }
+
+    [Fact]
+    public async Task Post_CreateUser_WithCustomerRole_LinksTheCustomerRecord()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var customerId = CreateCustomer("Portal Customer Co", "portal.link@example.com");
+
+        var response = await admin.PostAsJsonAsync("/api/admin/users", new
+        {
+            email = "portal.link@crm.local",
+            password = "Correct#Passw0rd!",
+            name = "Portal Link",
+            role = "customer",
+            customerId,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AdminUserDetail>();
+        Assert.Equal(customerId, body!.CustomerId);
+
+        // The new account can now reach the customer portal (the regression this
+        // guards against — see CurrentCustomerAccessor.cs).
+        var login = await _client.PostAsJsonAsync(
+            "/api/auth/login", new { email = "portal.link@crm.local", password = "Correct#Passw0rd!" });
+        var loginBody = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        var portalClient = _factory.CreateClient();
+        portalClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", loginBody!.Token);
+        var dashboard = await portalClient.GetAsync("/api/customer/dashboard");
+        Assert.Equal(HttpStatusCode.OK, dashboard.StatusCode);
+    }
+
     [Fact]
     public async Task Post_CreateUser_PersistsUser_AndWritesAudit()
     {
@@ -569,6 +716,70 @@ public class SecurityAdminUpdateUserTests : IClassFixture<CustomWebApplicationFa
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
         return db.AuditLogs.Count(a => a.Action == action && a.TargetId == targetId);
+    }
+
+    private Guid CreateCustomer(string fullName, string email)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            FullName = fullName,
+            Email = email,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+        db.Customers.Add(customer);
+        db.SaveChanges();
+        return customer.Id;
+    }
+
+    private Guid? CustomerIdOf(Guid userId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        return db.Users.Single(u => u.Id == userId).CustomerId;
+    }
+
+    [Fact]
+    public async Task Put_UpdateUser_RelinksCustomerId_ForACustomerRoleUser()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var (portalCustomerId, _) = _factory.SeedPortalCustomers();
+        var targetId = UserIdByEmail(CustomWebApplicationFactory.PortalCustomerEmail);
+        var newCustomerId = CreateCustomer("Relinked Customer Co", "relinked@example.com");
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/users/{targetId}", new
+        {
+            email = CustomWebApplicationFactory.PortalCustomerEmail,
+            name = "Portal Customer User",
+            customerId = newCustomerId,
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AdminUserDetail>();
+        Assert.Equal(newCustomerId, body!.CustomerId);
+        Assert.NotEqual(portalCustomerId, body.CustomerId);
+    }
+
+    [Fact]
+    public async Task Put_UpdateUser_IgnoresCustomerId_ForANonCustomerRoleUser()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var targetId = UserIdByEmail(CustomWebApplicationFactory.InactiveEmail);
+        var someCustomerId = CreateCustomer("Ignored Customer Co", "ignored@example.com");
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/users/{targetId}", new
+        {
+            email = CustomWebApplicationFactory.InactiveEmail,
+            name = "Inactive Agent",
+            customerId = someCustomerId,
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(CustomerIdOf(targetId));
     }
 
     [Fact]

@@ -672,7 +672,10 @@
         "email": "Email",
         "password": "Password",
         "passwordHelp": "At least 8 characters.",
-        "name": "Full name"
+        "name": "Full name",
+        "customer": "Linked customer",
+        "customerHelp": "Required for the customer role — search by name or email.",
+        "customerRelinkHelp": "Leave blank to keep the current link, or search to relink to a different customer."
       },
       "errors": {
         "duplicate_email": "A user with this email already exists.",
@@ -681,6 +684,8 @@
         "name_required": "Full name is required.",
         "weak_password": "Password must be at least 8 characters.",
         "passwordTooShort": "Password must be at least 8 characters.",
+        "customer_id_required": "Assigning the customer role requires linking a customer record. Use Edit User to link one.",
+        "customer_not_found": "The selected customer record could not be found.",
         "generic": "Something went wrong. Please try again."
       }
     },

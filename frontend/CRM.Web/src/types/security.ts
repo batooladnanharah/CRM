@@ -26,11 +26,13 @@ export interface AdminCreateUserRequest {
   password: string
   name: string
   role: AdminRole
+  customerId?: string
 }
 
 export interface AdminUpdateUserRequest {
   email: string
   name: string
+  customerId?: string
 }
 
 export interface AuditLogEntry {

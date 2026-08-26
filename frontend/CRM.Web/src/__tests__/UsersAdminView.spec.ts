@@ -1,11 +1,33 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import { reactive } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import UsersAdminView from '@/modules/security/views/UsersAdminView.vue'
 import { i18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import type { AdminUserListItem } from '@/types/security'
+import type { listCustomers } from '@/api/customers'
+import type { Customer } from '@/types/customers'
+
+const { listCustomersMock } = vi.hoisted(() => ({
+  listCustomersMock: vi.fn<typeof listCustomers>(),
+}))
+
+vi.mock('@/api/customers', () => ({
+  listCustomers: listCustomersMock,
+}))
+
+function makeCustomer(overrides: Partial<Customer> = {}): Customer {
+  return {
+    id: 'customer-1',
+    fullName: 'Alice Johnson',
+    email: 'alice@example.com',
+    phone: null,
+    company: null,
+    createdAtUtc: '2026-01-01T00:00:00Z',
+    ...overrides,
+  }
+}
 
 function makeUser(overrides: Partial<AdminUserListItem> = {}): AdminUserListItem {
   return {
@@ -57,6 +79,12 @@ function mountView() {
 beforeEach(() => {
   setActivePinia(createPinia())
   fakeStore = makeFakeStore()
+  listCustomersMock.mockReset()
+  listCustomersMock.mockResolvedValue({ items: [], page: 1, pageSize: 10, totalCount: 0 })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('UsersAdminView', () => {
@@ -233,5 +261,75 @@ describe('UsersAdminView create/edit dialogs', () => {
     await vi.waitFor(() => expect(fakeStore.create).toHaveBeenCalled())
 
     expect(wrapper.text()).toContain('already exists')
+  })
+
+  it('shows a required customer picker when the create role is set to customer', async () => {
+    fakeStore = makeFakeStore()
+    const wrapper = mountView()
+
+    await wrapper.find('.page-heading button').trigger('click')
+    expect(wrapper.find('#create-user-customer').exists()).toBe(false)
+
+    const roleSelect = wrapper.find('#create-user-role')
+    await roleSelect.setValue('customer')
+
+    expect(wrapper.find('#create-user-customer').exists()).toBe(true)
+  })
+
+  it('does not call store.create for a customer-role user with no customer selected', async () => {
+    fakeStore = makeFakeStore()
+    const wrapper = mountView()
+
+    await wrapper.find('.page-heading button').trigger('click')
+    const emailInput = wrapper.find('input[type="email"]')
+    const passwordInput = wrapper.find('input[type="password"]')
+    const nameInputs = wrapper.findAll('input[type="text"]')
+    await emailInput.setValue('newcustomer@example.com')
+    await passwordInput.setValue('Correct#Passw0rd!')
+    await nameInputs[nameInputs.length - 1]!.setValue('New Customer')
+    await wrapper.find('#create-user-role').setValue('customer')
+
+    await wrapper.find('.user-form').trigger('submit')
+
+    expect(fakeStore.create).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('linking a customer record')
+  })
+
+  it('calls store.create with the selected customerId once a customer is picked', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    listCustomersMock.mockResolvedValue({
+      items: [makeCustomer({ id: 'customer-9', fullName: 'Bob Martinez' })],
+      page: 1,
+      pageSize: 10,
+      totalCount: 1,
+    })
+    fakeStore = makeFakeStore()
+    fakeStore.create = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+    const wrapper = mountView()
+
+    await wrapper.find('.page-heading button').trigger('click')
+    const emailInput = wrapper.find('input[type="email"]')
+    const passwordInput = wrapper.find('input[type="password"]')
+    const nameInputs = wrapper.findAll('input[type="text"]')
+    await emailInput.setValue('newcustomer@example.com')
+    await passwordInput.setValue('Correct#Passw0rd!')
+    await nameInputs[nameInputs.length - 1]!.setValue('New Customer')
+    await wrapper.find('#create-user-role').setValue('customer')
+
+    await wrapper.find('#create-user-customer').setValue('Bob')
+    vi.advanceTimersByTime(300)
+    await flushPromises()
+
+    const suggestion = wrapper.find('.customer-suggestions li')
+    expect(suggestion.exists()).toBe(true)
+    await suggestion.trigger('click')
+
+    vi.useRealTimers()
+    await wrapper.find('.user-form').trigger('submit')
+    await vi.waitFor(() => expect(fakeStore.create).toHaveBeenCalled())
+
+    expect(fakeStore.create).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'customer', customerId: 'customer-9' }),
+    )
   })
 })

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSecurityStore } from '@/stores/security'
+import { useCustomersStore } from '@/stores/customers'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
@@ -19,24 +20,91 @@ const ROLES: AdminRole[] = ['admin', 'agent', 'customer']
 const { t } = useI18n()
 const authStore = useAuthStore()
 const store = useSecurityStore()
+const customersStore = useCustomersStore()
 
 function isSelf(user: AdminUserListItem): boolean {
   return user.id === authStore.user?.id
 }
 
 const isCreateOpen = ref(false)
-const createForm = reactive({ email: '', password: '', name: '', role: 'agent' as AdminRole })
+const createForm = reactive({
+  email: '',
+  password: '',
+  name: '',
+  role: 'agent' as AdminRole,
+  customerId: '',
+})
+const createCustomerSearch = ref('')
+const createCustomerName = ref('')
 const createFormError = ref<string | null>(null)
 
 const isEditOpen = ref(false)
 const editingUserId = ref<string | null>(null)
-const editForm = reactive({ email: '', name: '' })
+const editingUserRole = ref<AdminRole | ''>('')
+const editForm = reactive({ email: '', name: '', customerId: '' })
+const editCustomerSearch = ref('')
+const editCustomerName = ref('')
 const editFormError = ref<string | null>(null)
+
+let customerSearchDebounceHandle: ReturnType<typeof setTimeout> | null = null
+
+function debouncedCustomerSearch(term: string) {
+  if (customerSearchDebounceHandle) {
+    clearTimeout(customerSearchDebounceHandle)
+  }
+  customerSearchDebounceHandle = setTimeout(() => {
+    customerSearchDebounceHandle = null
+    void customersStore.fetch({ search: term, page: 1, pageSize: 10 })
+  }, 300)
+}
+
+watch(createCustomerSearch, (term) => {
+  if (!createForm.customerId) {
+    debouncedCustomerSearch(term)
+  }
+})
+
+watch(editCustomerSearch, (term) => {
+  if (!editForm.customerId) {
+    debouncedCustomerSearch(term)
+  }
+})
+
+function onCreateCustomerInput(value: string) {
+  createForm.customerId = ''
+  createCustomerName.value = ''
+  createCustomerSearch.value = value
+}
+
+function onEditCustomerInput(value: string) {
+  editForm.customerId = ''
+  editCustomerName.value = ''
+  editCustomerSearch.value = value
+}
+
+function selectCreateCustomer(id: string, fullName: string) {
+  createForm.customerId = id
+  createCustomerName.value = fullName
+  createCustomerSearch.value = fullName
+  customersStore.items = []
+}
+
+function selectEditCustomer(id: string, fullName: string) {
+  editForm.customerId = id
+  editCustomerName.value = fullName
+  editCustomerSearch.value = fullName
+  customersStore.items = []
+}
 
 const createPasswordValid = computed(() => createForm.password.length >= 8)
 const createEmailValid = computed(() => /\S+@\S+\.\S+/.test(createForm.email))
+const createCustomerValid = computed(() => createForm.role !== 'customer' || !!createForm.customerId)
 const createFormValid = computed(
-  () => createEmailValid.value && createPasswordValid.value && createForm.name.trim().length > 0,
+  () =>
+    createEmailValid.value &&
+    createPasswordValid.value &&
+    createForm.name.trim().length > 0 &&
+    createCustomerValid.value,
 )
 
 function openCreate() {
@@ -44,6 +112,9 @@ function openCreate() {
   createForm.password = ''
   createForm.name = ''
   createForm.role = 'agent'
+  createForm.customerId = ''
+  createCustomerSearch.value = ''
+  createCustomerName.value = ''
   createFormError.value = null
   isCreateOpen.value = true
 }
@@ -58,11 +129,19 @@ async function submitCreate() {
       ? 'invalid_email'
       : !createPasswordValid.value
         ? 'passwordTooShort'
-        : 'name_required'
+        : !createCustomerValid.value
+          ? 'customer_id_required'
+          : 'name_required'
     return
   }
   try {
-    await store.create({ ...createForm })
+    await store.create({
+      email: createForm.email,
+      password: createForm.password,
+      name: createForm.name,
+      role: createForm.role,
+      customerId: createForm.role === 'customer' ? createForm.customerId : undefined,
+    })
     isCreateOpen.value = false
   } catch {
     createFormError.value = store.mutateError
@@ -71,8 +150,12 @@ async function submitCreate() {
 
 function openEdit(user: AdminUserListItem) {
   editingUserId.value = user.id
+  editingUserRole.value = user.role
   editForm.email = user.email
   editForm.name = user.name
+  editForm.customerId = ''
+  editCustomerSearch.value = ''
+  editCustomerName.value = ''
   editFormError.value = null
   isEditOpen.value = true
 }
@@ -87,7 +170,11 @@ async function submitEdit() {
     return
   }
   try {
-    await store.update(editingUserId.value, { ...editForm })
+    await store.update(editingUserId.value, {
+      email: editForm.email,
+      name: editForm.name,
+      customerId: editForm.customerId || undefined,
+    })
     isEditOpen.value = false
     editingUserId.value = null
   } catch {
@@ -274,6 +361,29 @@ onMounted(() => {
             <option v-for="role in ROLES" :key="role" :value="role">{{ role }}</option>
           </select>
         </div>
+        <div v-if="createForm.role === 'customer'" class="field customer-field">
+          <AppInput
+            id="create-user-customer"
+            :label="t('security.users.fields.customer')"
+            :help="t('security.users.fields.customerHelp')"
+            type="text"
+            autocomplete="off"
+            :model-value="createCustomerSearch"
+            @update:model-value="onCreateCustomerInput"
+          />
+          <ul
+            v-if="!createForm.customerId && customersStore.items.length > 0"
+            class="customer-suggestions"
+          >
+            <li
+              v-for="customer in customersStore.items"
+              :key="customer.id"
+              @click="selectCreateCustomer(customer.id, customer.fullName)"
+            >
+              {{ customer.fullName }} — {{ customer.email }}
+            </li>
+          </ul>
+        </div>
         <div class="form-actions">
           <AppButton type="button" variant="secondary" @click="closeCreate">{{ t('common.cancel') }}</AppButton>
           <AppButton type="submit" :disabled="store.mutating">{{ t('security.users.createUser') }}</AppButton>
@@ -288,6 +398,29 @@ onMounted(() => {
         </AppAlert>
         <AppInput v-model="editForm.email" type="email" :label="t('security.users.fields.email')" required />
         <AppInput v-model="editForm.name" :label="t('security.users.fields.name')" required />
+        <div v-if="editingUserRole === 'customer'" class="field customer-field">
+          <AppInput
+            id="edit-user-customer"
+            :label="t('security.users.fields.customer')"
+            :help="t('security.users.fields.customerRelinkHelp')"
+            type="text"
+            autocomplete="off"
+            :model-value="editCustomerSearch"
+            @update:model-value="onEditCustomerInput"
+          />
+          <ul
+            v-if="!editForm.customerId && customersStore.items.length > 0"
+            class="customer-suggestions"
+          >
+            <li
+              v-for="customer in customersStore.items"
+              :key="customer.id"
+              @click="selectEditCustomer(customer.id, customer.fullName)"
+            >
+              {{ customer.fullName }} — {{ customer.email }}
+            </li>
+          </ul>
+        </div>
         <div class="form-actions">
           <AppButton type="button" variant="secondary" @click="closeEdit">{{ t('common.cancel') }}</AppButton>
           <AppButton type="submit" :disabled="store.mutating">{{ t('common.save') }}</AppButton>
@@ -313,5 +446,30 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.customer-field {
+  position: relative;
+}
+
+.customer-suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  max-height: 12rem;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+}
+
+.customer-suggestions li {
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.customer-suggestions li:hover {
+  background: #f5fbf9;
 }
 </style>
