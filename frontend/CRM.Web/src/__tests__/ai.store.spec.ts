@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAiStore } from '@/stores/ai'
+import { ApiError } from '@/api/http'
 import type { getAiStatus, summariseTicket } from '@/api/ai'
 import type { AiResponse, AiStatus } from '@/types/ai'
 
@@ -42,6 +43,7 @@ describe('ai store', () => {
     expect(store.status).toBeNull()
     expect(store.loadingStatus).toBe(false)
     expect(store.statusError).toBeNull()
+    expect(store.summaries).toEqual({})
   })
 
   it('loadStatus() populates status on success', async () => {
@@ -67,32 +69,82 @@ describe('ai store', () => {
     expect(store.loadingStatus).toBe(false)
   })
 
-  it('summarise() returns the AiResponse and forwards an abort signal', async () => {
-    const response = makeResponse()
-    summariseMock.mockResolvedValue(response)
+  it('generateSummary() stores the summary content and clears loading', async () => {
+    summariseMock.mockResolvedValue(makeResponse({ content: 'Development summary: ticket-1 content' }))
 
     const store = useAiStore()
-    const result = await store.summarise('ticket-1')
+    await store.generateSummary('ticket-1')
 
-    expect(result).toEqual(response)
-    expect(summariseMock).toHaveBeenCalledWith('ticket-1', expect.any(AbortSignal))
+    expect(store.summaries['ticket-1']).toBe('Development summary: ticket-1 content')
+    expect(store.summaryLoading['ticket-1']).toBe(false)
+    expect(store.summaryError['ticket-1']).toBeNull()
   })
 
-  it('cancelSummary() aborts the in-flight request', async () => {
-    let capturedSignal: AbortSignal | undefined
+  it('generateSummary() is a no-op while already loading for that ticket', async () => {
+    let resolveFirst!: (value: AiResponse) => void
+    summariseMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveFirst = resolve
+      }),
+    )
+
+    const store = useAiStore()
+    const first = store.generateSummary('ticket-1')
+    const second = store.generateSummary('ticket-1')
+
+    resolveFirst!(makeResponse())
+    await Promise.all([first, second])
+
+    expect(summariseMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('generateSummary() does not clobber the loading state of a different ticket', async () => {
+    let resolveFirst!: (value: AiResponse) => void
     summariseMock.mockImplementation(
-      (_ticketId, signal) =>
-        new Promise((_resolve, reject) => {
-          capturedSignal = signal
-          signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = resolve
         }),
     )
 
     const store = useAiStore()
-    const pending = store.summarise('ticket-1')
-    store.cancelSummary()
+    const pending = store.generateSummary('ticket-1')
+    expect(store.summaryLoading['ticket-1']).toBe(true)
 
-    await expect(pending).rejects.toThrow('Aborted')
-    expect(capturedSignal?.aborted).toBe(true)
+    resolveFirst!(makeResponse())
+    await pending
+  })
+
+  it('generateSummary() sets a mapped error code on 503 and rethrows', async () => {
+    summariseMock.mockRejectedValue(new ApiError(503, 'AI is unavailable'))
+
+    const store = useAiStore()
+    await expect(store.generateSummary('ticket-1')).rejects.toThrow('AI is unavailable')
+
+    expect(store.summaryError['ticket-1']).toBe('unavailable')
+    expect(store.summaryLoading['ticket-1']).toBe(false)
+    expect(store.summaries['ticket-1']).toBeUndefined()
+  })
+
+  it('generateSummary() sets a mapped error code on 502', async () => {
+    summariseMock.mockRejectedValue(new ApiError(502, 'Provider failed'))
+
+    const store = useAiStore()
+    await expect(store.generateSummary('ticket-1')).rejects.toThrow('Provider failed')
+
+    expect(store.summaryError['ticket-1']).toBe('providerFailed')
+  })
+
+  it('regenerateSummary() clears the previous summary before fetching a new one', async () => {
+    summariseMock.mockResolvedValueOnce(makeResponse({ content: 'first' }))
+    const store = useAiStore()
+    await store.generateSummary('ticket-1')
+    expect(store.summaries['ticket-1']).toBe('first')
+
+    summariseMock.mockResolvedValueOnce(makeResponse({ content: 'second' }))
+    await store.regenerateSummary('ticket-1')
+
+    expect(store.summaries['ticket-1']).toBe('second')
+    expect(summariseMock).toHaveBeenCalledTimes(2)
   })
 })

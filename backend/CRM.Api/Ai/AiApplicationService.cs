@@ -1,59 +1,50 @@
-using CRM.Api.Tickets;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace CRM.Api.Ai;
 
 public sealed class AiApplicationService(
     IAiService aiService,
-    TicketDbContext ticketDb,
+    ITicketAiContextBuilder contextBuilder,
     IOptions<AiOptions> options,
     ILogger<AiApplicationService> logger)
 {
-    private const int MaxMessages = 20;
-    private const int MaxMessageLength = 2000;
-
     public async Task<AiResponse?> SummariseTicketAsync(Guid ticketId, CancellationToken cancellationToken)
     {
-        var ticket = await ticketDb.Tickets.AsNoTracking().FirstOrDefaultAsync(t => t.Id == ticketId, cancellationToken);
-        if (ticket is null)
+        var context = await contextBuilder.BuildAsync(ticketId, cancellationToken);
+        if (context is null)
         {
             return null;
         }
 
-        var messages = await ticketDb.TicketMessages
-            .AsNoTracking()
-            .Where(m => m.TicketId == ticketId)
-            .OrderByDescending(m => m.CreatedAtUtc)
-            .Take(MaxMessages)
-            .OrderBy(m => m.CreatedAtUtc)
-            .Select(m => m.Body)
-            .ToListAsync(cancellationToken);
-
-        var context = new Dictionary<string, string>
+        // Summary context includes internal notes — unlike a future category
+        // suggestion, summarising benefits from an agent's internal-only
+        // observations, and this endpoint is staff-only to begin with.
+        var promptContext = new Dictionary<string, string>
         {
-            ["Subject"] = ticket.Title,
-            ["Description"] = ticket.Description,
-            ["Status"] = ticket.Status.ToString(),
-            ["Priority"] = ticket.Priority.ToString(),
+            ["Subject"] = context.Subject,
+            ["Description"] = context.Description,
+            ["Status"] = context.Status,
+            ["Priority"] = context.Priority,
         };
-        for (var i = 0; i < messages.Count; i++)
+        for (var i = 0; i < context.Messages.Count; i++)
         {
-            context[$"Message{i}"] = Truncate(messages[i], MaxMessageLength);
+            promptContext[$"Message{i}"] = context.Messages[i].Body;
         }
 
         var userInput = string.Join(
             "\n",
-            messages.Select(m => Truncate(m, MaxMessageLength)).Prepend(ticket.Description));
+            context.Messages.Select(m => m.Body).Prepend(context.Description));
 
-        var request = new AiRequest(AiFeature.TicketSummary, AiPromptTemplates.TicketSummary, userInput, context);
+        var request = new AiRequest(
+            AiFeature.TicketSummary, AiPromptTemplates.TicketSummary, userInput, promptContext);
 
         return await GenerateAsync(AiFeature.TicketSummary, request, cancellationToken);
     }
 
-    // TODO(follow-up AI feature stories): add CategoriseTicketAsync, SuggestReplyAsync,
-    // SuggestSolutionAsync, and a Chatbot entry point, each calling GenerateAsync with
-    // its own AiFeature/AiPromptTemplates constant.
+    // TODO(follow-up AI feature stories): add SuggestTicketCategoryAsync (blocked —
+    // the Ticket domain has no persisted category concept yet; see CRM-69 report),
+    // SuggestReplyAsync, SuggestSolutionAsync, and a Chatbot entry point, each
+    // calling GenerateAsync with its own AiFeature/AiPromptTemplates constant.
 
     private async Task<AiResponse> GenerateAsync(AiFeature feature, AiRequest request, CancellationToken callerToken)
     {
@@ -97,7 +88,4 @@ public sealed class AiApplicationService(
             return new AiResponse(false, null, provider, model, "ProviderError");
         }
     }
-
-    private static string Truncate(string value, int maxLength) =>
-        value.Length <= maxLength ? value : value[..maxLength];
 }

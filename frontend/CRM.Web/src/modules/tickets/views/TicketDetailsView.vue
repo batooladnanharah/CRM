@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useTicketsStore } from '@/stores/tickets'
 import { useAuthStore } from '@/stores/auth'
+import { useAiStore } from '@/stores/ai'
 import { useLocale } from '@/composables/useLocale'
 import { isEscalatable, legalNextStatuses } from '@/modules/tickets/statusTransitions'
 import TicketMessagesSection from '@/modules/tickets/components/TicketMessagesSection.vue'
@@ -12,6 +13,7 @@ import EscalateTicketDialog from '@/modules/tickets/components/EscalateTicketDia
 import SlaBadge from '@/modules/tickets/components/SlaBadge.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import type { TicketPriority, TicketStatus } from '@/types/tickets'
 
@@ -21,6 +23,7 @@ const route = useRoute()
 const router = useRouter()
 const store = useTicketsStore()
 const authStore = useAuthStore()
+const aiStore = useAiStore()
 
 const id = (route.params.id as string | undefined)?.trim() ?? ''
 
@@ -168,6 +171,28 @@ function onHistoryToggle(event: Event) {
     void store.loadHistory(id)
   }
 }
+
+const aiAvailable = computed(() => aiStore.status?.available ?? false)
+const aiProvider = computed(() => aiStore.status?.provider ?? null)
+const aiSummary = computed(() => aiStore.summaries[id])
+const aiSummaryLoading = computed(() => aiStore.summaryLoading[id] ?? false)
+const aiSummaryError = computed(() => aiStore.summaryError[id])
+
+async function onGenerateSummary() {
+  try {
+    await aiStore.generateSummary(id)
+  } catch {
+    // error surfaced via aiStore.summaryError
+  }
+}
+
+async function onRegenerateSummary() {
+  try {
+    await aiStore.regenerateSummary(id)
+  } catch {
+    // error surfaced via aiStore.summaryError
+  }
+}
 </script>
 
 <template>
@@ -268,6 +293,45 @@ function onHistoryToggle(event: Event) {
         <p>{{ t('tickets.details.updatedAt') }}: {{ formatDate(store.current.updatedAtUtc) }}</p>
       </section>
 
+      <section class="surface ticket-section ai-assistance">
+        <div class="ai-assistance__header">
+          <h3>{{ t('ai.ticket.assistanceTitle') }}</h3>
+          <AppBadge v-if="aiAvailable && aiProvider === 'Development'" tone="info">
+            {{ t('ai.ticket.developmentBadge') }}
+          </AppBadge>
+        </div>
+
+        <AppAlert v-if="!aiAvailable" tone="warning">{{ t('ai.ticket.unavailable') }}</AppAlert>
+
+        <template v-else>
+          <div class="ai-assistance__actions">
+            <AppButton
+              type="button"
+              size="sm"
+              :disabled="aiSummaryLoading"
+              @click="onGenerateSummary"
+            >{{ t('ai.ticket.generateSummary') }}</AppButton>
+          </div>
+
+          <LoadingState v-if="aiSummaryLoading" :label="t('ai.ticket.generatingSummary')" />
+
+          <div v-else-if="aiSummary" class="ai-assistance__summary">
+            <p class="text-body">{{ aiSummary }}</p>
+            <p class="text-caption">{{ t('ai.ticket.generatedByAi') }}</p>
+            <AppButton type="button" variant="secondary" size="sm" @click="onRegenerateSummary">
+              {{ t('ai.ticket.regenerate') }}
+            </AppButton>
+          </div>
+
+          <div v-else-if="aiSummaryError" class="ai-assistance__summary">
+            <AppAlert tone="danger">{{ t('ai.ticket.summaryError') }}</AppAlert>
+            <AppButton type="button" size="sm" @click="onGenerateSummary">
+              {{ t('ai.ticket.tryAgain') }}
+            </AppButton>
+          </div>
+        </template>
+      </section>
+
       <TicketMessagesSection :ticket-id="id" :ticket="store.current" />
 
       <TicketAttachmentsSection :ticket-id="id" />
@@ -339,5 +403,33 @@ function onHistoryToggle(event: Event) {
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-3);
+}
+
+.ai-assistance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-assistance__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-assistance__header h3 {
+  margin: 0;
+}
+
+.ai-assistance__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ai-assistance__summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 </style>

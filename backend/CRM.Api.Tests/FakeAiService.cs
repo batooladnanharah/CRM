@@ -10,6 +10,7 @@ public sealed class FakeAiService : IAiService
     public string ProviderName => "Development";
     public bool IsAvailable { get; set; } = true;
     public bool ShouldThrow { get; set; }
+    public bool EmptyContent { get; set; }
     public TimeSpan? Delay { get; set; }
     public List<AiRequest> Requests { get; } = [];
 
@@ -25,6 +26,11 @@ public sealed class FakeAiService : IAiService
         if (ShouldThrow)
         {
             throw new InvalidOperationException("Simulated AI provider failure.");
+        }
+
+        if (EmptyContent)
+        {
+            return new AiResponse(true, string.Empty, ProviderName, "development-mock", null);
         }
 
         return new AiResponse(true, $"Development summary: {request.UserInput}", ProviderName, "development-mock", null);

@@ -141,7 +141,7 @@ public class AiTicketSummaryEndpointTests : IClassFixture<CustomWebApplicationFa
     }
 
     [Fact]
-    public async Task AI_service_throws_returns_200_with_ProviderError_and_ticket_still_readable()
+    public async Task AI_service_throws_returns_502_and_ticket_still_readable()
     {
         using var factory = WithAiEnabled(fake => fake.ShouldThrow = true);
         var client = await AuthenticatedClientAsync(factory);
@@ -149,17 +149,16 @@ public class AiTicketSummaryEndpointTests : IClassFixture<CustomWebApplicationFa
 
         var response = await client.PostAsync($"/api/ai/tickets/{ticketId}/summary", null);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<AiResponse>();
-        Assert.False(body!.Success);
-        Assert.Equal("ProviderError", body.ErrorCode);
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AiUnavailableResponse>();
+        Assert.Equal("ai.provider_failed", body!.ErrorCode);
 
         var ticketResponse = await client.GetAsync($"/api/tickets/{ticketId}");
         Assert.Equal(HttpStatusCode.OK, ticketResponse.StatusCode);
     }
 
     [Fact]
-    public async Task AI_service_times_out_returns_Timeout_within_a_few_seconds()
+    public async Task AI_service_times_out_returns_502_within_a_few_seconds()
     {
         using var factory = WithAiEnabled(fake => fake.Delay = TimeSpan.FromSeconds(30));
         // Reconfigure timeout separately since WithAiEnabled already sets AI:Enabled/Provider.
@@ -173,10 +172,38 @@ public class AiTicketSummaryEndpointTests : IClassFixture<CustomWebApplicationFa
 
         var response = await client.PostAsync($"/api/ai/tickets/{ticketId}/summary", null);
 
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AiUnavailableResponse>();
+        Assert.Equal("ai.provider_failed", body!.ErrorCode);
+    }
+
+    [Fact]
+    public async Task AI_empty_response_returns_502()
+    {
+        using var factory = WithAiEnabled(fake => fake.EmptyContent = true);
+        var client = await AuthenticatedClientAsync(factory);
+        CreateCustomerAndTicket(factory, out var ticketId);
+
+        var response = await client.PostAsync($"/api/ai/tickets/{ticketId}/summary", null);
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Summary_includes_the_latest_message_after_a_new_message_is_added()
+    {
+        using var factory = WithAiEnabled();
+        var client = await AuthenticatedClientAsync(factory);
+        CreateCustomerAndTicket(factory, out var ticketId);
+
+        await client.PostAsJsonAsync(
+            $"/api/tickets/{ticketId}/messages", new { body = "A brand new follow-up detail.", isInternal = false });
+
+        var response = await client.PostAsync($"/api/ai/tickets/{ticketId}/summary", null);
+
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<AiResponse>();
-        Assert.False(body!.Success);
-        Assert.Equal("Timeout", body.ErrorCode);
+        Assert.Contains("A brand new follow-up detail.", body!.Content);
     }
 
     [Fact]

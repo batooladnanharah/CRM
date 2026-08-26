@@ -109,6 +109,7 @@ else
 {
     builder.Services.AddSingleton<IAiService, DevelopmentAiService>();
 }
+builder.Services.AddScoped<ITicketAiContextBuilder, TicketAiContextBuilder>();
 builder.Services.AddScoped<AiApplicationService>();
 
 // Kestrel's default MaxRequestBodySize (30MB) already comfortably covers the

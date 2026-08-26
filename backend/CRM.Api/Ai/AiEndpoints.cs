@@ -41,12 +41,19 @@ public static class AiEndpoints
                 return Results.NotFound();
             }
 
+            if (!response.Success)
+            {
+                return Results.Json(
+                    new AiUnavailableResponse("ai.provider_failed"), statusCode: StatusCodes.Status502BadGateway);
+            }
+
             return Results.Ok(response);
         })
         .RequireAuthorization("AgentOrAdmin")
         .WithName("SummariseTicket")
         .Produces<AiResponse>()
         .Produces(StatusCodes.Status404NotFound)
+        .Produces<AiUnavailableResponse>(StatusCodes.Status502BadGateway)
         .Produces<AiUnavailableResponse>(StatusCodes.Status503ServiceUnavailable);
 
         return app;

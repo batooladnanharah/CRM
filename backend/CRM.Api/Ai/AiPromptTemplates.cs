@@ -4,9 +4,15 @@ namespace CRM.Api.Ai;
 // can consume the same instructions later without re-plumbing call sites.
 public static class AiPromptTemplates
 {
-    public const string TicketSummary =
-        "Summarise this support ticket conversation for an agent in 2-3 sentences. " +
-        "Focus on the customer's issue and current state; do not invent facts not present in the context.";
+    public const string TicketSummary = """
+        Summarize the following customer support ticket.
+
+        Rules:
+        - Use only the provided information.
+        - Do not invent facts.
+        - Keep the summary concise.
+        - Focus on the customer's issue and relevant actions already taken.
+        """;
 
     public const string TicketCategorization =
         "Categorise this support ticket into a single short category label based on its subject and description.";
