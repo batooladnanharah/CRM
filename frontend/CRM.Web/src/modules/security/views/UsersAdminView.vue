@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSecurityStore } from '@/stores/security'
@@ -8,6 +8,7 @@ import AppButton from '@/components/ui/AppButton.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppPagination from '@/components/ui/AppPagination.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
+import AppDialog from '@/components/ui/AppDialog.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -21,6 +22,77 @@ const store = useSecurityStore()
 
 function isSelf(user: AdminUserListItem): boolean {
   return user.id === authStore.user?.id
+}
+
+const isCreateOpen = ref(false)
+const createForm = reactive({ email: '', password: '', name: '', role: 'agent' as AdminRole })
+const createFormError = ref<string | null>(null)
+
+const isEditOpen = ref(false)
+const editingUserId = ref<string | null>(null)
+const editForm = reactive({ email: '', name: '' })
+const editFormError = ref<string | null>(null)
+
+const createPasswordValid = computed(() => createForm.password.length >= 8)
+const createEmailValid = computed(() => /\S+@\S+\.\S+/.test(createForm.email))
+const createFormValid = computed(
+  () => createEmailValid.value && createPasswordValid.value && createForm.name.trim().length > 0,
+)
+
+function openCreate() {
+  createForm.email = ''
+  createForm.password = ''
+  createForm.name = ''
+  createForm.role = 'agent'
+  createFormError.value = null
+  isCreateOpen.value = true
+}
+
+function closeCreate() {
+  isCreateOpen.value = false
+}
+
+async function submitCreate() {
+  if (!createFormValid.value) {
+    createFormError.value = !createEmailValid.value
+      ? 'invalid_email'
+      : !createPasswordValid.value
+        ? 'passwordTooShort'
+        : 'name_required'
+    return
+  }
+  try {
+    await store.create({ ...createForm })
+    isCreateOpen.value = false
+  } catch {
+    createFormError.value = store.mutateError
+  }
+}
+
+function openEdit(user: AdminUserListItem) {
+  editingUserId.value = user.id
+  editForm.email = user.email
+  editForm.name = user.name
+  editFormError.value = null
+  isEditOpen.value = true
+}
+
+function closeEdit() {
+  isEditOpen.value = false
+  editingUserId.value = null
+}
+
+async function submitEdit() {
+  if (!editingUserId.value) {
+    return
+  }
+  try {
+    await store.update(editingUserId.value, { ...editForm })
+    isEditOpen.value = false
+    editingUserId.value = null
+  } catch {
+    editFormError.value = store.mutateError
+  }
 }
 
 function onRoleFilterChange(event: Event) {
@@ -76,6 +148,7 @@ onMounted(() => {
         <p class="eyebrow">{{ t('navigation.workspace') }}</p>
         <h1>{{ t('security.users.title') }}</h1>
       </div>
+      <AppButton type="button" @click="openCreate">{{ t('security.users.createUser') }}</AppButton>
     </div>
 
     <div class="surface toolbar">
@@ -142,13 +215,14 @@ onMounted(() => {
                 {{ user.isDisabled ? t('security.users.disabled') : t('security.users.enabled') }}
               </AppBadge>
             </td>
-            <td>
+            <td class="row-actions">
               <AppButton
                 v-if="!user.isDisabled"
                 variant="ghost"
                 size="sm"
                 type="button"
                 :disabled="isSelf(user) || store.mutating"
+                :title="isSelf(user) ? t('security.users.cannotDeactivateSelf') : undefined"
                 @click="onDisable(user)"
               >
                 {{ t('security.users.actions.disable') }}
@@ -163,6 +237,9 @@ onMounted(() => {
               >
                 {{ t('security.users.actions.enable') }}
               </AppButton>
+              <AppButton variant="ghost" size="sm" type="button" @click="openEdit(user)">
+                {{ t('security.users.editUser') }}
+              </AppButton>
             </td>
           </tr>
         </tbody>
@@ -176,6 +253,47 @@ onMounted(() => {
       :total-count="store.usersTotalCount"
       @update:page="store.setUsersPage"
     />
+
+    <AppDialog v-if="isCreateOpen" :title="t('security.users.createUser')" @close="closeCreate">
+      <form class="user-form" @submit.prevent="submitCreate">
+        <AppAlert v-if="createFormError" tone="danger">
+          {{ t(`security.users.errors.${createFormError}`, createFormError) }}
+        </AppAlert>
+        <AppInput v-model="createForm.email" type="email" :label="t('security.users.fields.email')" required />
+        <AppInput
+          v-model="createForm.password"
+          type="password"
+          :label="t('security.users.fields.password')"
+          :help="t('security.users.fields.passwordHelp')"
+          required
+        />
+        <AppInput v-model="createForm.name" :label="t('security.users.fields.name')" required />
+        <div class="field">
+          <label for="create-user-role">{{ t('security.users.filters.role') }}</label>
+          <select id="create-user-role" v-model="createForm.role">
+            <option v-for="role in ROLES" :key="role" :value="role">{{ role }}</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <AppButton type="button" variant="secondary" @click="closeCreate">{{ t('common.cancel') }}</AppButton>
+          <AppButton type="submit" :disabled="store.mutating">{{ t('security.users.createUser') }}</AppButton>
+        </div>
+      </form>
+    </AppDialog>
+
+    <AppDialog v-if="isEditOpen" :title="t('security.users.editUser')" @close="closeEdit">
+      <form class="user-form" @submit.prevent="submitEdit">
+        <AppAlert v-if="editFormError" tone="danger">
+          {{ t(`security.users.errors.${editFormError}`, editFormError) }}
+        </AppAlert>
+        <AppInput v-model="editForm.email" type="email" :label="t('security.users.fields.email')" required />
+        <AppInput v-model="editForm.name" :label="t('security.users.fields.name')" required />
+        <div class="form-actions">
+          <AppButton type="button" variant="secondary" @click="closeEdit">{{ t('common.cancel') }}</AppButton>
+          <AppButton type="submit" :disabled="store.mutating">{{ t('common.save') }}</AppButton>
+        </div>
+      </form>
+    </AppDialog>
   </div>
 </template>
 
@@ -183,5 +301,17 @@ onMounted(() => {
 .users-admin-view {
   max-width: 60rem;
   margin: var(--space-8) auto;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.user-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 </style>

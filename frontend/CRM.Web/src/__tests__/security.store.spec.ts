@@ -2,15 +2,33 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSecurityStore } from '@/stores/security'
 import { ApiError } from '@/api/http'
-import type { assignRole, disableUser, enableUser, listAuditLog, listUsers } from '@/api/security'
+import type {
+  assignRole,
+  createUser,
+  disableUser,
+  enableUser,
+  listAuditLog,
+  listUsers,
+  updateUser,
+} from '@/api/security'
 import type { AdminUserListItem, AuditLogEntry } from '@/types/security'
 
-const { listUsersMock, assignRoleMock, disableUserMock, enableUserMock, listAuditLogMock } = vi.hoisted(() => ({
+const {
+  listUsersMock,
+  assignRoleMock,
+  disableUserMock,
+  enableUserMock,
+  listAuditLogMock,
+  createUserMock,
+  updateUserMock,
+} = vi.hoisted(() => ({
   listUsersMock: vi.fn<typeof listUsers>(),
   assignRoleMock: vi.fn<typeof assignRole>(),
   disableUserMock: vi.fn<typeof disableUser>(),
   enableUserMock: vi.fn<typeof enableUser>(),
   listAuditLogMock: vi.fn<typeof listAuditLog>(),
+  createUserMock: vi.fn<typeof createUser>(),
+  updateUserMock: vi.fn<typeof updateUser>(),
 }))
 
 vi.mock('@/api/security', () => ({
@@ -19,6 +37,8 @@ vi.mock('@/api/security', () => ({
   disableUser: disableUserMock,
   enableUser: enableUserMock,
   listAuditLog: listAuditLogMock,
+  createUser: createUserMock,
+  updateUser: updateUserMock,
 }))
 
 function makeUser(overrides: Partial<AdminUserListItem> = {}): AdminUserListItem {
@@ -55,6 +75,8 @@ beforeEach(() => {
   disableUserMock.mockReset()
   enableUserMock.mockReset()
   listAuditLogMock.mockReset()
+  createUserMock.mockReset()
+  updateUserMock.mockReset()
 })
 
 describe('security store', () => {
@@ -101,6 +123,63 @@ describe('security store', () => {
     expect(listUsersMock).toHaveBeenCalledWith(
       expect.objectContaining({ role: 'admin', disabled: true, page: 1 }),
     )
+  })
+
+  it('create() re-fetches the current page on success', async () => {
+    listUsersMock.mockResolvedValue({ items: [], page: 1, pageSize: 25, totalCount: 0 })
+    createUserMock.mockResolvedValue({
+      id: 'new-1', email: 'new.agent@crm.local', name: 'New Agent', role: 'agent', isDisabled: false,
+      customerId: null, createdAtUtc: '2026-01-01T00:00:00Z',
+    })
+
+    const store = useSecurityStore()
+    const result = await store.create({
+      email: 'new.agent@crm.local', password: 'Correct#Passw0rd!', name: 'New Agent', role: 'agent',
+    })
+
+    expect(result.email).toBe('new.agent@crm.local')
+    expect(listUsersMock).toHaveBeenCalledTimes(1)
+    expect(store.mutating).toBe(false)
+    expect(store.mutateError).toBeNull()
+  })
+
+  it('create() sets mutateError to the conflict code and rethrows on 409', async () => {
+    createUserMock.mockRejectedValue(new ApiError(409, 'duplicate_email'))
+
+    const store = useSecurityStore()
+    await expect(
+      store.create({ email: 'dup@crm.local', password: 'Correct#Passw0rd!', name: 'Dup', role: 'agent' }),
+    ).rejects.toThrow('duplicate_email')
+
+    expect(store.mutateError).toBe('duplicate_email')
+    expect(store.mutating).toBe(false)
+  })
+
+  it('update() replaces the user email/name in place on success', async () => {
+    listUsersMock.mockResolvedValue({
+      items: [makeUser({ id: '1', email: 'old@crm.local', name: 'Old Name' })],
+      page: 1, pageSize: 25, totalCount: 1,
+    })
+    const store = useSecurityStore()
+    await store.fetchUsers()
+
+    updateUserMock.mockResolvedValue({
+      id: '1', email: 'new@crm.local', name: 'New Name', role: 'agent', isDisabled: false,
+      customerId: null, createdAtUtc: '2026-01-01T00:00:00Z',
+    })
+    await store.update('1', { email: 'new@crm.local', name: 'New Name' })
+
+    expect(store.users[0]!.email).toBe('new@crm.local')
+    expect(store.users[0]!.name).toBe('New Name')
+  })
+
+  it('update() sets mutateError to the conflict code and rethrows on 409', async () => {
+    updateUserMock.mockRejectedValue(new ApiError(409, 'duplicate_email'))
+
+    const store = useSecurityStore()
+    await expect(store.update('1', { email: 'dup@crm.local', name: 'Dup' })).rejects.toThrow('duplicate_email')
+
+    expect(store.mutateError).toBe('duplicate_email')
   })
 
   it('changeRole() updates the user role in place on success', async () => {

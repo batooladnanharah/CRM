@@ -7,6 +7,8 @@ public static class AuditActions
     public const string RoleAssigned = "user.role.assigned";
     public const string UserDisabled = "user.disabled";
     public const string UserEnabled = "user.enabled";
+    public const string UserCreated = "user.created";
+    public const string UserUpdated = "user.updated";
     public const string AccessDenied = "security.access.denied";
 
     // Added by CRM-84 so every endpoint that mutates customer/ticket data is

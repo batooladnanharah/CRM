@@ -21,6 +21,18 @@ export interface AdminUserListQuery {
   pageSize?: number
 }
 
+export interface AdminCreateUserRequest {
+  email: string
+  password: string
+  name: string
+  role: AdminRole
+}
+
+export interface AdminUpdateUserRequest {
+  email: string
+  name: string
+}
+
 export interface AuditLogEntry {
   id: string
   occurredAtUtc: string

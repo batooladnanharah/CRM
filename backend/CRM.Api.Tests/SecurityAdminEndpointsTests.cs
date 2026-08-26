@@ -404,6 +404,243 @@ public class SecurityAccessDeniedAuditTests : IClassFixture<CustomWebApplication
     }
 }
 
+public class SecurityAdminCreateUserTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly CustomWebApplicationFactory _factory;
+    private readonly HttpClient _client;
+
+    public SecurityAdminCreateUserTests(CustomWebApplicationFactory factory)
+    {
+        _factory = factory;
+        factory.SeedUsers();
+        _client = factory.CreateClient();
+    }
+
+    private async Task<HttpClient> AuthenticatedClientAsync(string email, string password)
+    {
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password });
+        var body = await login.Content.ReadFromJsonAsync<LoginResponse>();
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body!.Token);
+        return client;
+    }
+
+    private int AuditCount(string action, string targetId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        return db.AuditLogs.Count(a => a.Action == action && a.TargetId == targetId);
+    }
+
+    [Fact]
+    public async Task Post_CreateUser_PersistsUser_AndWritesAudit()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PostAsJsonAsync("/api/admin/users", new
+        {
+            email = "new.agent@crm.local",
+            password = "Correct#Passw0rd!",
+            name = "New Agent",
+            role = "agent",
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AdminUserDetail>();
+        Assert.Equal("new.agent@crm.local", body!.Email);
+        Assert.Equal("agent", body.Role);
+        Assert.False(body.IsDisabled);
+        Assert.Equal(1, AuditCount(AuditActions.UserCreated, body.Id.ToString()));
+
+        // The created user can log in with the supplied password immediately.
+        var login = await _client.PostAsJsonAsync(
+            "/api/auth/login", new { email = "new.agent@crm.local", password = "Correct#Passw0rd!" });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_CreateUser_Returns409_OnDuplicateEmail()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PostAsJsonAsync("/api/admin/users", new
+        {
+            email = CustomWebApplicationFactory.ActiveEmail,
+            password = "Correct#Passw0rd!",
+            name = "Duplicate",
+            role = "agent",
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("duplicate_email", body!.Message);
+    }
+
+    [Fact]
+    public async Task Post_CreateUser_Returns400_OnInvalidRole()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PostAsJsonAsync("/api/admin/users", new
+        {
+            email = "invalid.role@crm.local",
+            password = "Correct#Passw0rd!",
+            name = "Invalid Role",
+            role = "superuser",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("invalid_role", body!.Message);
+    }
+
+    [Fact]
+    public async Task Post_CreateUser_Returns400_OnWeakPassword()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PostAsJsonAsync("/api/admin/users", new
+        {
+            email = "weak.password@crm.local",
+            password = "short",
+            name = "Weak Password",
+            role = "agent",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("weak_password", body!.Message);
+    }
+
+    [Fact]
+    public async Task Post_CreateUser_Returns403_ForAgent()
+    {
+        var agent = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword);
+
+        var response = await agent.PostAsJsonAsync("/api/admin/users", new
+        {
+            email = "blocked@crm.local",
+            password = "Correct#Passw0rd!",
+            name = "Blocked",
+            role = "agent",
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+}
+
+public class SecurityAdminUpdateUserTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly CustomWebApplicationFactory _factory;
+    private readonly HttpClient _client;
+
+    public SecurityAdminUpdateUserTests(CustomWebApplicationFactory factory)
+    {
+        _factory = factory;
+        factory.SeedUsers();
+        _client = factory.CreateClient();
+    }
+
+    private async Task<HttpClient> AuthenticatedClientAsync(string email, string password)
+    {
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password });
+        var body = await login.Content.ReadFromJsonAsync<LoginResponse>();
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body!.Token);
+        return client;
+    }
+
+    private Guid UserIdByEmail(string email)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        return db.Users.Single(u => u.Email == email).Id;
+    }
+
+    private int AuditCount(string action, string targetId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        return db.AuditLogs.Count(a => a.Action == action && a.TargetId == targetId);
+    }
+
+    [Fact]
+    public async Task Put_UpdateUser_UpdatesFields_AndWritesAudit()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var targetId = UserIdByEmail(CustomWebApplicationFactory.SecondAgentEmail);
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/users/{targetId}", new
+        {
+            email = "renamed.agent@crm.local",
+            name = "Renamed Agent",
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AdminUserDetail>();
+        Assert.Equal("renamed.agent@crm.local", body!.Email);
+        Assert.Equal("Renamed Agent", body.Name);
+        Assert.Equal(1, AuditCount(AuditActions.UserUpdated, targetId.ToString()));
+    }
+
+    [Fact]
+    public async Task Put_UpdateUser_Returns409_OnDuplicateEmail()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var targetId = UserIdByEmail(CustomWebApplicationFactory.SecondAgentEmail);
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/users/{targetId}", new
+        {
+            email = CustomWebApplicationFactory.ActiveEmail,
+            name = "Second Agent",
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("duplicate_email", body!.Message);
+    }
+
+    [Fact]
+    public async Task Put_UpdateUser_Returns404_WhenTargetMissing()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/users/{Guid.NewGuid()}", new
+        {
+            email = "nobody@crm.local",
+            name = "Nobody",
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_UpdateUser_Returns403_ForAgent()
+    {
+        var agent = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword);
+        var targetId = UserIdByEmail(CustomWebApplicationFactory.SecondAgentEmail);
+
+        var response = await agent.PutAsJsonAsync($"/api/admin/users/{targetId}", new
+        {
+            email = "blocked@crm.local",
+            name = "Blocked",
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+}
+
 public sealed record PagedResultOfAdminUserListItem(
     IReadOnlyList<AdminUserListItem> Items, int Page, int PageSize, int TotalCount);
 

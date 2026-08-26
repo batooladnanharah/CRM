@@ -646,6 +646,9 @@
       "confirmDisable": "Disable this user? They will no longer be able to log in.",
       "enabled": "Enabled",
       "disabled": "Disabled",
+      "createUser": "Create User",
+      "editUser": "Edit User",
+      "cannotDeactivateSelf": "You cannot deactivate your own account.",
       "filters": {
         "role": "Role",
         "status": "Status",
@@ -664,6 +667,21 @@
         "assignRole": "Assign Role",
         "disable": "Disable",
         "enable": "Enable"
+      },
+      "fields": {
+        "email": "Email",
+        "password": "Password",
+        "passwordHelp": "At least 8 characters.",
+        "name": "Full name"
+      },
+      "errors": {
+        "duplicate_email": "A user with this email already exists.",
+        "invalid_role": "Please choose a valid role.",
+        "invalid_email": "Please enter a valid email address.",
+        "name_required": "Full name is required.",
+        "weak_password": "Password must be at least 8 characters.",
+        "passwordTooShort": "Password must be at least 8 characters.",
+        "generic": "Something went wrong. Please try again."
       }
     },
     "audit": {

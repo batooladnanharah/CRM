@@ -1,6 +1,8 @@
 import { apiRequest } from './http'
 import type { PagedResult } from '@/types/customers'
 import type {
+  AdminCreateUserRequest,
+  AdminUpdateUserRequest,
   AdminUserDetail,
   AdminUserListItem,
   AdminUserListQuery,
@@ -25,6 +27,20 @@ export function listUsers(query: AdminUserListQuery = {}): Promise<PagedResult<A
 
 export function getUser(id: string): Promise<AdminUserDetail> {
   return apiRequest<AdminUserDetail>(`/admin/users/${id}`, { method: 'GET' })
+}
+
+export function createUser(payload: AdminCreateUserRequest): Promise<AdminUserDetail> {
+  return apiRequest<AdminUserDetail>('/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateUser(id: string, payload: AdminUpdateUserRequest): Promise<AdminUserDetail> {
+  return apiRequest<AdminUserDetail>(`/admin/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
 }
 
 export function assignRole(id: string, role: string): Promise<AdminUserDetail> {

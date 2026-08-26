@@ -38,6 +38,8 @@ function makeFakeStore(overrides: Record<string, unknown> = {}) {
     changeRole: vi.fn<() => Promise<void>>(),
     disable: vi.fn<() => Promise<void>>(),
     enable: vi.fn<() => Promise<void>>(),
+    create: vi.fn<() => Promise<void>>(),
+    update: vi.fn<() => Promise<void>>(),
     ...overrides,
   })
 }
@@ -140,5 +142,96 @@ describe('UsersAdminView', () => {
     const wrapper = mountView()
 
     expect(wrapper.text()).toContain('You cannot change your own role or disable your own account.')
+  })
+
+  it('disables Deactivate on the current user row', () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'] }
+
+    fakeStore = makeFakeStore({ users: [makeUser({ id: '1' })] })
+    const wrapper = mountView()
+
+    const disableButton = wrapper
+      .findAll('tbody button')
+      .find((b) => b.text() === 'Disable')!
+    expect(disableButton.attributes('disabled')).toBeDefined()
+  })
+})
+
+describe('UsersAdminView create/edit dialogs', () => {
+  it('opens the create dialog and calls store.create with the form values', async () => {
+    fakeStore = makeFakeStore()
+    fakeStore.create = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+    const wrapper = mountView()
+
+    await wrapper.find('.page-heading button').trigger('click')
+    expect(wrapper.text()).toContain('Create User')
+
+    const emailInput = wrapper.find('input[type="email"]')
+    const passwordInput = wrapper.find('input[type="password"]')
+    const nameInputs = wrapper.findAll('input[type="text"]')
+    await emailInput.setValue('new.agent@crm.local')
+    await passwordInput.setValue('Correct#Passw0rd!')
+    await nameInputs[nameInputs.length - 1]!.setValue('New Agent')
+
+    await wrapper.find('.user-form').trigger('submit')
+    await vi.waitFor(() => expect(fakeStore.create).toHaveBeenCalled())
+
+    expect(fakeStore.create).toHaveBeenCalledWith({
+      email: 'new.agent@crm.local',
+      password: 'Correct#Passw0rd!',
+      name: 'New Agent',
+      role: 'agent',
+    })
+  })
+
+  it('does not call store.create when the create form is invalid', async () => {
+    fakeStore = makeFakeStore()
+    const wrapper = mountView()
+
+    await wrapper.find('.page-heading button').trigger('click')
+    await wrapper.find('.user-form').trigger('submit')
+
+    expect(fakeStore.create).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('valid email')
+  })
+
+  it('opens the edit dialog pre-filled and calls store.update', async () => {
+    fakeStore = makeFakeStore({ users: [makeUser({ id: '2', email: 'old@crm.local', name: 'Old Name' })] })
+    fakeStore.update = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+    const wrapper = mountView()
+
+    const editButton = wrapper.findAll('tbody button').find((b) => b.text() === 'Edit User')!
+    await editButton.trigger('click')
+
+    const emailInput = wrapper.find('input[type="email"]')
+    expect((emailInput.element as HTMLInputElement).value).toBe('old@crm.local')
+
+    await emailInput.setValue('renamed@crm.local')
+    await wrapper.find('.user-form').trigger('submit')
+    await vi.waitFor(() => expect(fakeStore.update).toHaveBeenCalled())
+
+    expect(fakeStore.update).toHaveBeenCalledWith('2', { email: 'renamed@crm.local', name: 'Old Name' })
+  })
+
+  it('displays the mapped error when store.create fails', async () => {
+    fakeStore = makeFakeStore()
+    fakeStore.create = vi.fn<() => Promise<void>>().mockRejectedValue(new Error('failed'))
+    fakeStore.mutateError = 'duplicate_email'
+    const wrapper = mountView()
+
+    await wrapper.find('.page-heading button').trigger('click')
+    const emailInput = wrapper.find('input[type="email"]')
+    const passwordInput = wrapper.find('input[type="password"]')
+    const nameInputs = wrapper.findAll('input[type="text"]')
+    await emailInput.setValue('dup@crm.local')
+    await passwordInput.setValue('Correct#Passw0rd!')
+    await nameInputs[nameInputs.length - 1]!.setValue('Dup')
+
+    await wrapper.find('.user-form').trigger('submit')
+    await vi.waitFor(() => expect(fakeStore.create).toHaveBeenCalled())
+
+    expect(wrapper.text()).toContain('already exists')
   })
 })

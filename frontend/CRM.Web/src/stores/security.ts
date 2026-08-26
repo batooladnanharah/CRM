@@ -1,8 +1,23 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { assignRole, disableUser, enableUser, listAuditLog, listUsers } from '@/api/security'
+import {
+  assignRole,
+  createUser,
+  disableUser,
+  enableUser,
+  listAuditLog,
+  listUsers,
+  updateUser,
+} from '@/api/security'
 import { ApiError } from '@/api/http'
-import type { AdminRole, AdminUserListItem, AuditLogEntry, AuditLogQuery } from '@/types/security'
+import type {
+  AdminCreateUserRequest,
+  AdminRole,
+  AdminUpdateUserRequest,
+  AdminUserListItem,
+  AuditLogEntry,
+  AuditLogQuery,
+} from '@/types/security'
 
 const SEARCH_DEBOUNCE_MS = 300
 
@@ -75,6 +90,40 @@ export const useSecurityStore = defineStore('security', () => {
     void fetchUsers({ page })
   }
 
+  async function create(payload: AdminCreateUserRequest) {
+    mutating.value = true
+    mutateError.value = null
+
+    try {
+      const created = await createUser(payload)
+      await fetchUsers()
+      return created
+    } catch (err) {
+      mutateError.value = errorCode(err)
+      throw err
+    } finally {
+      mutating.value = false
+    }
+  }
+
+  async function update(id: string, payload: AdminUpdateUserRequest) {
+    mutating.value = true
+    mutateError.value = null
+
+    try {
+      const updated = await updateUser(id, payload)
+      users.value = users.value.map((u) =>
+        u.id === id ? { ...u, email: updated.email, name: updated.name } : u,
+      )
+      return updated
+    } catch (err) {
+      mutateError.value = errorCode(err)
+      throw err
+    } finally {
+      mutating.value = false
+    }
+  }
+
   async function changeRole(id: string, role: string) {
     mutating.value = true
     mutateError.value = null
@@ -124,7 +173,7 @@ export const useSecurityStore = defineStore('security', () => {
   }
 
   function errorCode(err: unknown): string {
-    if (err instanceof ApiError && err.status === 409) {
+    if (err instanceof ApiError && (err.status === 409 || err.status === 400)) {
       return err.message
     }
     return 'generic'
@@ -177,6 +226,8 @@ export const useSecurityStore = defineStore('security', () => {
     setUsersSearch,
     setUsersFilters,
     setUsersPage,
+    create,
+    update,
     changeRole,
     disable,
     enable,

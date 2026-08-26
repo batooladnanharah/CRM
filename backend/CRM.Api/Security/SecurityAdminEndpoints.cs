@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CRM.Api.Auth;
 using CRM.Api.Customers;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Api.Security;
@@ -58,9 +59,140 @@ public static class SecurityAdminEndpoints
         })
         .WithName("GetAdminUser");
 
+        admin.MapPost("/users", async (
+            AdminCreateUserRequest request, AuthDbContext db, CustomerDbContext customerDb,
+            IPasswordHasher<User> hasher, IAuditLogger auditLogger, CancellationToken ct) =>
+        {
+            var email = request.Email?.Trim().ToLowerInvariant() ?? string.Empty;
+            var name = request.Name?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrEmpty(email) || !email.Contains('@'))
+            {
+                return Results.BadRequest(new ErrorResponse("invalid_email"));
+            }
+            if (string.IsNullOrEmpty(name))
+            {
+                return Results.BadRequest(new ErrorResponse("name_required"));
+            }
+            if (string.IsNullOrEmpty(request.Password) || request.Password.Length < 8)
+            {
+                return Results.BadRequest(new ErrorResponse("weak_password"));
+            }
+
+            var normalizedRole = AllowedRoles.FirstOrDefault(
+                r => string.Equals(r, request.Role, StringComparison.OrdinalIgnoreCase));
+            if (normalizedRole is null)
+            {
+                return Results.BadRequest(new ErrorResponse("invalid_role"));
+            }
+
+            if (await db.Users.AsNoTracking().AnyAsync(u => u.Email == email, ct))
+            {
+                return Results.Conflict(new ErrorResponse("duplicate_email"));
+            }
+
+            // A customer-role account is meaningless without a linked Customer
+            // record — the customer portal endpoints resolve "who am I" purely
+            // from User.CustomerId (see CustomerPortal/CurrentCustomerAccessor.cs)
+            // and 403 when it is null. Require and validate the link up front so
+            // an admin can never create a customer-role account that can't log
+            // into the portal.
+            Guid? customerId = null;
+            if (normalizedRole == Roles.Customer)
+            {
+                if (request.CustomerId is null)
+                {
+                    return Results.BadRequest(new ErrorResponse("customer_id_required"));
+                }
+                if (!await customerDb.Customers.AsNoTracking().AnyAsync(c => c.Id == request.CustomerId, ct))
+                {
+                    return Results.BadRequest(new ErrorResponse("customer_not_found"));
+                }
+                customerId = request.CustomerId;
+            }
+
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = email,
+                Name = name,
+                IsActive = true,
+                Roles = [normalizedRole],
+                CustomerId = customerId,
+                CreatedAtUtc = DateTime.UtcNow,
+            };
+            user.PasswordHash = hasher.HashPassword(user, request.Password);
+
+            db.Users.Add(user);
+            await db.SaveChangesAsync(ct);
+
+            await auditLogger.WriteAsync(
+                AuditActions.UserCreated, targetType: "user", targetId: user.Id.ToString(),
+                payload: new { email, name, role = normalizedRole, customerId }, ct: ct);
+
+            return Results.Created($"/api/admin/users/{user.Id}", ToDetail(user));
+        })
+        .WithName("CreateAdminUser");
+
+        admin.MapPut("/users/{id:guid}", async (
+            Guid id, AdminUpdateUserRequest request, AuthDbContext db, CustomerDbContext customerDb,
+            IAuditLogger auditLogger, CancellationToken ct) =>
+        {
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
+            if (user is null)
+            {
+                return Results.NotFound();
+            }
+
+            var email = request.Email?.Trim().ToLowerInvariant() ?? string.Empty;
+            var name = request.Name?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrEmpty(email) || !email.Contains('@'))
+            {
+                return Results.BadRequest(new ErrorResponse("invalid_email"));
+            }
+            if (string.IsNullOrEmpty(name))
+            {
+                return Results.BadRequest(new ErrorResponse("name_required"));
+            }
+
+            if (email != user.Email &&
+                await db.Users.AsNoTracking().AnyAsync(u => u.Email == email && u.Id != id, ct))
+            {
+                return Results.Conflict(new ErrorResponse("duplicate_email"));
+            }
+
+            // Only a customer-role user carries a portal-linked CustomerId — see
+            // the same rationale in the create handler above. Re-linking is only
+            // meaningful (and only accepted) for an account that is already
+            // customer-role; other roles never have one.
+            var customerId = user.CustomerId;
+            if (user.Roles.Contains(Roles.Customer) && request.CustomerId is not null)
+            {
+                if (!await customerDb.Customers.AsNoTracking().AnyAsync(c => c.Id == request.CustomerId, ct))
+                {
+                    return Results.BadRequest(new ErrorResponse("customer_not_found"));
+                }
+                customerId = request.CustomerId;
+            }
+
+            var before = new { email = user.Email, name = user.Name, customerId = user.CustomerId };
+            user.Email = email;
+            user.Name = name;
+            user.CustomerId = customerId;
+            await db.SaveChangesAsync(ct);
+
+            await auditLogger.WriteAsync(
+                AuditActions.UserUpdated, targetType: "user", targetId: user.Id.ToString(),
+                payload: new { before, after = new { email, name, customerId } }, ct: ct);
+
+            return Results.Ok(ToDetail(user));
+        })
+        .WithName("UpdateAdminUser");
+
         admin.MapPut("/users/{id:guid}/role", async (
-            Guid id, AssignRoleRequest request, AuthDbContext db, IAuditLogger auditLogger,
-            ClaimsPrincipal principal, CancellationToken ct) =>
+            Guid id, AssignRoleRequest request, AuthDbContext db, CustomerDbContext customerDb,
+            IAuditLogger auditLogger, ClaimsPrincipal principal, CancellationToken ct) =>
         {
             var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
             if (user is null)
@@ -88,13 +220,37 @@ public static class SecurityAdminEndpoints
                 return Results.Conflict(new ErrorResponse("last_admin"));
             }
 
+            // Same portal-link requirement as create/update above: a customer-role
+            // account is unusable without User.CustomerId. Accept a freshly
+            // supplied id, fall back to one the account already carries (e.g.
+            // re-confirming customer role on an already-linked account), and
+            // reject outright if neither is available or the id doesn't exist.
+            Guid? customerId = user.CustomerId;
+            if (normalizedRole == Roles.Customer)
+            {
+                customerId = request.CustomerId ?? user.CustomerId;
+                if (customerId is null)
+                {
+                    return Results.BadRequest(new ErrorResponse("customer_id_required"));
+                }
+                if (!await customerDb.Customers.AsNoTracking().AnyAsync(c => c.Id == customerId, ct))
+                {
+                    return Results.BadRequest(new ErrorResponse("customer_not_found"));
+                }
+            }
+            else
+            {
+                customerId = null;
+            }
+
             var beforeRoles = user.Roles.ToList();
             user.Roles = [normalizedRole];
+            user.CustomerId = customerId;
             await db.SaveChangesAsync(ct);
 
             await auditLogger.WriteAsync(
                 AuditActions.RoleAssigned, targetType: "user", targetId: user.Id.ToString(),
-                payload: new { before = beforeRoles, after = user.Roles }, ct: ct);
+                payload: new { before = beforeRoles, after = user.Roles, customerId }, ct: ct);
 
             return Results.Ok(ToDetail(user));
         })

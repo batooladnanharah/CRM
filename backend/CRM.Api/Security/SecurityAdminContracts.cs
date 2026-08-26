@@ -13,7 +13,11 @@ public sealed record AdminUserDetail(
 public sealed record AdminUserListQuery(
     string? Search, string? Role, bool? Disabled, int Page = 1, int PageSize = 25);
 
-public sealed record AssignRoleRequest(string Role);
+public sealed record AssignRoleRequest(string Role, Guid? CustomerId = null);
+
+public sealed record AdminCreateUserRequest(string Email, string Password, string Name, string Role, Guid? CustomerId = null);
+
+public sealed record AdminUpdateUserRequest(string Email, string Name, Guid? CustomerId = null);
 
 public sealed record AuditLogEntryResponse(
     Guid Id,
