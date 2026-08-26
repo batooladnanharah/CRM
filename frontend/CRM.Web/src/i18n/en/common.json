@@ -299,7 +299,8 @@
         "description": "Description",
         "priority": "Priority",
         "customerPlaceholder": "Search by name or email…",
-        "titlePlaceholder": "Brief summary of the issue"
+        "titlePlaceholder": "Brief summary of the issue",
+        "descriptionPlaceholder": "Describe the issue in detail…"
       },
       "submit": "Create Ticket",
       "cancel": "Cancel",

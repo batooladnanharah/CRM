@@ -299,7 +299,8 @@
         "description": "الوصف",
         "priority": "الأولوية",
         "customerPlaceholder": "ابحث بالاسم أو البريد الإلكتروني…",
-        "titlePlaceholder": "ملخص موجز للمشكلة"
+        "titlePlaceholder": "ملخص موجز للمشكلة",
+        "descriptionPlaceholder": "صف المشكلة بالتفصيل…"
       },
       "submit": "إنشاء تذكرة",
       "cancel": "إلغاء",

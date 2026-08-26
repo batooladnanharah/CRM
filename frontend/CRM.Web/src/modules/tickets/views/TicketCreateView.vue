@@ -151,15 +151,17 @@ function onCancel() {
           required
         />
 
-        <div class="field">
+        <div class="field field-wide">
           <label for="ticket-description">{{ t('tickets.create.fields.description') }}</label>
           <textarea
             id="ticket-description"
             v-model="description"
             maxlength="4000"
-            rows="4"
+            rows="6"
+            :placeholder="t('tickets.create.fields.descriptionPlaceholder')"
             required
           ></textarea>
+          <span class="field-hint">{{ description.length }}/4000</span>
         </div>
 
         <div class="field">
@@ -196,7 +198,7 @@ function onCancel() {
 
 <style scoped>
 .ticket-create-view {
-  max-width: 30rem;
+  max-width: 40rem;
   margin: var(--space-8) auto;
 }
 
@@ -205,23 +207,38 @@ function onCancel() {
 }
 
 .customer-suggestions {
+  position: absolute;
+  z-index: 2;
+  width: 100%;
   list-style: none;
-  margin: 0;
-  padding: 0;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-1);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   max-height: 12rem;
   overflow-y: auto;
   box-shadow: var(--shadow-md);
+  box-sizing: border-box;
 }
 
 .customer-suggestions li {
   padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .customer-suggestions li:hover {
-  background: #f5fbf9;
+  background: var(--surface-2, #f5fbf9);
+}
+
+.field-hint {
+  align-self: flex-end;
+  color: var(--text-muted, var(--text-secondary));
+  font: 400 12px var(--font-sans);
+}
+
+textarea#ticket-description {
+  resize: vertical;
 }
 </style>
