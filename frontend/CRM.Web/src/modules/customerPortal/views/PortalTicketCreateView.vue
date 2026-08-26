@@ -83,6 +83,7 @@ function onCancel() {
           :label="t('portal.ticket.submit.fields.subject')"
           type="text"
           maxlength="200"
+          :placeholder="t('portal.ticket.submit.fields.subjectPlaceholder')"
           required
         />
 

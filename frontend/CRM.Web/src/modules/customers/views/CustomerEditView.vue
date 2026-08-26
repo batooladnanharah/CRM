@@ -98,6 +98,7 @@ function onCancel() {
           :label="t('customers.create.fields.fullName')"
           type="text"
           maxlength="200"
+          :placeholder="t('customers.create.fields.fullNamePlaceholder')"
           required
         />
         <AppInput
@@ -106,6 +107,7 @@ function onCancel() {
           :label="t('customers.create.fields.email')"
           type="email"
           maxlength="320"
+          :placeholder="t('customers.create.fields.emailPlaceholder')"
           required
         />
         <AppInput
@@ -114,6 +116,7 @@ function onCancel() {
           :label="t('customers.create.fields.phone')"
           type="tel"
           maxlength="32"
+          :placeholder="t('customers.create.fields.phonePlaceholder')"
         />
         <AppInput
           id="customer-company"
@@ -121,6 +124,7 @@ function onCancel() {
           :label="t('customers.create.fields.company')"
           type="text"
           maxlength="200"
+          :placeholder="t('customers.create.fields.companyPlaceholder')"
         />
       </div>
 

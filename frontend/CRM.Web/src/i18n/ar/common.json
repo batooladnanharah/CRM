@@ -60,7 +60,9 @@
     "title": "تسجيل الدخول",
     "subtitle": "حافظ على تقدم كل محادثة مع العملاء.",
     "email": "البريد الإلكتروني",
+    "emailPlaceholder": "you{'@'}company.com",
     "password": "كلمة المرور",
+    "passwordPlaceholder": "أدخل كلمة المرور",
     "submit": "تسجيل الدخول",
     "submitting": "جارٍ تسجيل الدخول…",
     "errors": {
@@ -140,7 +142,11 @@
         "fullName": "الاسم الكامل",
         "email": "البريد الإلكتروني",
         "phone": "الهاتف",
-        "company": "الشركة"
+        "company": "الشركة",
+        "fullNamePlaceholder": "مثال: أحمد محمد",
+        "emailPlaceholder": "jane{'@'}example.com",
+        "phonePlaceholder": "+966 5X XXX XXXX",
+        "companyPlaceholder": "مثال: شركة المثال"
       },
       "actions": {
         "submit": "إنشاء عميل",
@@ -291,7 +297,9 @@
         "customer": "العميل",
         "title": "العنوان",
         "description": "الوصف",
-        "priority": "الأولوية"
+        "priority": "الأولوية",
+        "customerPlaceholder": "ابحث بالاسم أو البريد الإلكتروني…",
+        "titlePlaceholder": "ملخص موجز للمشكلة"
       },
       "submit": "إنشاء تذكرة",
       "cancel": "إلغاء",
@@ -371,6 +379,7 @@
         "channelEmail": "البريد الإلكتروني",
         "to": "إلى",
         "subject": "الموضوع",
+        "subjectPlaceholder": "مثال: رد: الطلب رقم 1234",
         "send": "إرسال بريد إلكتروني",
         "sending": "جارٍ الإرسال…",
         "sent": "تم إرسال البريد الإلكتروني",
@@ -418,6 +427,7 @@
     "deleteConfirm": "هل تريد حذف هذا الرد السريع؟ لا يمكن التراجع عن هذا الإجراء.",
     "fields": {
       "title": "العنوان",
+      "titlePlaceholder": "مثال: سياسة الاسترجاع",
       "content": "المحتوى",
       "isActive": "نشط"
     },
@@ -451,6 +461,7 @@
     "disabledBadge": "معطّلة",
     "fields": {
       "name": "الاسم",
+      "namePlaceholder": "مثال: بريد الدعم",
       "typeEmailOnly": "النوع: البريد الإلكتروني (النوع الوحيد المتاح)",
       "fromAddress": "من",
       "subject": "الموضوع",
@@ -477,6 +488,7 @@
       "deleteConfirm": "هل تريد حذف هذه السياسة؟ لا يمكن التراجع عن هذا الإجراء.",
       "fields": {
         "name": "الاسم",
+        "namePlaceholder": "مثال: الدعم القياسي",
         "channel": "القناة",
         "channelAny": "أي قناة",
         "priority": "الأولوية",
@@ -512,13 +524,17 @@
     "filters": {
       "status": "الحالة",
       "tag": "الوسم",
+      "tagPlaceholder": "تصفية حسب الوسم…",
       "allStatuses": "جميع الحالات"
     },
     "fields": {
       "title": "العنوان",
+      "titlePlaceholder": "عنوان المقالة",
       "slug": "المعرّف (Slug)",
+      "slugPlaceholder": "يُنشأ تلقائيًا من العنوان",
       "body": "المحتوى",
       "tags": "الوسوم (مفصولة بفواصل)",
+      "tagsPlaceholder": "الفوترة، التهيئة",
       "status": "الحالة"
     },
     "status": {
@@ -570,6 +586,7 @@
         "title": "إرسال تذكرة",
         "fields": {
           "subject": "الموضوع",
+          "subjectPlaceholder": "ملخص موجز للمشكلة",
           "description": "الوصف",
           "priority": "الأولوية"
         },
@@ -640,6 +657,7 @@
     },
     "users": {
       "title": "أدوار المستخدمين",
+      "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني…",
       "empty": "لا يوجد مستخدمون.",
       "errorLoad": "تعذر تحميل المستخدمين. حاول مرة أخرى.",
       "confirmSelf": "لا يمكنك تغيير دورك الخاص أو تعطيل حسابك الخاص.",
@@ -675,9 +693,11 @@
       },
       "fields": {
         "email": "البريد الإلكتروني",
+        "emailPlaceholder": "you{'@'}company.com",
         "password": "كلمة المرور",
         "passwordHelp": "8 أحرف على الأقل.",
         "name": "الاسم الكامل",
+        "namePlaceholder": "مثال: أحمد محمد",
         "customer": "العميل المرتبط",
         "customerHelp": "مطلوب لدور العميل — ابحث بالاسم أو البريد الإلكتروني.",
         "customerRelinkHelp": "اتركه فارغًا للاحتفاظ بالربط الحالي، أو ابحث لربطه بعميل آخر."
@@ -702,10 +722,15 @@
       "viewPayload": "عرض التفاصيل",
       "filters": {
         "action": "الإجراء",
+        "actionPlaceholder": "مثال: user.login.succeeded",
         "actor": "الفاعل",
+        "actorPlaceholder": "معرّف المستخدم الفاعل",
         "target": "الهدف",
+        "targetPlaceholder": "معرّف السجل المستهدف",
         "from": "من",
+        "fromPlaceholder": "YYYY-MM-DD",
         "to": "إلى",
+        "toPlaceholder": "YYYY-MM-DD",
         "apply": "تطبيق"
       },
       "columns": {

@@ -259,7 +259,13 @@ async function onDelete(article: KnowledgeBaseArticle) {
       </div>
       <div class="toolbar-field">
         <label for="kb-tag-filter">{{ t('knowledgeBase.filters.tag') }}</label>
-        <input id="kb-tag-filter" v-model="tagFilter" type="text" @change="onFilterChange" />
+        <input
+          id="kb-tag-filter"
+          v-model="tagFilter"
+          type="text"
+          :placeholder="t('knowledgeBase.filters.tagPlaceholder')"
+          @change="onFilterChange"
+        />
       </div>
     </div>
 
@@ -268,7 +274,14 @@ async function onDelete(article: KnowledgeBaseArticle) {
     <form v-if="isAdding" class="surface kb-article-form" @submit.prevent="submitAdd">
       <div class="field">
         <label for="kb-title">{{ t('knowledgeBase.fields.title') }}</label>
-        <input id="kb-title" v-model="draftTitle" type="text" maxlength="200" @input="onTitleInput" />
+        <input
+          id="kb-title"
+          v-model="draftTitle"
+          type="text"
+          maxlength="200"
+          :placeholder="t('knowledgeBase.fields.titlePlaceholder')"
+          @input="onTitleInput"
+        />
       </div>
       <div class="field">
         <label for="kb-slug">{{ t('knowledgeBase.fields.slug') }}</label>
@@ -277,6 +290,7 @@ async function onDelete(article: KnowledgeBaseArticle) {
           v-model="draftSlug"
           type="text"
           maxlength="200"
+          :placeholder="t('knowledgeBase.fields.slugPlaceholder')"
           @input="onSlugTouched"
           @blur="onSlugBlur"
         />
@@ -291,7 +305,7 @@ async function onDelete(article: KnowledgeBaseArticle) {
       </div>
       <div class="field">
         <label for="kb-tags">{{ t('knowledgeBase.fields.tags') }}</label>
-        <input id="kb-tags" v-model="draftTagsText" type="text" />
+        <input id="kb-tags" v-model="draftTagsText" type="text" :placeholder="t('knowledgeBase.fields.tagsPlaceholder')" />
       </div>
       <div class="field">
         <label for="kb-status">{{ t('knowledgeBase.fields.status') }}</label>
@@ -310,7 +324,14 @@ async function onDelete(article: KnowledgeBaseArticle) {
     <form v-else-if="isEditingOutsideList" class="surface kb-article-form" @submit.prevent="submitEdit">
       <div class="field">
         <label for="kb-title">{{ t('knowledgeBase.fields.title') }}</label>
-        <input id="kb-title" v-model="draftTitle" type="text" maxlength="200" @input="onTitleInput" />
+        <input
+          id="kb-title"
+          v-model="draftTitle"
+          type="text"
+          maxlength="200"
+          :placeholder="t('knowledgeBase.fields.titlePlaceholder')"
+          @input="onTitleInput"
+        />
       </div>
       <div class="field">
         <label for="kb-slug">{{ t('knowledgeBase.fields.slug') }}</label>
@@ -319,6 +340,7 @@ async function onDelete(article: KnowledgeBaseArticle) {
           v-model="draftSlug"
           type="text"
           maxlength="200"
+          :placeholder="t('knowledgeBase.fields.slugPlaceholder')"
           @input="onSlugTouched"
           @blur="onSlugBlur"
         />
@@ -333,7 +355,7 @@ async function onDelete(article: KnowledgeBaseArticle) {
       </div>
       <div class="field">
         <label for="kb-tags">{{ t('knowledgeBase.fields.tags') }}</label>
-        <input id="kb-tags" v-model="draftTagsText" type="text" />
+        <input id="kb-tags" v-model="draftTagsText" type="text" :placeholder="t('knowledgeBase.fields.tagsPlaceholder')" />
       </div>
       <div class="field">
         <label for="kb-status">{{ t('knowledgeBase.fields.status') }}</label>
@@ -367,11 +389,12 @@ async function onDelete(article: KnowledgeBaseArticle) {
             <tr v-if="editingId === article.id">
               <td colspan="4">
                 <form class="kb-article-inline-form" @submit.prevent="submitEdit">
-                  <input v-model="draftTitle" type="text" maxlength="200" @input="onTitleInput" />
+                  <input v-model="draftTitle" type="text" maxlength="200" :placeholder="t('knowledgeBase.fields.titlePlaceholder')" @input="onTitleInput" />
                   <input
                     v-model="draftSlug"
                     type="text"
                     maxlength="200"
+                    :placeholder="t('knowledgeBase.fields.slugPlaceholder')"
                     @input="onSlugTouched"
                     @blur="onSlugBlur"
                   />
@@ -380,7 +403,7 @@ async function onDelete(article: KnowledgeBaseArticle) {
                     {{ t('knowledgeBase.validation.slugConflict') }}
                   </p>
                   <textarea v-model="draftBody" maxlength="20000" rows="8"></textarea>
-                  <input v-model="draftTagsText" type="text" />
+                  <input v-model="draftTagsText" type="text" :placeholder="t('knowledgeBase.fields.tagsPlaceholder')" />
                   <select v-model="draftStatus">
                     <option v-for="status in STATUSES" :key="status" :value="status">
                       {{ t(`knowledgeBase.status.${status.toLowerCase()}`) }}

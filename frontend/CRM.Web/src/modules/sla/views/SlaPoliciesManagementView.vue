@@ -133,7 +133,13 @@ async function onDelete(policy: SlaPolicy) {
     <form v-if="isAdding" class="surface sla-policy-form" @submit.prevent="submitAdd">
       <div class="field">
         <label for="sla-policy-name">{{ t('sla.policies.fields.name') }}</label>
-        <input id="sla-policy-name" v-model="draftName" type="text" maxlength="200" />
+        <input
+          id="sla-policy-name"
+          v-model="draftName"
+          type="text"
+          maxlength="200"
+          :placeholder="t('sla.policies.fields.namePlaceholder')"
+        />
       </div>
       <div class="field">
         <label for="sla-policy-channel">{{ t('sla.policies.fields.channel') }}</label>
@@ -198,7 +204,12 @@ async function onDelete(policy: SlaPolicy) {
             <tr v-if="editingId === policy.id">
               <td colspan="8">
                 <form class="sla-policy-inline-form" @submit.prevent="submitEdit">
-                  <input v-model="draftName" type="text" maxlength="200" />
+                  <input
+                    v-model="draftName"
+                    type="text"
+                    maxlength="200"
+                    :placeholder="t('sla.policies.fields.namePlaceholder')"
+                  />
                   <input
                     v-model="draftChannel"
                     type="text"

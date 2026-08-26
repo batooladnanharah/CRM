@@ -82,6 +82,7 @@ function submitErrorKey(): string | null {
         :label="t('login.email')"
         type="email"
         autocomplete="username"
+        :placeholder="t('login.emailPlaceholder')"
         required
       />
 
@@ -91,6 +92,7 @@ function submitErrorKey(): string | null {
         :label="t('login.password')"
         type="password"
         autocomplete="current-password"
+        :placeholder="t('login.passwordPlaceholder')"
         required
       />
 

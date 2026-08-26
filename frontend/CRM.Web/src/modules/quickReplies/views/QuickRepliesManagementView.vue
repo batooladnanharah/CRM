@@ -102,7 +102,13 @@ async function onDelete(reply: QuickReply) {
     <form v-if="isAdding" class="surface quick-reply-form" @submit.prevent="submitAdd">
       <div class="field">
         <label for="quick-reply-title">{{ t('quickReplies.fields.title') }}</label>
-        <input id="quick-reply-title" v-model="draftTitle" type="text" maxlength="120" />
+        <input
+          id="quick-reply-title"
+          v-model="draftTitle"
+          type="text"
+          maxlength="120"
+          :placeholder="t('quickReplies.fields.titlePlaceholder')"
+        />
       </div>
       <div class="field">
         <label for="quick-reply-content">{{ t('quickReplies.fields.content') }}</label>
@@ -133,7 +139,12 @@ async function onDelete(reply: QuickReply) {
             <tr v-if="editingId === reply.id">
               <td colspan="3">
                 <form class="quick-reply-inline-form" @submit.prevent="submitEdit">
-                  <input v-model="draftTitle" type="text" maxlength="120" />
+                  <input
+                    v-model="draftTitle"
+                    type="text"
+                    maxlength="120"
+                    :placeholder="t('quickReplies.fields.titlePlaceholder')"
+                  />
                   <textarea v-model="draftContent" maxlength="4000" rows="3"></textarea>
                   <label class="active-toggle">
                     <input type="checkbox" v-model="draftIsActive" />

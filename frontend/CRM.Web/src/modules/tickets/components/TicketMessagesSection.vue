@@ -235,6 +235,7 @@ function isMentionSegment(segment: string): boolean {
         <AppInput
           v-model="draftSubject"
           :label="t('tickets.messages.email.subject')"
+          :placeholder="t('tickets.messages.email.subjectPlaceholder')"
         />
         <AppAlert v-if="store.sendError" tone="danger">{{ t('tickets.messages.email.failed') }}</AppAlert>
       </template>

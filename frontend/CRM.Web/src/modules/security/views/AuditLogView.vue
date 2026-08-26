@@ -63,23 +63,48 @@ onMounted(() => {
     <form class="surface toolbar" @submit.prevent="applyFilters">
       <div class="toolbar-field">
         <label for="audit-action">{{ t('security.audit.filters.action') }}</label>
-        <input id="audit-action" v-model="actionFilter" type="text" />
+        <input
+          id="audit-action"
+          v-model="actionFilter"
+          type="text"
+          :placeholder="t('security.audit.filters.actionPlaceholder')"
+        />
       </div>
       <div class="toolbar-field">
         <label for="audit-actor">{{ t('security.audit.filters.actor') }}</label>
-        <input id="audit-actor" v-model="actorIdFilter" type="text" />
+        <input
+          id="audit-actor"
+          v-model="actorIdFilter"
+          type="text"
+          :placeholder="t('security.audit.filters.actorPlaceholder')"
+        />
       </div>
       <div class="toolbar-field">
         <label for="audit-target">{{ t('security.audit.filters.target') }}</label>
-        <input id="audit-target" v-model="targetIdFilter" type="text" />
+        <input
+          id="audit-target"
+          v-model="targetIdFilter"
+          type="text"
+          :placeholder="t('security.audit.filters.targetPlaceholder')"
+        />
       </div>
       <div class="toolbar-field">
         <label for="audit-from">{{ t('security.audit.filters.from') }}</label>
-        <input id="audit-from" v-model="fromFilter" type="date" />
+        <input
+          id="audit-from"
+          v-model="fromFilter"
+          type="date"
+          :placeholder="t('security.audit.filters.fromPlaceholder')"
+        />
       </div>
       <div class="toolbar-field">
         <label for="audit-to">{{ t('security.audit.filters.to') }}</label>
-        <input id="audit-to" v-model="toFilter" type="date" />
+        <input
+          id="audit-to"
+          v-model="toFilter"
+          type="date"
+          :placeholder="t('security.audit.filters.toPlaceholder')"
+        />
       </div>
       <AppButton type="submit">{{ t('security.audit.filters.apply') }}</AppButton>
     </form>

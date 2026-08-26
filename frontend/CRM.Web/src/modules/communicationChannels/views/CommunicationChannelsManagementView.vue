@@ -101,7 +101,13 @@ async function onSelect(channel: Channel) {
 
         <form v-if="isAdding" class="channel-form" @submit.prevent="submitAdd">
           <label for="channel-name">{{ t('communicationChannels.fields.name') }}</label>
-          <input id="channel-name" v-model="draftName" type="text" maxlength="200" />
+          <input
+            id="channel-name"
+            v-model="draftName"
+            type="text"
+            maxlength="200"
+            :placeholder="t('communicationChannels.fields.namePlaceholder')"
+          />
           <p class="channel-type-hint">{{ t('communicationChannels.fields.typeEmailOnly') }}</p>
           <div class="form-actions">
             <AppButton type="submit" :loading="store.saving" :disabled="!draftName.trim()">

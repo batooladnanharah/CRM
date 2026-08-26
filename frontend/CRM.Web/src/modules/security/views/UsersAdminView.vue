@@ -50,21 +50,29 @@ function onDocumentClick(event: MouseEvent) {
   }
 }
 
+function onWindowScroll(event: Event) {
+  const target = event.target as HTMLElement | Document
+  if (target instanceof HTMLElement && target.closest('.permissions-popover')) {
+    return
+  }
+  closePermissionsPopover()
+}
+
 watch(popoverUserId, (value) => {
   if (value) {
     document.addEventListener('click', onDocumentClick)
-    window.addEventListener('scroll', closePermissionsPopover, true)
+    window.addEventListener('scroll', onWindowScroll, true)
     window.addEventListener('resize', closePermissionsPopover)
   } else {
     document.removeEventListener('click', onDocumentClick)
-    window.removeEventListener('scroll', closePermissionsPopover, true)
+    window.removeEventListener('scroll', onWindowScroll, true)
     window.removeEventListener('resize', closePermissionsPopover)
   }
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', onDocumentClick)
-  window.removeEventListener('scroll', closePermissionsPopover, true)
+  window.removeEventListener('scroll', onWindowScroll, true)
   window.removeEventListener('resize', closePermissionsPopover)
 })
 
@@ -330,6 +338,7 @@ onMounted(() => {
           id="users-search"
           :label="t('common.search')"
           type="search"
+          :placeholder="t('security.users.searchPlaceholder')"
           :model-value="store.usersSearch"
           @update:model-value="store.setUsersSearch"
         />
@@ -453,7 +462,13 @@ onMounted(() => {
         <AppAlert v-if="createFormError" tone="danger">
           {{ t(`security.users.errors.${createFormError}`, createFormError) }}
         </AppAlert>
-        <AppInput v-model="createForm.email" type="email" :label="t('security.users.fields.email')" required />
+        <AppInput
+          v-model="createForm.email"
+          type="email"
+          :label="t('security.users.fields.email')"
+          :placeholder="t('security.users.fields.emailPlaceholder')"
+          required
+        />
         <AppInput
           v-model="createForm.password"
           type="password"
@@ -461,7 +476,12 @@ onMounted(() => {
           :help="t('security.users.fields.passwordHelp')"
           required
         />
-        <AppInput v-model="createForm.name" :label="t('security.users.fields.name')" required />
+        <AppInput
+          v-model="createForm.name"
+          :label="t('security.users.fields.name')"
+          :placeholder="t('security.users.fields.namePlaceholder')"
+          required
+        />
         <div class="field">
           <label for="create-user-role">{{ t('security.users.filters.role') }}</label>
           <select id="create-user-role" v-model="createForm.role">
@@ -503,8 +523,19 @@ onMounted(() => {
         <AppAlert v-if="editFormError" tone="danger">
           {{ t(`security.users.errors.${editFormError}`, editFormError) }}
         </AppAlert>
-        <AppInput v-model="editForm.email" type="email" :label="t('security.users.fields.email')" required />
-        <AppInput v-model="editForm.name" :label="t('security.users.fields.name')" required />
+        <AppInput
+          v-model="editForm.email"
+          type="email"
+          :label="t('security.users.fields.email')"
+          :placeholder="t('security.users.fields.emailPlaceholder')"
+          required
+        />
+        <AppInput
+          v-model="editForm.name"
+          :label="t('security.users.fields.name')"
+          :placeholder="t('security.users.fields.namePlaceholder')"
+          required
+        />
         <div v-if="editingUserRole === 'customer'" class="field customer-field">
           <AppInput
             id="edit-user-customer"

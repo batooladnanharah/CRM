@@ -60,7 +60,9 @@
     "title": "Sign in",
     "subtitle": "Keep every customer conversation moving forward.",
     "email": "Email",
+    "emailPlaceholder": "you{'@'}company.com",
     "password": "Password",
+    "passwordPlaceholder": "Enter your password",
     "submit": "Log in",
     "submitting": "Signing in…",
     "errors": {
@@ -140,7 +142,11 @@
         "fullName": "Full name",
         "email": "Email",
         "phone": "Phone",
-        "company": "Company"
+        "company": "Company",
+        "fullNamePlaceholder": "Jane Doe",
+        "emailPlaceholder": "jane{'@'}example.com",
+        "phonePlaceholder": "+1 555 123 4567",
+        "companyPlaceholder": "Acme Inc."
       },
       "actions": {
         "submit": "Create Customer",
@@ -291,7 +297,9 @@
         "customer": "Customer",
         "title": "Title",
         "description": "Description",
-        "priority": "Priority"
+        "priority": "Priority",
+        "customerPlaceholder": "Search by name or email…",
+        "titlePlaceholder": "Brief summary of the issue"
       },
       "submit": "Create Ticket",
       "cancel": "Cancel",
@@ -371,6 +379,7 @@
         "channelEmail": "Email",
         "to": "To",
         "subject": "Subject",
+        "subjectPlaceholder": "e.g. Re: Order #1234",
         "send": "Send Email",
         "sending": "Sending…",
         "sent": "Email sent",
@@ -418,6 +427,7 @@
     "deleteConfirm": "Delete this quick reply? This cannot be undone.",
     "fields": {
       "title": "Title",
+      "titlePlaceholder": "e.g. Refund Policy",
       "content": "Content",
       "isActive": "Active"
     },
@@ -451,6 +461,7 @@
     "disabledBadge": "Disabled",
     "fields": {
       "name": "Name",
+      "namePlaceholder": "e.g. Support Inbox",
       "typeEmailOnly": "Type: Email (only channel type available)",
       "fromAddress": "From",
       "subject": "Subject",
@@ -477,6 +488,7 @@
       "deleteConfirm": "Delete this SLA policy? This cannot be undone.",
       "fields": {
         "name": "Name",
+        "namePlaceholder": "e.g. Standard Support",
         "channel": "Channel",
         "channelAny": "Any channel",
         "priority": "Priority",
@@ -512,13 +524,17 @@
     "filters": {
       "status": "Status",
       "tag": "Tag",
+      "tagPlaceholder": "Filter by tag…",
       "allStatuses": "All statuses"
     },
     "fields": {
       "title": "Title",
+      "titlePlaceholder": "Article title",
       "slug": "Slug",
+      "slugPlaceholder": "auto-generated-from-title",
       "body": "Body",
       "tags": "Tags (comma-separated)",
+      "tagsPlaceholder": "billing, onboarding",
       "status": "Status"
     },
     "status": {
@@ -570,6 +586,7 @@
         "title": "Submit a Ticket",
         "fields": {
           "subject": "Subject",
+          "subjectPlaceholder": "Brief summary of the issue",
           "description": "Description",
           "priority": "Priority"
         },
@@ -640,6 +657,7 @@
     },
     "users": {
       "title": "User Roles",
+      "searchPlaceholder": "Search by name or email…",
       "empty": "No users found.",
       "errorLoad": "Could not load users. Please try again.",
       "confirmSelf": "You cannot change your own role or disable your own account.",
@@ -675,9 +693,11 @@
       },
       "fields": {
         "email": "Email",
+        "emailPlaceholder": "you{'@'}company.com",
         "password": "Password",
         "passwordHelp": "At least 8 characters.",
         "name": "Full name",
+        "namePlaceholder": "Jane Doe",
         "customer": "Linked customer",
         "customerHelp": "Required for the customer role — search by name or email.",
         "customerRelinkHelp": "Leave blank to keep the current link, or search to relink to a different customer."
@@ -702,10 +722,15 @@
       "viewPayload": "View Details",
       "filters": {
         "action": "Action",
+        "actionPlaceholder": "e.g. user.login.succeeded",
         "actor": "Actor",
+        "actorPlaceholder": "Actor user ID",
         "target": "Target",
+        "targetPlaceholder": "Target record ID",
         "from": "From",
+        "fromPlaceholder": "YYYY-MM-DD",
         "to": "To",
+        "toPlaceholder": "YYYY-MM-DD",
         "apply": "Apply"
       },
       "columns": {

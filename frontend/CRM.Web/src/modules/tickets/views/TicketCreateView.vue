@@ -123,6 +123,7 @@ function onCancel() {
             :label="t('tickets.create.fields.customer')"
             type="text"
             autocomplete="off"
+            :placeholder="t('tickets.create.fields.customerPlaceholder')"
             :model-value="customerSearchTerm"
             @update:model-value="onCustomerInput"
           />
@@ -146,6 +147,7 @@ function onCancel() {
           :label="t('tickets.create.fields.title')"
           type="text"
           maxlength="200"
+          :placeholder="t('tickets.create.fields.titlePlaceholder')"
           required
         />
 
