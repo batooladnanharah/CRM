@@ -51,12 +51,18 @@ const inputId = computed(() => props.id ?? generatedId)
 .ui-input {
   width: 100%;
   box-sizing: border-box;
-  min-height: var(--space-8);
+  min-height: 36px;
   padding: var(--space-3);
-  color: var(--color-text-primary);
+  color: var(--text-primary, var(--color-text-primary));
   background: white;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--line, var(--color-border));
+  border-radius: var(--radius-md);
+  font: 400 14px var(--font-sans, Arial, sans-serif);
+  transition: border-color .15s ease;
+}
+
+.ui-input:focus-visible {
+  border-color: var(--accent, var(--teal));
 }
 
 .ui-input--error {

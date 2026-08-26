@@ -20,11 +20,11 @@ withDefaults(
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.2rem 0.6rem;
+  padding: 0.3rem 0.65rem;
   border-radius: 999px;
   color: var(--color-text-secondary);
   background: #eef2f2;
-  font: 700 var(--font-size-xs) Arial, sans-serif;
+  font: 500 12px var(--font-sans, Arial, sans-serif);
   white-space: nowrap;
 }
 

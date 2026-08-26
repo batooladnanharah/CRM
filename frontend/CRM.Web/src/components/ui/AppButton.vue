@@ -36,18 +36,19 @@ withDefaults(
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: var(--space-8);
+  min-height: 36px;
   padding-inline: var(--space-4);
-  border: 0;
-  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   color: white;
-  background: var(--teal);
-  font: 700 var(--font-size-sm) Arial, sans-serif;
+  background: var(--accent, var(--teal));
+  font: 500 13px var(--font-sans, Arial, sans-serif);
   cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
 
 .ui-button:hover:not(:disabled) {
-  background: var(--teal-dark);
+  background: var(--accent-dark, var(--teal-dark));
 }
 
 .ui-button:disabled {
@@ -58,25 +59,29 @@ withDefaults(
 .ui-button--sm {
   min-height: 32px;
   padding-inline: var(--space-3);
-  font-size: var(--font-size-xs);
+  font-size: 12px;
 }
 
 .ui-button--secondary {
-  color: var(--color-text-primary);
-  background: #edf2f2;
+  color: var(--text-primary, var(--color-text-primary));
+  background: transparent;
+  border-color: var(--line, var(--color-border));
 }
 
 .ui-button--secondary:hover:not(:disabled) {
-  background: #dde7e7;
+  background: var(--surface-2, #f7faf9);
+  border-color: var(--accent, var(--teal));
 }
 
 .ui-button--ghost {
-  color: var(--teal-dark);
+  color: var(--text-secondary, var(--color-text-secondary));
   background: transparent;
+  border-color: transparent;
 }
 
 .ui-button--ghost:hover:not(:disabled) {
-  background: #e7f4f0;
+  color: var(--accent-dark, var(--teal-dark));
+  background: var(--surface-2, #e7f4f0);
 }
 
 .ui-button--danger {
