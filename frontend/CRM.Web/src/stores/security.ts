@@ -11,6 +11,8 @@ import {
   updateUser,
 } from '@/api/security'
 import { ApiError } from '@/api/http'
+import { i18n } from '@/i18n'
+import { useToast } from '@/composables/useToast'
 import type {
   AdminCreateUserRequest,
   AdminRole,
@@ -22,6 +24,7 @@ import type {
 } from '@/types/security'
 
 const SEARCH_DEBOUNCE_MS = 300
+const t = i18n.global.t
 
 export const useSecurityStore = defineStore('security', () => {
   const users = ref<AdminUserListItem[]>([])
@@ -99,6 +102,7 @@ export const useSecurityStore = defineStore('security', () => {
     try {
       const created = await createUser(payload)
       await fetchUsers()
+      useToast().success(t('notifications.security.userCreated'))
       return created
     } catch (err) {
       mutateError.value = errorCode(err)
@@ -133,6 +137,7 @@ export const useSecurityStore = defineStore('security', () => {
     try {
       const updated = await assignRole(id, role)
       users.value = users.value.map((u) => (u.id === id ? { ...u, role: updated.role } : u))
+      useToast().success(t('notifications.security.permissionsUpdated'))
       return updated
     } catch (err) {
       mutateError.value = errorCode(err)

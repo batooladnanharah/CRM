@@ -5,11 +5,19 @@ import { ApiError } from '@/api/http'
 import type { createCustomer, getCustomer, listCustomers, updateCustomer } from '@/api/customers'
 import type { Customer, PagedResult } from '@/types/customers'
 
-const { listCustomersMock, createCustomerMock, getCustomerMock, updateCustomerMock } = vi.hoisted(() => ({
+const { listCustomersMock, createCustomerMock, getCustomerMock, updateCustomerMock, toastMock } = vi.hoisted(() => ({
   listCustomersMock: vi.fn<typeof listCustomers>(),
   createCustomerMock: vi.fn<typeof createCustomer>(),
   getCustomerMock: vi.fn<typeof getCustomer>(),
   updateCustomerMock: vi.fn<typeof updateCustomer>(),
+  toastMock: {
+    success: vi.fn<(input: unknown) => string>(),
+    error: vi.fn<(input: unknown) => string>(),
+    warning: vi.fn<(input: unknown) => string>(),
+    info: vi.fn<(input: unknown) => string>(),
+    dismiss: vi.fn<(id: string) => void>(),
+    clear: vi.fn<() => void>(),
+  },
 }))
 
 vi.mock('@/api/customers', () => ({
@@ -18,6 +26,8 @@ vi.mock('@/api/customers', () => ({
   getCustomer: getCustomerMock,
   updateCustomer: updateCustomerMock,
 }))
+
+vi.mock('@/composables/useToast', () => ({ useToast: () => toastMock }))
 
 function makeCustomer(overrides: Partial<Customer> = {}): Customer {
   return {
@@ -47,6 +57,8 @@ beforeEach(() => {
   createCustomerMock.mockReset()
   getCustomerMock.mockReset()
   updateCustomerMock.mockReset()
+  toastMock.success.mockReset()
+  toastMock.error.mockReset()
 })
 
 describe('customers store', () => {
@@ -319,6 +331,15 @@ describe('customers store', () => {
 
       expect(store.updateError).toBe('duplicateEmail')
       expect(store.updating).toBe(false)
+    })
+
+    it('shows a success toast after updateCustomer succeeds', async () => {
+      updateCustomerMock.mockResolvedValue(makeCustomer({ fullName: 'Updated Name' }))
+
+      const store = useCustomersStore()
+      await store.update('1', { fullName: 'Updated Name', email: 'alice@example.com' })
+
+      expect(toastMock.success).toHaveBeenCalledTimes(1)
     })
   })
 })

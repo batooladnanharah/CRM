@@ -1,7 +1,11 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { createSlaPolicy, deleteSlaPolicy, listSlaPolicies, updateSlaPolicy } from '@/api/sla'
+import { i18n } from '@/i18n'
+import { useToast } from '@/composables/useToast'
 import type { CreateSlaPolicyPayload, SlaPolicy, UpdateSlaPolicyPayload } from '@/types/tickets'
+
+const t = i18n.global.t
 
 export const useSlaPoliciesStore = defineStore('slaPolicies', () => {
   const items = ref<SlaPolicy[]>([])
@@ -29,6 +33,7 @@ export const useSlaPoliciesStore = defineStore('slaPolicies', () => {
     try {
       const created = await createSlaPolicy(payload)
       items.value = [...items.value, created].sort((a, b) => a.name.localeCompare(b.name))
+      useToast().success(t('notifications.sla.policySaved'))
       return created
     } catch (err) {
       error.value = 'errorSave'
@@ -45,6 +50,7 @@ export const useSlaPoliciesStore = defineStore('slaPolicies', () => {
     try {
       const updated = await updateSlaPolicy(id, payload)
       items.value = items.value.map((p) => (p.id === id ? updated : p))
+      useToast().success(t('notifications.sla.policySaved'))
       return updated
     } catch (err) {
       error.value = 'errorSave'

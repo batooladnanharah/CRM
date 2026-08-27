@@ -2,6 +2,37 @@
   "app": {
     "name": "CRM"
   },
+  "notifications": {
+    "close": "إغلاق",
+    "regionLabel": "الإشعارات",
+    "tickets": {
+      "created": "تم إنشاء التذكرة بنجاح.",
+      "updated": "تم تحديث التذكرة بنجاح.",
+      "assigned": "تم تعيين التذكرة بنجاح.",
+      "loadFailed": "تعذر تحميل التذاكر."
+    },
+    "customers": {
+      "updated": "تم تحديث بيانات العميل بنجاح."
+    },
+    "knowledgeBase": {
+      "articleCreated": "تم إنشاء المقالة بنجاح.",
+      "articleUpdated": "تم تحديث المقالة بنجاح."
+    },
+    "sla": {
+      "policySaved": "تم تحديث إعدادات اتفاقية مستوى الخدمة."
+    },
+    "security": {
+      "userCreated": "تم إنشاء المستخدم بنجاح.",
+      "permissionsUpdated": "تم تحديث الصلاحيات."
+    },
+    "ai": {
+      "completed": "اكتملت عملية الذكاء الاصطناعي.",
+      "failed": "فشلت عملية الذكاء الاصطناعي."
+    },
+    "api": {
+      "genericError": "تعذر إتمام الطلب. يرجى المحاولة مرة أخرى."
+    }
+  },
   "navigation": {
     "primary": "التنقل الرئيسي",
     "menu": "مساحة العمل",

@@ -10,6 +10,8 @@ import {
   updateArticle,
 } from '@/api/knowledgeBase'
 import { ApiError } from '@/api/http'
+import { i18n } from '@/i18n'
+import { useToast } from '@/composables/useToast'
 import type {
   CreateKnowledgeBaseArticlePayload,
   KnowledgeBaseArticle,
@@ -17,6 +19,8 @@ import type {
   KnowledgeBaseSearchQuery,
   UpdateKnowledgeBaseArticlePayload,
 } from '@/types/knowledgeBase'
+
+const t = i18n.global.t
 
 export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
   const articles = ref<KnowledgeBaseArticle[]>([])
@@ -102,6 +106,7 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
     try {
       const created = await createArticle(payload)
       articles.value = [...articles.value, created].sort((a, b) => a.title.localeCompare(b.title))
+      useToast().success(t('notifications.knowledgeBase.articleCreated'))
       return created
     } catch (err) {
       error.value = errorMessage(err)
@@ -121,6 +126,7 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
       if (currentArticle.value?.id === id) {
         currentArticle.value = updated
       }
+      useToast().success(t('notifications.knowledgeBase.articleUpdated'))
       return updated
     } catch (err) {
       error.value = errorMessage(err)

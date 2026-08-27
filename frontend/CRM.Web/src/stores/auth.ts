@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { loginRequest, logoutRequest } from '@/api/auth'
 import { ApiError, NetworkError } from '@/api/http'
+import { useNotificationStore } from '@/stores/notification'
 import { Roles, type AuthUser } from '@/types/auth'
 
 const TOKEN_STORAGE_KEY = 'crm.auth.token'
@@ -103,6 +104,7 @@ export const useAuthStore = defineStore('auth', () => {
     status.value = 'idle'
     errorMessage.value = null
     persist()
+    useNotificationStore().clear()
   }
 
   function hydrate() {

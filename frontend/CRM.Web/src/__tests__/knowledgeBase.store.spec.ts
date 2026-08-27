@@ -21,6 +21,7 @@ const {
   createArticleMock,
   updateArticleMock,
   deleteArticleMock,
+  toastMock,
 } = vi.hoisted(() => ({
   listArticlesMock: vi.fn<typeof listArticles>(),
   searchArticlesMock: vi.fn<typeof searchArticles>(),
@@ -29,7 +30,17 @@ const {
   createArticleMock: vi.fn<typeof createArticle>(),
   updateArticleMock: vi.fn<typeof updateArticle>(),
   deleteArticleMock: vi.fn<typeof deleteArticle>(),
+  toastMock: {
+    success: vi.fn<(input: unknown) => string>(),
+    error: vi.fn<(input: unknown) => string>(),
+    warning: vi.fn<(input: unknown) => string>(),
+    info: vi.fn<(input: unknown) => string>(),
+    dismiss: vi.fn<(id: string) => void>(),
+    clear: vi.fn<() => void>(),
+  },
 }))
+
+vi.mock('@/composables/useToast', () => ({ useToast: () => toastMock }))
 
 vi.mock('@/api/knowledgeBase', () => ({
   listArticles: listArticlesMock,
@@ -66,6 +77,8 @@ beforeEach(() => {
   createArticleMock.mockReset()
   updateArticleMock.mockReset()
   deleteArticleMock.mockReset()
+  toastMock.success.mockReset()
+  toastMock.error.mockReset()
 })
 
 describe('knowledgeBase store', () => {
@@ -156,6 +169,7 @@ describe('knowledgeBase store', () => {
 
     expect(result.title).toBe('Apple Article')
     expect(store.articles.map((a) => a.title)).toEqual(['Apple Article'])
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
   })
 
   it('create() sets error and rethrows on failure', async () => {
@@ -179,6 +193,7 @@ describe('knowledgeBase store', () => {
     await store.update('1', { title: 'Updated', slug: 'resetting-your-password', body: 'Body', tags: [], status: 'Draft' })
 
     expect(store.articles[0]).toEqual(updated)
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
   })
 
   it('update() sets error and rethrows on failure', async () => {

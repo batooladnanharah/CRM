@@ -23,6 +23,7 @@ const {
   createUserMock,
   updateUserMock,
   listRolesMock,
+  toastMock,
 } = vi.hoisted(() => ({
   listUsersMock: vi.fn<typeof listUsers>(),
   assignRoleMock: vi.fn<typeof assignRole>(),
@@ -32,7 +33,17 @@ const {
   createUserMock: vi.fn<typeof createUser>(),
   updateUserMock: vi.fn<typeof updateUser>(),
   listRolesMock: vi.fn<typeof listRoles>(),
+  toastMock: {
+    success: vi.fn<(input: unknown) => string>(),
+    error: vi.fn<(input: unknown) => string>(),
+    warning: vi.fn<(input: unknown) => string>(),
+    info: vi.fn<(input: unknown) => string>(),
+    dismiss: vi.fn<(id: string) => void>(),
+    clear: vi.fn<() => void>(),
+  },
 }))
+
+vi.mock('@/composables/useToast', () => ({ useToast: () => toastMock }))
 
 vi.mock('@/api/security', () => ({
   listUsers: listUsersMock,
@@ -82,6 +93,8 @@ beforeEach(() => {
   createUserMock.mockReset()
   updateUserMock.mockReset()
   listRolesMock.mockReset()
+  toastMock.success.mockReset()
+  toastMock.error.mockReset()
 })
 
 describe('security store', () => {
@@ -146,6 +159,7 @@ describe('security store', () => {
     expect(listUsersMock).toHaveBeenCalledTimes(1)
     expect(store.mutating).toBe(false)
     expect(store.mutateError).toBeNull()
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
   })
 
   it('create() sets mutateError to the conflict code and rethrows on 409', async () => {
@@ -201,6 +215,7 @@ describe('security store', () => {
     await store.changeRole('1', 'admin')
 
     expect(store.users[0]!.role).toBe('admin')
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
   })
 
   it('changeRole() sets mutateError to the conflict code and rethrows on 409', async () => {

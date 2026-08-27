@@ -26,6 +26,7 @@ const {
   fetchTicketHistoryMock,
   fetchEligibleAgentsMock,
   escalateTicketMock,
+  toastMock,
 } = vi.hoisted(() => ({
   listTicketsMock: vi.fn<typeof listTickets>(),
   createTicketMock: vi.fn<typeof createTicket>(),
@@ -36,6 +37,14 @@ const {
   fetchTicketHistoryMock: vi.fn<typeof fetchTicketHistory>(),
   fetchEligibleAgentsMock: vi.fn<typeof fetchEligibleAgents>(),
   escalateTicketMock: vi.fn<typeof escalateTicket>(),
+  toastMock: {
+    success: vi.fn<(input: unknown) => string>(),
+    error: vi.fn<(input: unknown) => string>(),
+    warning: vi.fn<(input: unknown) => string>(),
+    info: vi.fn<(input: unknown) => string>(),
+    dismiss: vi.fn<(id: string) => void>(),
+    clear: vi.fn<() => void>(),
+  },
 }))
 
 vi.mock('@/api/tickets', () => ({
@@ -49,6 +58,8 @@ vi.mock('@/api/tickets', () => ({
   escalateTicket: escalateTicketMock,
   fetchEligibleAgents: fetchEligibleAgentsMock,
 }))
+
+vi.mock('@/composables/useToast', () => ({ useToast: () => toastMock }))
 
 function makeTicketListItem(overrides: Partial<TicketListItem> = {}): TicketListItem {
   return {
@@ -146,6 +157,8 @@ beforeEach(() => {
   fetchTicketHistoryMock.mockReset()
   fetchEligibleAgentsMock.mockReset()
   escalateTicketMock.mockReset()
+  toastMock.success.mockReset()
+  toastMock.error.mockReset()
 })
 
 describe('tickets store', () => {
@@ -283,6 +296,26 @@ describe('tickets store', () => {
       expect(store.createError).toBe('generic')
       expect(store.creating).toBe(false)
     })
+
+    it('shows a success toast after a successful create', async () => {
+      createTicketMock.mockResolvedValue(makeTicket({ id: '2', title: 'New Ticket' }))
+
+      const store = useTicketsStore()
+      await store.create({ customerId: 'customer-1', title: 'New Ticket', description: 'Details' })
+
+      expect(toastMock.success).toHaveBeenCalledTimes(1)
+    })
+
+    it('shows an error toast when create fails', async () => {
+      createTicketMock.mockRejectedValue(new Error('network down'))
+
+      const store = useTicketsStore()
+      await expect(
+        store.create({ customerId: 'customer-1', title: 'Err', description: 'Details' }),
+      ).rejects.toThrow('network down')
+
+      expect(toastMock.error).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('fetchOne', () => {
@@ -376,6 +409,16 @@ describe('tickets store', () => {
       expect(store.actionError).toBe('invalid_agent')
       expect(store.isAssigning).toBe(false)
       expect(store.current).toBeNull()
+      expect(toastMock.error).toHaveBeenCalledTimes(1)
+    })
+
+    it('shows a success toast on successful assignment', async () => {
+      assignTicketMock.mockResolvedValue(makeTicket({ assigneeUserId: 'agent-1' }))
+
+      const store = useTicketsStore()
+      await store.assign('1', 'agent-1')
+
+      expect(toastMock.success).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -394,6 +437,7 @@ describe('tickets store', () => {
       expect(store.actionError).toBeNull()
       expect(result).toEqual(updated)
       expect(store.current).toEqual(updated)
+      expect(toastMock.success).toHaveBeenCalledTimes(1)
     })
 
     it('sets actionError on an illegal-transition 400 and does not replace current', async () => {

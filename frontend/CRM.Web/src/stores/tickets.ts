@@ -12,6 +12,8 @@ import {
   listTickets,
 } from '@/api/tickets'
 import { ApiError } from '@/api/http'
+import { i18n } from '@/i18n'
+import { useToast } from '@/composables/useToast'
 import type {
   CreateTicketPayload,
   EligibleAgent,
@@ -23,6 +25,7 @@ import type {
 } from '@/types/tickets'
 
 const SEARCH_DEBOUNCE_MS = 300
+const t = i18n.global.t
 
 export const useTicketsStore = defineStore('tickets', () => {
   const items = ref<TicketListItem[]>([])
@@ -139,13 +142,16 @@ export const useTicketsStore = defineStore('tickets', () => {
     createError.value = null
 
     try {
-      return await createTicket(payload)
+      const created = await createTicket(payload)
+      useToast().success(t('notifications.tickets.created'))
+      return created
     } catch (err) {
       if (err instanceof ApiError && err.status === 400 && err.message === 'customer_not_found') {
         createError.value = 'customerNotFound'
       } else {
         createError.value = 'generic'
       }
+      useToast().error(t('notifications.tickets.loadFailed'))
       throw err
     } finally {
       creating.value = false
@@ -167,9 +173,11 @@ export const useTicketsStore = defineStore('tickets', () => {
     try {
       const updated = await assignTicket(id, agentUserId)
       current.value = updated
+      useToast().success(t('notifications.tickets.assigned'))
       return updated
     } catch (err) {
       actionError.value = mapActionError(err)
+      useToast().error(t('notifications.tickets.loadFailed'))
       throw err
     } finally {
       isAssigning.value = false
@@ -183,9 +191,11 @@ export const useTicketsStore = defineStore('tickets', () => {
     try {
       const updated = await changeTicketStatus(id, nextStatus)
       current.value = updated
+      useToast().success(t('notifications.tickets.updated'))
       return updated
     } catch (err) {
       actionError.value = mapActionError(err)
+      useToast().error(t('notifications.tickets.loadFailed'))
       throw err
     } finally {
       isChangingStatus.value = false

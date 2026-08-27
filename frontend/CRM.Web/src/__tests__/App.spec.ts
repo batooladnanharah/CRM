@@ -6,6 +6,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import App from '../App.vue'
 import LoginView from '@/modules/auth/views/LoginView.vue'
 import DashboardView from '@/modules/dashboard/views/DashboardView.vue'
+import ConfirmDialogHost from '@/components/ui/ConfirmDialogHost.vue'
+import ToastHost from '@/components/ui/ToastHost.vue'
 import { i18n } from '../i18n'
 
 function makeTestRouter() {
@@ -31,5 +33,20 @@ describe('App', () => {
     })
 
     expect(wrapper.find('#login-email').exists()).toBe(true)
+  })
+
+  it('mounts ToastHost alongside ConfirmDialogHost on every route', async () => {
+    const router = makeTestRouter()
+    router.push('/login')
+    await router.isReady()
+
+    const wrapper = mount(App, {
+      global: {
+        plugins: [createPinia(), router, i18n],
+      },
+    })
+
+    expect(wrapper.findComponent(ConfirmDialogHost).exists()).toBe(true)
+    expect(wrapper.findComponent(ToastHost).exists()).toBe(true)
   })
 })

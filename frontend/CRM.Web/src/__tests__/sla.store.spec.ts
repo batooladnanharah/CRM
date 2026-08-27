@@ -4,11 +4,19 @@ import { useSlaPoliciesStore } from '@/stores/sla'
 import type { createSlaPolicy, deleteSlaPolicy, listSlaPolicies, updateSlaPolicy } from '@/api/sla'
 import type { SlaPolicy } from '@/types/tickets'
 
-const { listMock, createMock, updateMock, deleteMock } = vi.hoisted(() => ({
+const { listMock, createMock, updateMock, deleteMock, toastMock } = vi.hoisted(() => ({
   listMock: vi.fn<typeof listSlaPolicies>(),
   createMock: vi.fn<typeof createSlaPolicy>(),
   updateMock: vi.fn<typeof updateSlaPolicy>(),
   deleteMock: vi.fn<typeof deleteSlaPolicy>(),
+  toastMock: {
+    success: vi.fn<(input: unknown) => string>(),
+    error: vi.fn<(input: unknown) => string>(),
+    warning: vi.fn<(input: unknown) => string>(),
+    info: vi.fn<(input: unknown) => string>(),
+    dismiss: vi.fn<(id: string) => void>(),
+    clear: vi.fn<() => void>(),
+  },
 }))
 
 vi.mock('@/api/sla', () => ({
@@ -17,6 +25,8 @@ vi.mock('@/api/sla', () => ({
   updateSlaPolicy: updateMock,
   deleteSlaPolicy: deleteMock,
 }))
+
+vi.mock('@/composables/useToast', () => ({ useToast: () => toastMock }))
 
 function makeSlaPolicy(overrides: Partial<SlaPolicy> = {}): SlaPolicy {
   return {
@@ -40,6 +50,8 @@ beforeEach(() => {
   createMock.mockReset()
   updateMock.mockReset()
   deleteMock.mockReset()
+  toastMock.success.mockReset()
+  toastMock.error.mockReset()
 })
 
 describe('sla policies store', () => {
@@ -93,6 +105,7 @@ describe('sla policies store', () => {
     expect(store.items.map((p) => p.name)).toEqual(['Apple Policy'])
     expect(store.saving).toBe(false)
     expect(store.error).toBeNull()
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
   })
 
   it('create() sets errorSave and rethrows on failure', async () => {
@@ -131,6 +144,7 @@ describe('sla policies store', () => {
     })
 
     expect(store.items[0]).toEqual(updated)
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
   })
 
   it('update() sets errorSave and rethrows on failure', async () => {

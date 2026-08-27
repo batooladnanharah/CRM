@@ -5,15 +5,25 @@ import { ApiError } from '@/api/http'
 import type { getAiStatus, summariseTicket } from '@/api/ai'
 import type { AiResponse, AiStatus } from '@/types/ai'
 
-const { getStatusMock, summariseMock } = vi.hoisted(() => ({
+const { getStatusMock, summariseMock, toastMock } = vi.hoisted(() => ({
   getStatusMock: vi.fn<typeof getAiStatus>(),
   summariseMock: vi.fn<typeof summariseTicket>(),
+  toastMock: {
+    success: vi.fn<(input: unknown) => string>(),
+    error: vi.fn<(input: unknown) => string>(),
+    warning: vi.fn<(input: unknown) => string>(),
+    info: vi.fn<(input: unknown) => string>(),
+    dismiss: vi.fn<(id: string) => void>(),
+    clear: vi.fn<() => void>(),
+  },
 }))
 
 vi.mock('@/api/ai', () => ({
   getAiStatus: getStatusMock,
   summariseTicket: summariseMock,
 }))
+
+vi.mock('@/composables/useToast', () => ({ useToast: () => toastMock }))
 
 function makeStatus(overrides: Partial<AiStatus> = {}): AiStatus {
   return { enabled: true, provider: 'Development', available: true, ...overrides }
@@ -34,6 +44,8 @@ beforeEach(() => {
   setActivePinia(createPinia())
   getStatusMock.mockReset()
   summariseMock.mockReset()
+  toastMock.success.mockReset()
+  toastMock.error.mockReset()
 })
 
 describe('ai store', () => {
@@ -78,6 +90,7 @@ describe('ai store', () => {
     expect(store.summaries['ticket-1']).toBe('Development summary: ticket-1 content')
     expect(store.summaryLoading['ticket-1']).toBe(false)
     expect(store.summaryError['ticket-1']).toBeNull()
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
   })
 
   it('generateSummary() is a no-op while already loading for that ticket', async () => {
@@ -124,6 +137,7 @@ describe('ai store', () => {
     expect(store.summaryError['ticket-1']).toBe('unavailable')
     expect(store.summaryLoading['ticket-1']).toBe(false)
     expect(store.summaries['ticket-1']).toBeUndefined()
+    expect(toastMock.error).toHaveBeenCalledTimes(1)
   })
 
   it('generateSummary() sets a mapped error code on 502', async () => {

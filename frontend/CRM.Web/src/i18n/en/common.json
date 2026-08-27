@@ -2,6 +2,37 @@
   "app": {
     "name": "CRM"
   },
+  "notifications": {
+    "close": "Close",
+    "regionLabel": "Notifications",
+    "tickets": {
+      "created": "Ticket created successfully.",
+      "updated": "Ticket updated successfully.",
+      "assigned": "Ticket assigned successfully.",
+      "loadFailed": "Failed to load tickets."
+    },
+    "customers": {
+      "updated": "Customer updated successfully."
+    },
+    "knowledgeBase": {
+      "articleCreated": "Article created successfully.",
+      "articleUpdated": "Article updated successfully."
+    },
+    "sla": {
+      "policySaved": "SLA configuration updated."
+    },
+    "security": {
+      "userCreated": "User created successfully.",
+      "permissionsUpdated": "Permission update completed."
+    },
+    "ai": {
+      "completed": "AI operation completed.",
+      "failed": "AI operation failed."
+    },
+    "api": {
+      "genericError": "The request could not be completed. Please try again."
+    }
+  },
   "navigation": {
     "primary": "Primary navigation",
     "menu": "Workspace",

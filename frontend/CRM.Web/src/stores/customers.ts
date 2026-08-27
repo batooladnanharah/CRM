@@ -2,6 +2,8 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { createCustomer, getCustomer, listCustomers, updateCustomer } from '@/api/customers'
 import { ApiError } from '@/api/http'
+import { i18n } from '@/i18n'
+import { useToast } from '@/composables/useToast'
 import type {
   Customer,
   CreateCustomerPayload,
@@ -10,6 +12,7 @@ import type {
 } from '@/types/customers'
 
 const SEARCH_DEBOUNCE_MS = 300
+const t = i18n.global.t
 
 export const useCustomersStore = defineStore('customers', () => {
   const items = ref<Customer[]>([])
@@ -174,6 +177,7 @@ export const useCustomersStore = defineStore('customers', () => {
     try {
       const customer = await updateCustomer(id, payload)
       current.value = customer
+      useToast().success(t('notifications.customers.updated'))
       return customer
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
