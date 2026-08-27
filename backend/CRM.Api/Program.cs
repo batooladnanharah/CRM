@@ -9,6 +9,7 @@ using CRM.Api.CustomerPortal;
 using CRM.Api.Customers.Attachments;
 using CRM.Api.Email;
 using CRM.Api.KnowledgeBase;
+using CRM.Api.Notifications;
 using CRM.Api.QuickReplies;
 using CRM.Api.Reports;
 using CRM.Api.Security;
@@ -48,12 +49,17 @@ builder.Services.AddDbContext<CommunicationChannelsDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("CrmDb")));
 builder.Services.AddDbContext<KnowledgeBaseDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("CrmDb")));
+builder.Services.AddDbContext<NotificationsDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("CrmDb")));
 
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddScoped<ISlaService, SlaService>();
 builder.Services.AddScoped<TicketEscalationService>();
 builder.Services.AddScoped<ISlaEvaluator, SlaEvaluator>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IManagerResolver, ManagerResolver>();
+builder.Services.AddScoped<IEscalationDispatcher, EscalationDispatcher>();
 builder.Services.AddScoped<TicketCreationService>();
 builder.Services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
 builder.Services.AddScoped<ReportsService>();
@@ -339,6 +345,9 @@ if (app.Environment.IsDevelopment())
 
     var knowledgeBaseDb = scope.ServiceProvider.GetRequiredService<KnowledgeBaseDbContext>();
     knowledgeBaseDb.Database.Migrate();
+
+    var notificationsDb = scope.ServiceProvider.GetRequiredService<NotificationsDbContext>();
+    notificationsDb.Database.Migrate();
 }
 
 var summaries = new[]
@@ -426,6 +435,8 @@ app.MapTicketAttachmentEndpoints();
 app.MapQuickReplyEndpoints();
 app.MapCommunicationChannelEndpoints();
 app.MapSlaPolicyEndpoints();
+app.MapEscalationRuleEndpoints();
+app.MapNotificationEndpoints();
 app.MapKnowledgeBaseEndpoints();
 app.MapCustomerPortalEndpoints();
 app.MapReportsEndpoints();

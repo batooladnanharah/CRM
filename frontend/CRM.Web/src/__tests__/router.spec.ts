@@ -377,6 +377,82 @@ describe('router guards — sla policies management', () => {
   })
 })
 
+describe('router guards — escalation rules management', () => {
+  it('redirects an unauthenticated visit to /sla/escalation-rules to /login', async () => {
+    const router = createAppRouter()
+
+    await router.push('/sla/escalation-rules')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/login')
+  })
+
+  it('redirects an agent visit to /sla/escalation-rules to /forbidden', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
+
+    const router = createAppRouter()
+
+    await router.push('/sla/escalation-rules')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/forbidden')
+  })
+
+  it('allows an admin to visit /sla/escalation-rules', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
+
+    const router = createAppRouter()
+
+    await router.push('/sla/escalation-rules')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/sla/escalation-rules')
+    expect(router.currentRoute.value.name).toBe('escalation-rules-management')
+  })
+})
+
+describe('router guards — escalation rules management', () => {
+  it('redirects an unauthenticated visit to /sla/escalation-rules to /login', async () => {
+    const router = createAppRouter()
+
+    await router.push('/sla/escalation-rules')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/login')
+  })
+
+  it('redirects an agent visit to /sla/escalation-rules to /forbidden', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
+
+    const router = createAppRouter()
+
+    await router.push('/sla/escalation-rules')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/forbidden')
+  })
+
+  it('allows an admin to visit /sla/escalation-rules', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
+
+    const router = createAppRouter()
+
+    await router.push('/sla/escalation-rules')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/sla/escalation-rules')
+    expect(router.currentRoute.value.name).toBe('escalation-rules-management')
+  })
+})
+
 describe('router guards — knowledge base', () => {
   it('redirects an unauthenticated visit to /knowledge-base to /login', async () => {
     const router = createAppRouter()

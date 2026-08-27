@@ -21,7 +21,8 @@ public interface ISlaEvaluator
 // change) can move the due dates themselves, but an already-persisted
 // *BreachedAtUtc timestamp is never rewritten or cleared.
 public sealed class SlaEvaluator(
-    TicketDbContext db, TicketEscalationService escalationService, ILogger<SlaEvaluator> logger) : ISlaEvaluator
+    TicketDbContext db, TicketEscalationService escalationService, IEscalationDispatcher escalationDispatcher,
+    ILogger<SlaEvaluator> logger) : ISlaEvaluator
 {
     private const string AutoEscalationReason = "Automatically escalated due to an SLA breach.";
 
@@ -88,6 +89,35 @@ public sealed class SlaEvaluator(
         // validation (e.g. already Urgent) without saving, this call is what
         // actually persists the breach fields/history recorded above.
         await db.SaveChangesAsync(ct);
+
+        // CRM-63: dispatch escalation-rule notifications for AtRisk/Breached
+        // objectives that aren't already completed. Idempotent via
+        // EscalationDispatcher's unique-index dedupe, so calling this every
+        // tick for a still-AtRisk ticket is safe/cheap (early-outs when no
+        // active rule matches).
+        if (ticket.FirstRespondedAtUtc is null)
+        {
+            if (firstResponseStatus == SlaStatus.Breached)
+            {
+                await escalationDispatcher.DispatchAsync(ticket, SlaObjectiveKind.Response, EscalationTrigger.Breached, ct);
+            }
+            else if (firstResponseStatus == SlaStatus.AtRisk)
+            {
+                await escalationDispatcher.DispatchAsync(ticket, SlaObjectiveKind.Response, EscalationTrigger.AtRisk, ct);
+            }
+        }
+
+        if (ticket.ResolvedAtUtc is null)
+        {
+            if (resolutionStatus == SlaStatus.Breached)
+            {
+                await escalationDispatcher.DispatchAsync(ticket, SlaObjectiveKind.Resolution, EscalationTrigger.Breached, ct);
+            }
+            else if (resolutionStatus == SlaStatus.AtRisk)
+            {
+                await escalationDispatcher.DispatchAsync(ticket, SlaObjectiveKind.Resolution, EscalationTrigger.AtRisk, ct);
+            }
+        }
 
         return breachedNow;
     }

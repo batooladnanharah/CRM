@@ -2,6 +2,21 @@
   "app": {
     "name": "CRM"
   },
+  "notificationCenter": {
+    "title": "الإشعارات",
+    "markAllRead": "تعليم الكل كمقروء",
+    "empty": "لا توجد إشعارات لديك.",
+    "loading": "جارٍ تحميل الإشعارات…",
+    "error": "تعذر تحميل الإشعارات. حاول مرة أخرى.",
+    "unreadCount": "{count} غير مقروء",
+    "bellLabel": "الإشعارات",
+    "item": {
+      "sla": {
+        "atRisk": "اتفاقية مستوى الخدمة معرّضة للخطر",
+        "breached": "تم تجاوز اتفاقية مستوى الخدمة"
+      }
+    }
+  },
   "notifications": {
     "close": "إغلاق",
     "regionLabel": "الإشعارات",
@@ -548,7 +563,55 @@
       "met": "تم الالتزام"
     },
     "firstResponse": "الاستجابة الأولى",
-    "resolution": "الحل"
+    "resolution": "الحل",
+    "escalation": {
+      "title": "قواعد التصعيد",
+      "create": "+ قاعدة جديدة",
+      "rule": "القاعدة",
+      "trigger": {
+        "label": "المُحفِّز",
+        "atRisk": "معرّضة للخطر",
+        "breached": "متأخرة"
+      },
+      "actions": {
+        "label": "الإجراءات",
+        "notifyAgent": "إشعار الموظف",
+        "notifyManager": "إشعار المدير",
+        "both": "الموظف والمدير",
+        "none": "لا شيء"
+      },
+      "status": {
+        "active": "مفعّلة",
+        "inactive": "غير مفعّلة"
+      },
+      "actionsColumn": "الإجراءات",
+      "statusColumn": "الحالة",
+      "empty": "لا توجد قواعد تصعيد بعد.",
+      "loading": "جارٍ تحميل قواعد التصعيد…",
+      "saving": "جارٍ الحفظ…",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "activate": "تفعيل",
+      "deactivate": "إلغاء التفعيل",
+      "deleteConfirm": "هل تريد حذف قاعدة التصعيد هذه؟ لا يمكن التراجع عن هذا الإجراء.",
+      "fields": {
+        "name": "الاسم",
+        "namePlaceholder": "مثال: إشعار المدير عند التأخر"
+      },
+      "validation": {
+        "nameRequired": "الاسم مطلوب.",
+        "atLeastOneAction": "اختر إجراء إشعار واحدًا على الأقل."
+      },
+      "errors": {
+        "errorLoad": "تعذر تحميل قواعد التصعيد. حاول مرة أخرى.",
+        "errorSave": "تعذر حفظ قاعدة التصعيد. حاول مرة أخرى.",
+        "errorDelete": "تعذر حذف قاعدة التصعيد. حاول مرة أخرى."
+      },
+      "ticket": {
+        "agentNotified": "تم إشعار الموظف",
+        "managerNotified": "تم إشعار المدير"
+      }
+    }
   },
   "knowledgeBase": {
     "nav": "قاعدة المعرفة",

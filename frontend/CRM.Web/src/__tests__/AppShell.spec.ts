@@ -35,6 +35,7 @@ function makeRouter(): Router {
         component: { template: '<div />' },
       },
       { path: '/settings/sla', name: 'sla-policies-management', component: { template: '<div />' } },
+      { path: '/sla/escalation-rules', name: 'escalation-rules-management', component: { template: '<div />' } },
       { path: '/reports', name: 'reports', component: { template: '<div />' } },
       { path: '/admin/users', name: 'admin-users', component: { template: '<div />' } },
       { path: '/admin/audit-log', name: 'admin-audit-log', component: { template: '<div />' } },
@@ -91,6 +92,48 @@ describe('AppShell navigation', () => {
 
     expect(wrapper.text()).not.toContain('Reports')
     expect(wrapper.text()).toContain('My Tickets')
+  })
+
+  it('shows the Escalation Rules link for an admin', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Admin', email: 'admin@crm.local', roles: ['admin'], permissions: ADMIN_PERMISSIONS }
+
+    const wrapper = await mountShell()
+
+    expect(wrapper.text()).toContain('Escalation Rules')
+  })
+
+  it('hides the Escalation Rules link for an agent', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
+
+    const wrapper = await mountShell()
+
+    expect(wrapper.text()).not.toContain('Escalation Rules')
+  })
+})
+
+describe('AppShell notification bell', () => {
+  it('renders the notification bell in the header for an authenticated agent', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
+
+    const wrapper = await mountShell()
+
+    expect(wrapper.find('.notification-bell').exists()).toBe(true)
+  })
+
+  it('hides the notification bell for a portal customer', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Portal Customer', email: 'customer@crm.local', roles: ['customer'], permissions: CUSTOMER_PERMISSIONS }
+
+    const wrapper = await mountShell()
+
+    expect(wrapper.find('.notification-bell').exists()).toBe(false)
   })
 })
 

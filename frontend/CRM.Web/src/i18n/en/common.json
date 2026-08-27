@@ -2,6 +2,21 @@
   "app": {
     "name": "CRM"
   },
+  "notificationCenter": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "You have no notifications.",
+    "loading": "Loading notifications…",
+    "error": "Could not load notifications. Please try again.",
+    "unreadCount": "{count} unread",
+    "bellLabel": "Notifications",
+    "item": {
+      "sla": {
+        "atRisk": "SLA At Risk",
+        "breached": "SLA Breached"
+      }
+    }
+  },
   "notifications": {
     "close": "Close",
     "regionLabel": "Notifications",
@@ -548,7 +563,55 @@
       "met": "Met"
     },
     "firstResponse": "First Response",
-    "resolution": "Resolution"
+    "resolution": "Resolution",
+    "escalation": {
+      "title": "Escalation Rules",
+      "create": "+ New Rule",
+      "rule": "Rule",
+      "trigger": {
+        "label": "Trigger",
+        "atRisk": "At Risk",
+        "breached": "Breached"
+      },
+      "actions": {
+        "label": "Actions",
+        "notifyAgent": "Notify Agent",
+        "notifyManager": "Notify Manager",
+        "both": "Agent + Manager",
+        "none": "None"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "actionsColumn": "Actions",
+      "statusColumn": "Status",
+      "empty": "No escalation rules yet.",
+      "loading": "Loading escalation rules…",
+      "saving": "Saving…",
+      "edit": "Edit",
+      "delete": "Delete",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "deleteConfirm": "Delete this escalation rule? This cannot be undone.",
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "e.g. Notify manager on breach"
+      },
+      "validation": {
+        "nameRequired": "Name is required.",
+        "atLeastOneAction": "Select at least one notification action."
+      },
+      "errors": {
+        "errorLoad": "Could not load escalation rules. Please try again.",
+        "errorSave": "Could not save the escalation rule. Please try again.",
+        "errorDelete": "Could not delete the escalation rule. Please try again."
+      },
+      "ticket": {
+        "agentNotified": "Agent notified",
+        "managerNotified": "Manager notified"
+      }
+    }
   },
   "knowledgeBase": {
     "nav": "Knowledge Base",

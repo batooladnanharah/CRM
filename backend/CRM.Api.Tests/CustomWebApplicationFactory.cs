@@ -5,6 +5,7 @@ using CRM.Api.Customers;
 using CRM.Api.Customers.Attachments;
 using CRM.Api.Email;
 using CRM.Api.KnowledgeBase;
+using CRM.Api.Notifications;
 using CRM.Api.QuickReplies;
 using CRM.Api.Tickets;
 using Microsoft.AspNetCore.Hosting;
@@ -43,6 +44,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     private readonly string _quickReplyDbName = Guid.NewGuid().ToString();
     private readonly string _communicationChannelsDbName = Guid.NewGuid().ToString();
     private readonly string _knowledgeBaseDbName = Guid.NewGuid().ToString();
+    private readonly string _notificationsDbName = Guid.NewGuid().ToString();
 
     public CustomWebApplicationFactory()
     {
@@ -111,6 +113,13 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<KnowledgeBaseDbContext>(
                 options => options.UseInMemoryDatabase(_knowledgeBaseDbName));
+
+            services.RemoveAll<DbContextOptions<NotificationsDbContext>>();
+            services.RemoveAll<NotificationsDbContext>();
+            services.RemoveAll(typeof(IDbContextOptionsConfiguration<NotificationsDbContext>));
+
+            services.AddDbContext<NotificationsDbContext>(
+                options => options.UseInMemoryDatabase(_notificationsDbName));
 
             // Real LocalFileStorage would write under App_Data on disk; tests use
             // an in-memory double instead so attachment tests never touch disk.

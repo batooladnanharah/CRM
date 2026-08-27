@@ -9,6 +9,7 @@ import { useLocale } from '@/composables/useLocale'
 import KnowledgeBaseSearchDialog from '@/modules/knowledgeBase/components/KnowledgeBaseSearchDialog.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AiAvailabilityBadge from '@/components/ai/AiAvailabilityBadge.vue'
+import NotificationBell from '@/components/notifications/NotificationBell.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -38,6 +39,7 @@ const routeTitleKeys: Record<string, string> = {
   'quick-replies-management': 'quickReplies.title',
   'communication-channels-management': 'communicationChannels.title',
   'sla-policies-management': 'sla.policies.title',
+  'escalation-rules-management': 'sla.escalation.title',
   reports: 'reports.title',
   'admin-users': 'security.users.title',
   'admin-audit-log': 'security.audit.title',
@@ -89,6 +91,13 @@ const navigation = computed(() => {
       label: t('sla.policies.title'),
       to: { name: 'sla-policies-management' },
       icon: '⏱',
+    })
+  }
+  if (authStore.can(Permissions.ManageSlaEscalationRules)) {
+    items.push({
+      label: t('sla.escalation.title'),
+      to: { name: 'escalation-rules-management' },
+      icon: '📣',
     })
   }
   if (authStore.can(Permissions.ReportsView)) {
@@ -206,6 +215,10 @@ async function onLogout() {
           </div>
           <div class="action-divider" aria-hidden="true"></div>
           <AiAvailabilityBadge />
+          <div class="action-divider" aria-hidden="true"></div>
+          <NotificationBell v-if="!authStore.isCustomer" />
+          <div class="action-divider" aria-hidden="true"></div>
+          <NotificationBell v-if="!authStore.isCustomer" />
           <div class="action-divider" aria-hidden="true"></div>
           <div class="profile-group">
             <div class="user-chip">

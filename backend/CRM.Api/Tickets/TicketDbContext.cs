@@ -16,6 +16,11 @@ public sealed class TicketDbContext(DbContextOptions<TicketDbContext> options) :
     // the Ticket rows they apply to.
     public DbSet<SlaPolicy> SlaPolicies => Set<SlaPolicy>();
 
+    // Escalation rules/events (CRM-63) live here too — same rationale as
+    // SlaPolicy: they are meaningless without the Ticket rows they escalate.
+    public DbSet<EscalationRule> EscalationRules => Set<EscalationRule>();
+    public DbSet<EscalationEvent> EscalationEvents => Set<EscalationEvent>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Ticket>(entity =>
@@ -137,6 +142,28 @@ public sealed class TicketDbContext(DbContextOptions<TicketDbContext> options) :
             entity.HasIndex(p => p.IsDefault)
                 .IsUnique()
                 .HasFilter("\"IsDefault\" = true");
+        });
+
+        modelBuilder.Entity<EscalationRule>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+
+            entity.Property(r => r.Name).IsRequired().HasMaxLength(128);
+            entity.Property(r => r.Trigger).HasConversion<int>();
+
+            entity.HasIndex(r => r.IsActive);
+        });
+
+        modelBuilder.Entity<EscalationEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Trigger).HasConversion<int>();
+            entity.Property(e => e.Objective).HasConversion<int>();
+
+            // Dedupe guard — see EscalationDispatcher. (EF Core InMemory test
+            // provider enforces unique indexes too, unlike filtered indexes.)
+            entity.HasIndex(e => new { e.TicketId, e.RuleId, e.Trigger, e.Objective }).IsUnique();
         });
     }
 }

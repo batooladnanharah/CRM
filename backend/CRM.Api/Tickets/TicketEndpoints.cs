@@ -130,7 +130,7 @@ public static class TicketEndpoints
             var customer = await customerDb.Customers.AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == entity.CustomerId);
 
-            var response = await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb);
+            var response = await ToResponseAsync(entity, customer?.FullName ?? string.Empty, customer?.Email ?? string.Empty, authDb, db);
             return Results.Ok(response);
         })
         .RequireAuthorization(Permissions.TicketsManage)
@@ -477,7 +477,7 @@ public static class TicketEndpoints
     }
 
     private static async Task<TicketResponse> ToResponseAsync(
-        Ticket entity, string customerName, string customerEmail, AuthDbContext authDb)
+        Ticket entity, string customerName, string customerEmail, AuthDbContext authDb, TicketDbContext? ticketDb = null)
     {
         string? assigneeName = null;
         if (entity.AssigneeUserId is not null)
@@ -487,6 +487,14 @@ public static class TicketEndpoints
                 .Select(u => u.Name)
                 .FirstOrDefaultAsync();
         }
+
+        var escalations = ticketDb is null
+            ? []
+            : await ticketDb.EscalationEvents.AsNoTracking()
+                .Where(e => e.TicketId == entity.Id)
+                .Select(e => new TicketEscalationResponse(
+                    e.AgentNotified, e.ManagerNotified, e.Trigger.ToString(), e.Objective.ToString()))
+                .ToListAsync();
 
         return new TicketResponse(
             entity.Id,
@@ -501,7 +509,8 @@ public static class TicketEndpoints
             assigneeName,
             entity.CreatedAtUtc,
             entity.UpdatedAtUtc,
-            BuildSlaSnapshot(entity));
+            BuildSlaSnapshot(entity),
+            escalations);
     }
 
     private static async Task<List<TicketListItem>> ToListItemsAsync(

@@ -21,7 +21,11 @@ public record TicketResponse(
     string? AssigneeDisplayName,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
-    TicketSlaSnapshotResponse Sla);
+    TicketSlaSnapshotResponse Sla,
+    IReadOnlyList<TicketEscalationResponse> Escalations);
+
+public record TicketEscalationResponse(
+    bool AgentNotified, bool ManagerNotified, string Trigger, string Objective);
 
 public record TicketListItem(
     Guid Id,

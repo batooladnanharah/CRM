@@ -17,6 +17,13 @@ export interface TicketSla {
   slaAutoEscalatedAtUtc: string | null
 }
 
+export interface TicketEscalation {
+  agentNotified: boolean
+  managerNotified: boolean
+  trigger: string
+  objective: string
+}
+
 export interface Ticket {
   id: string
   customerId: string
@@ -31,6 +38,7 @@ export interface Ticket {
   createdAtUtc: string
   updatedAtUtc: string
   sla: TicketSla
+  escalations: TicketEscalation[]
 }
 
 export interface TicketListItem {

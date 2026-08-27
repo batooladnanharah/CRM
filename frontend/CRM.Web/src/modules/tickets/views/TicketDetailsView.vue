@@ -218,6 +218,12 @@ async function onRegenerateSummary() {
           <SlaBadge :sla="store.current.sla" kind="firstResponse" />
           <SlaBadge :sla="store.current.sla" kind="resolution" />
         </div>
+        <ul v-if="store.current.escalations?.length" class="escalation-surface">
+          <li v-for="(escalation, index) in store.current.escalations" :key="index">
+            <span v-if="escalation.agentNotified">✓ {{ t('sla.escalation.ticket.agentNotified') }}</span>
+            <span v-if="escalation.managerNotified">✓ {{ t('sla.escalation.ticket.managerNotified') }}</span>
+          </li>
+        </ul>
         <EscalateTicketDialog v-if="canEscalate" :ticket-id="id" />
       </header>
 

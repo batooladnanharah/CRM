@@ -78,6 +78,12 @@ export function createAppRouter() {
         meta: { requiresAuth: true, permission: 'sla.manage', title: 'SLA policies' },
       },
       {
+        path: '/sla/escalation-rules',
+        name: 'escalation-rules-management',
+        component: () => import('@/modules/sla/views/EscalationRulesManagementView.vue'),
+        meta: { requiresAuth: true, permission: 'sla.escalation.manage', title: 'Escalation rules' },
+      },
+      {
         path: '/knowledge-base',
         name: 'knowledge-base-management',
         component: () => import('@/modules/knowledgeBase/views/KnowledgeBaseManagementView.vue'),

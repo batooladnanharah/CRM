@@ -24,6 +24,7 @@ public static class Permissions
     public const string CommunicationChannelsManage = "channels.manage";
 
     public const string SlaManage = "sla.manage";
+    public const string ManageSlaEscalationRules = "sla.escalation.manage";
     public const string ReportsView = "reports.view";
     public const string SecurityAdmin = "security.admin";
     public const string PortalAccess = "portal.access";
@@ -35,6 +36,6 @@ public static class Permissions
         QuickRepliesView, QuickRepliesManage,
         KnowledgeBaseView, KnowledgeBaseManage,
         CommunicationChannelsView, CommunicationChannelsManage,
-        SlaManage, ReportsView, SecurityAdmin, PortalAccess,
+        SlaManage, ManageSlaEscalationRules, ReportsView, SecurityAdmin, PortalAccess,
     ];
 }

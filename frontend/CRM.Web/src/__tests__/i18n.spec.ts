@@ -109,6 +109,35 @@ describe('i18n key parity', () => {
       expect(enKeys.has(key), `missing key: ${key}`).toBe(true)
     }
   })
+
+  it('has sla.escalation.* and notificationCenter.* namespaces that CRM-63 introduces', () => {
+    const enKeys = new Set(collectKeyPaths(en))
+
+    const expectedKeys = [
+      'sla.escalation.title',
+      'sla.escalation.create',
+      'sla.escalation.rule',
+      'sla.escalation.trigger.label',
+      'sla.escalation.trigger.atRisk',
+      'sla.escalation.trigger.breached',
+      'sla.escalation.actions.notifyAgent',
+      'sla.escalation.actions.notifyManager',
+      'sla.escalation.status.active',
+      'sla.escalation.status.inactive',
+      'sla.escalation.validation.atLeastOneAction',
+      'notificationCenter.title',
+      'notificationCenter.markAllRead',
+      'notificationCenter.empty',
+      'notificationCenter.loading',
+      'notificationCenter.error',
+      'notificationCenter.item.sla.atRisk',
+      'notificationCenter.item.sla.breached',
+    ]
+
+    for (const key of expectedKeys) {
+      expect(enKeys.has(key), `missing key: ${key}`).toBe(true)
+    }
+  })
 })
 
 describe('RTL direction toggling (CRM-92)', () => {

@@ -23,6 +23,7 @@ export const Permissions = {
   CommunicationChannelsView: 'channels.view',
   CommunicationChannelsManage: 'channels.manage',
   SlaManage: 'sla.manage',
+  ManageSlaEscalationRules: 'sla.escalation.manage',
   ReportsView: 'reports.view',
   SecurityAdmin: 'security.admin',
   PortalAccess: 'portal.access',
