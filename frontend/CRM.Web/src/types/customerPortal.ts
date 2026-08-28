@@ -46,3 +46,29 @@ export interface CustomerDashboard {
   resolvedCount: number
   recentTickets: CustomerTicketListItem[]
 }
+
+// Portal-facing knowledge-base article shapes — no authorId/status, since
+// every article the portal can see is Published by definition.
+export interface CustomerKnowledgeBaseArticleListItem {
+  id: string
+  title: string
+  slug: string
+  tags: string[]
+  publishedAtUtc: string
+}
+
+export interface CustomerKnowledgeBaseArticleDetails {
+  id: string
+  title: string
+  slug: string
+  body: string
+  tags: string[]
+  publishedAtUtc: string
+}
+
+export interface CustomerKnowledgeBaseArticleListResult {
+  items: CustomerKnowledgeBaseArticleListItem[]
+  total: number
+  page: number
+  pageSize: number
+}

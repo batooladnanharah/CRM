@@ -31,7 +31,9 @@
     },
     "knowledgeBase": {
       "articleCreated": "Article created successfully.",
-      "articleUpdated": "Article updated successfully."
+      "articleUpdated": "Article updated successfully.",
+      "articlePublished": "Article published successfully.",
+      "articleUnpublished": "Article unpublished successfully."
     },
     "sla": {
       "policySaved": "SLA configuration updated."
@@ -644,7 +646,9 @@
       "edit": "Edit",
       "delete": "Delete",
       "save": "Save",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "publish": "Publish",
+      "unpublish": "Unpublish"
     },
     "validation": {
       "titleRequired": "Title is required.",
@@ -655,6 +659,24 @@
       "saved": "Article saved.",
       "deleted": "Article deleted.",
       "searchEmpty": "No articles found."
+    },
+    "list": {
+      "loading": "Loading articles…",
+      "empty": "No knowledge base articles yet.",
+      "errorRetry": "Could not load articles. Please try again."
+    },
+    "form": {
+      "saving": "Saving…",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "publishing": "Publishing…",
+      "unpublishing": "Unpublishing…"
+    },
+    "errors": {
+      "saveFailed": "Could not save the article. Please try again.",
+      "publishFailed": "Could not publish the article. Please try again.",
+      "unpublishFailed": "Could not unpublish the article. Please try again.",
+      "loadFailed": "Could not load the article. Please try again."
     }
   },
   "portal": {
@@ -707,6 +729,16 @@
         "none": "None",
         "backToList": "Back to my tickets"
       }
+    },
+    "helpCentre": {
+      "title": "Help Centre",
+      "empty": "No help articles are available yet.",
+      "loading": "Loading help articles…",
+      "error": "Could not load help articles. Please try again.",
+      "retry": "Retry",
+      "backToList": "Back to Help Centre",
+      "publishedOn": "Published {date}",
+      "notFound": "We couldn't find that article."
     },
     "errors": {
       "unauthorized": "Your account isn't linked to a customer record yet. Please contact support.",

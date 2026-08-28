@@ -138,6 +138,48 @@ public class RbacEndpointEnforcementTests : IClassFixture<CustomWebApplicationFa
     [Theory]
     [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
     [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, false)]
+    public async Task KnowledgeBasePublish_OnlyAdmin(string email, string password, bool allowed)
+    {
+        var client = await AuthenticatedClientAsync(email, password);
+
+        // A non-existent article id still exercises the policy first — a 403
+        // for Agent proves the permission check runs before the 404 the
+        // handler would otherwise return; Admin reaching 404 (not 403)
+        // proves the policy let the request through.
+        var response = await client.PostAsync($"/api/knowledge-base/articles/{Guid.NewGuid()}/publish", null);
+
+        if (allowed)
+        {
+            Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+    }
+
+    [Theory]
+    [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
+    [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, false)]
+    public async Task KnowledgeBaseUnpublish_OnlyAdmin(string email, string password, bool allowed)
+    {
+        var client = await AuthenticatedClientAsync(email, password);
+
+        var response = await client.PostAsync($"/api/knowledge-base/articles/{Guid.NewGuid()}/unpublish", null);
+
+        if (allowed)
+        {
+            Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+    }
+
+    [Theory]
+    [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
+    [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, false)]
     public async Task CommunicationChannelsManage_OnlyAdmin(string email, string password, bool allowed)
     {
         var client = await AuthenticatedClientAsync(email, password);

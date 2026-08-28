@@ -221,6 +221,53 @@ public static class KnowledgeBaseEndpoints
         .RequireAuthorization(Permissions.KnowledgeBaseManage)
         .WithName("DeleteKnowledgeBaseArticle")
         .WithTags("KnowledgeBase");
+
+        // Dedicated publish/unpublish actions alongside the generic PUT above
+        // (kept for callers that already depend on it). Publish always stamps
+        // PublishedAtUtc to "now" (even on an already-published article, so a
+        // deliberate re-publish refreshes it); unpublish moves the article to
+        // Draft and never touches Body/Title/Tags. Idempotent: calling either
+        // action from a state that's already the target status still
+        // succeeds and returns the current article, matching the pattern
+        // used by TicketEndpoints for repeated status transitions.
+        articles.MapPost("/{id:guid}/publish", async (Guid id, KnowledgeBaseDbContext db) =>
+        {
+            var entity = await db.Articles.FirstOrDefaultAsync(a => a.Id == id);
+            if (entity is null)
+            {
+                return Results.NotFound();
+            }
+
+            entity.Status = KnowledgeBaseArticleStatus.Published;
+            entity.PublishedAtUtc = DateTime.UtcNow;
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+
+            await db.SaveChangesAsync();
+            return Results.Ok(ToResponse(entity));
+        })
+        .RequireAuthorization(Permissions.KnowledgeBaseManage)
+        .WithName("PublishKnowledgeBaseArticle")
+        .WithTags("KnowledgeBase");
+
+        articles.MapPost("/{id:guid}/unpublish", async (Guid id, KnowledgeBaseDbContext db) =>
+        {
+            var entity = await db.Articles.FirstOrDefaultAsync(a => a.Id == id);
+            if (entity is null)
+            {
+                return Results.NotFound();
+            }
+
+            // Status only -> Draft. Content (Title/Body/Tags/Slug) and
+            // PublishedAtUtc (first-publish history) are left untouched.
+            entity.Status = KnowledgeBaseArticleStatus.Draft;
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+
+            await db.SaveChangesAsync();
+            return Results.Ok(ToResponse(entity));
+        })
+        .RequireAuthorization(Permissions.KnowledgeBaseManage)
+        .WithName("UnpublishKnowledgeBaseArticle")
+        .WithTags("KnowledgeBase");
     }
 
     private static IResult? Validate(

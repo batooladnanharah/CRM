@@ -8,7 +8,9 @@ import type {
   getArticle,
   getArticleBySlug,
   listArticles,
+  publishArticle,
   searchArticles,
+  unpublishArticle,
   updateArticle,
 } from '@/api/knowledgeBase'
 import type { KnowledgeBaseArticle } from '@/types/knowledgeBase'
@@ -21,6 +23,8 @@ const {
   createArticleMock,
   updateArticleMock,
   deleteArticleMock,
+  publishArticleMock,
+  unpublishArticleMock,
   toastMock,
 } = vi.hoisted(() => ({
   listArticlesMock: vi.fn<typeof listArticles>(),
@@ -30,6 +34,8 @@ const {
   createArticleMock: vi.fn<typeof createArticle>(),
   updateArticleMock: vi.fn<typeof updateArticle>(),
   deleteArticleMock: vi.fn<typeof deleteArticle>(),
+  publishArticleMock: vi.fn<typeof publishArticle>(),
+  unpublishArticleMock: vi.fn<typeof unpublishArticle>(),
   toastMock: {
     success: vi.fn<(input: unknown) => string>(),
     error: vi.fn<(input: unknown) => string>(),
@@ -50,6 +56,8 @@ vi.mock('@/api/knowledgeBase', () => ({
   createArticle: createArticleMock,
   updateArticle: updateArticleMock,
   deleteArticle: deleteArticleMock,
+  publishArticle: publishArticleMock,
+  unpublishArticle: unpublishArticleMock,
 }))
 
 function makeArticle(overrides: Partial<KnowledgeBaseArticle> = {}): KnowledgeBaseArticle {
@@ -77,6 +85,8 @@ beforeEach(() => {
   createArticleMock.mockReset()
   updateArticleMock.mockReset()
   deleteArticleMock.mockReset()
+  publishArticleMock.mockReset()
+  unpublishArticleMock.mockReset()
   toastMock.success.mockReset()
   toastMock.error.mockReset()
 })
@@ -207,6 +217,51 @@ describe('knowledgeBase store', () => {
     expect(store.error).toBe('errorLoad')
   })
 
+  it('publish() calls the publish API and replaces the article in place', async () => {
+    listArticlesMock.mockResolvedValue({ items: [makeArticle({ id: '1', status: 'Draft' })], total: 1 })
+    const store = useKnowledgeBaseStore()
+    await store.fetchArticles()
+
+    const published = makeArticle({ id: '1', status: 'Published', publishedAtUtc: '2026-01-02T00:00:00Z' })
+    publishArticleMock.mockResolvedValue(published)
+    await store.publish('1')
+
+    expect(publishArticleMock).toHaveBeenCalledWith('1')
+    expect(store.articles[0]).toEqual(published)
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
+  })
+
+  it('publish() sets error and rethrows on failure', async () => {
+    publishArticleMock.mockRejectedValue(new Error('failed'))
+
+    const store = useKnowledgeBaseStore()
+    await expect(store.publish('1')).rejects.toThrow('failed')
+
+    expect(store.error).toBe('errorLoad')
+  })
+
+  it('unpublish() calls the unpublish API and updates the article status to Draft', async () => {
+    listArticlesMock.mockResolvedValue({ items: [makeArticle({ id: '1', status: 'Published' })], total: 1 })
+    const store = useKnowledgeBaseStore()
+    await store.fetchArticles()
+
+    const unpublished = makeArticle({ id: '1', status: 'Draft' })
+    unpublishArticleMock.mockResolvedValue(unpublished)
+    await store.unpublish('1')
+
+    expect(unpublishArticleMock).toHaveBeenCalledWith('1')
+    expect(store.articles[0].status).toBe('Draft')
+  })
+
+  it('unpublish() sets error and rethrows on failure', async () => {
+    unpublishArticleMock.mockRejectedValue(new Error('failed'))
+
+    const store = useKnowledgeBaseStore()
+    await expect(store.unpublish('1')).rejects.toThrow('failed')
+
+    expect(store.error).toBe('errorLoad')
+  })
+
   it('remove() removes the article from state on success', async () => {
     listArticlesMock.mockResolvedValue({ items: [makeArticle({ id: '1' })], total: 1 })
     const store = useKnowledgeBaseStore()
@@ -225,5 +280,64 @@ describe('knowledgeBase store', () => {
     await expect(store.remove('1')).rejects.toThrow('failed')
 
     expect(store.error).toBe('errorLoad')
+  })
+
+  it('publish() calls the publish API and updates the local article status', async () => {
+    listArticlesMock.mockResolvedValue({ items: [makeArticle({ id: '1', status: 'Draft' })], total: 1 })
+    const store = useKnowledgeBaseStore()
+    await store.fetchArticles()
+
+    const published = makeArticle({ id: '1', status: 'Published', publishedAtUtc: '2026-01-02T00:00:00Z' })
+    publishArticleMock.mockResolvedValue(published)
+
+    const result = await store.publish('1')
+
+    expect(publishArticleMock).toHaveBeenCalledWith('1')
+    expect(result.status).toBe('Published')
+    expect(store.articles[0]).toEqual(published)
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
+  })
+
+  it('publish() sets error and rethrows on failure', async () => {
+    publishArticleMock.mockRejectedValue(new Error('failed'))
+
+    const store = useKnowledgeBaseStore()
+    await expect(store.publish('1')).rejects.toThrow('failed')
+
+    expect(store.error).toBe('errorLoad')
+  })
+
+  it('unpublish() calls the unpublish API and updates status to Draft', async () => {
+    listArticlesMock.mockResolvedValue({ items: [makeArticle({ id: '1', status: 'Published' })], total: 1 })
+    const store = useKnowledgeBaseStore()
+    await store.fetchArticles()
+
+    const unpublished = makeArticle({ id: '1', status: 'Draft' })
+    unpublishArticleMock.mockResolvedValue(unpublished)
+
+    const result = await store.unpublish('1')
+
+    expect(unpublishArticleMock).toHaveBeenCalledWith('1')
+    expect(result.status).toBe('Draft')
+    expect(store.articles[0]).toEqual(unpublished)
+  })
+
+  it('unpublish() sets error and rethrows on failure', async () => {
+    unpublishArticleMock.mockRejectedValue(new Error('failed'))
+
+    const store = useKnowledgeBaseStore()
+    await expect(store.unpublish('1')).rejects.toThrow('failed')
+
+    expect(store.error).toBe('errorLoad')
+  })
+
+  it('fetchArticles() passes page and pageSize through and updates total', async () => {
+    listArticlesMock.mockResolvedValue({ items: [makeArticle()], total: 42 })
+
+    const store = useKnowledgeBaseStore()
+    await store.fetchArticles({ page: 3, pageSize: 10 })
+
+    expect(listArticlesMock).toHaveBeenCalledWith({ page: 3, pageSize: 10 })
+    expect(store.total).toBe(42)
   })
 })

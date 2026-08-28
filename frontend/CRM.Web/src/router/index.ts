@@ -144,6 +144,18 @@ export function createAppRouter() {
         component: () => import('@/modules/customerPortal/views/PortalTicketDetailsView.vue'),
         meta: { requiresAuth: true, portalOnly: true, title: 'Ticket Details' },
       },
+      {
+        path: '/portal/knowledge-base',
+        name: 'portal-knowledge-base-list',
+        component: () => import('@/modules/customerPortal/views/PortalKnowledgeBaseListView.vue'),
+        meta: { requiresAuth: true, portalOnly: true, title: 'Help Centre' },
+      },
+      {
+        path: '/portal/knowledge-base/:id',
+        name: 'portal-knowledge-base-article',
+        component: () => import('@/modules/customerPortal/views/PortalKnowledgeBaseArticleView.vue'),
+        meta: { requiresAuth: true, portalOnly: true, title: 'Help Article' },
+      },
       { path: '/:pathMatch(.*)*', redirect: '/' },
     ],
   })

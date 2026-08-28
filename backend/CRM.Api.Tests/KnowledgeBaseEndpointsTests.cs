@@ -304,6 +304,98 @@ public class KnowledgeBaseEndpointsTests : IClassFixture<CustomWebApplicationFac
     }
 
     [Fact]
+    public async Task Publish_SetsStatusPublishedAndStampsPublishedAtUtc()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var created = await CreateArticleAsync(admin, ArticlePayload("Publish Me", "publish-me-article"));
+        Assert.Equal(KnowledgeBaseArticleStatus.Draft, created.Status);
+        Assert.Null(created.PublishedAtUtc);
+
+        var response = await admin.PostAsync($"/api/knowledge-base/articles/{created.Id}/publish", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseArticleResponse>();
+        Assert.Equal(KnowledgeBaseArticleStatus.Published, body!.Status);
+        Assert.NotNull(body.PublishedAtUtc);
+    }
+
+    [Fact]
+    public async Task Publish_Returns404_WhenMissing()
+    {
+        var admin = await AuthenticatedClientAsync();
+
+        var response = await admin.PostAsync($"/api/knowledge-base/articles/{Guid.NewGuid()}/publish", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Publish_Returns403_ForAgent()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var created = await CreateArticleAsync(admin, ArticlePayload("Agent Cannot Publish", "agent-cannot-publish"));
+
+        var agent = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword);
+        var response = await agent.PostAsync($"/api/knowledge-base/articles/{created.Id}/publish", null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unpublish_SetsStatusDraftAndKeepsContent()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var created = await CreateArticleAsync(
+            admin, ArticlePayload("Unpublish Me", "unpublish-me-article", "Keep this body.", status: "Published"));
+        Assert.Equal(KnowledgeBaseArticleStatus.Published, created.Status);
+
+        var response = await admin.PostAsync($"/api/knowledge-base/articles/{created.Id}/unpublish", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseArticleResponse>();
+        Assert.Equal(KnowledgeBaseArticleStatus.Draft, body!.Status);
+        Assert.Equal("Keep this body.", body.Body);
+    }
+
+    [Fact]
+    public async Task Unpublish_Returns404_WhenMissing()
+    {
+        var admin = await AuthenticatedClientAsync();
+
+        var response = await admin.PostAsync($"/api/knowledge-base/articles/{Guid.NewGuid()}/unpublish", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unpublish_Returns403_ForAgent()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var created = await CreateArticleAsync(
+            admin, ArticlePayload("Agent Cannot Unpublish", "agent-cannot-unpublish", status: "Published"));
+
+        var agent = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword);
+        var response = await agent.PostAsync($"/api/knowledge-base/articles/{created.Id}/unpublish", null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unpublish_IsIdempotent_WhenAlreadyDraft()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var created = await CreateArticleAsync(admin, ArticlePayload("Already Draft", "already-draft-article"));
+
+        var response = await admin.PostAsync($"/api/knowledge-base/articles/{created.Id}/unpublish", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseArticleResponse>();
+        Assert.Equal(KnowledgeBaseArticleStatus.Draft, body!.Status);
+    }
+
+    [Fact]
     public async Task AllEndpoints_ReturnUnauthorized_WhenAnonymous()
     {
         var articleId = Guid.NewGuid();
@@ -331,5 +423,11 @@ public class KnowledgeBaseEndpointsTests : IClassFixture<CustomWebApplicationFac
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             (await _client.DeleteAsync($"/api/knowledge-base/articles/{articleId}")).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            (await _client.PostAsync($"/api/knowledge-base/articles/{articleId}/publish", null)).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            (await _client.PostAsync($"/api/knowledge-base/articles/{articleId}/unpublish", null)).StatusCode);
     }
 }

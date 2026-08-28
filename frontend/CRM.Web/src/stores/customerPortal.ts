@@ -3,10 +3,19 @@ import { defineStore } from 'pinia'
 import {
   createPortalTicket,
   fetchPortalDashboard,
+  fetchPortalKnowledgeBaseArticle,
+  fetchPortalKnowledgeBaseArticles,
   fetchPortalTicket,
   fetchPortalTickets,
 } from '@/api/customerPortal'
-import type { CreateCustomerTicketPayload, CustomerDashboard, CustomerTicketDetails, CustomerTicketListItem } from '@/types/customerPortal'
+import type {
+  CreateCustomerTicketPayload,
+  CustomerDashboard,
+  CustomerKnowledgeBaseArticleDetails,
+  CustomerKnowledgeBaseArticleListItem,
+  CustomerTicketDetails,
+  CustomerTicketListItem,
+} from '@/types/customerPortal'
 
 export const useCustomerPortalStore = defineStore('customerPortal', () => {
   const dashboard = ref<CustomerDashboard | null>(null)
@@ -15,6 +24,16 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
   const loading = ref(false)
   const creating = ref(false)
   const error = ref<string | null>(null)
+
+  const articles = ref<CustomerKnowledgeBaseArticleListItem[]>([])
+  const currentArticle = ref<CustomerKnowledgeBaseArticleDetails | null>(null)
+  const articlesTotal = ref(0)
+  const articlesPage = ref(1)
+  const articlesPageSize = ref(20)
+  const articlesLoading = ref(false)
+  const articlesError = ref<string | null>(null)
+  const articleLoading = ref(false)
+  const articleError = ref<string | null>(null)
 
   async function fetchDashboard() {
     loading.value = true
@@ -71,6 +90,37 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
     }
   }
 
+  async function fetchArticles(page = 1, pageSize = 20) {
+    articlesLoading.value = true
+    articlesError.value = null
+
+    try {
+      const result = await fetchPortalKnowledgeBaseArticles(page, pageSize)
+      articles.value = result.items
+      articlesTotal.value = result.total
+      articlesPage.value = result.page
+      articlesPageSize.value = result.pageSize
+    } catch {
+      articlesError.value = 'errorLoad'
+    } finally {
+      articlesLoading.value = false
+    }
+  }
+
+  async function fetchArticle(id: string) {
+    articleLoading.value = true
+    articleError.value = null
+    currentArticle.value = null
+
+    try {
+      currentArticle.value = await fetchPortalKnowledgeBaseArticle(id)
+    } catch {
+      articleError.value = 'errorLoad'
+    } finally {
+      articleLoading.value = false
+    }
+  }
+
   return {
     dashboard,
     tickets,
@@ -82,5 +132,16 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
     fetchTickets,
     fetchTicket,
     createTicket,
+    articles,
+    currentArticle,
+    articlesTotal,
+    articlesPage,
+    articlesPageSize,
+    articlesLoading,
+    articlesError,
+    articleLoading,
+    articleError,
+    fetchArticles,
+    fetchArticle,
   }
 })

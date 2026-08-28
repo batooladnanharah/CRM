@@ -6,7 +6,9 @@ import {
   getArticle,
   getArticleBySlug,
   listArticles,
+  publishArticle,
   searchArticles,
+  unpublishArticle,
   updateArticle,
 } from '@/api/knowledgeBase'
 import { ApiError } from '@/api/http'
@@ -136,6 +138,46 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
     }
   }
 
+  async function publish(id: string) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const updated = await publishArticle(id)
+      articles.value = articles.value.map((a) => (a.id === id ? updated : a))
+      if (currentArticle.value?.id === id) {
+        currentArticle.value = updated
+      }
+      useToast().success(t('notifications.knowledgeBase.articlePublished'))
+      return updated
+    } catch (err) {
+      error.value = errorMessage(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function unpublish(id: string) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const updated = await unpublishArticle(id)
+      articles.value = articles.value.map((a) => (a.id === id ? updated : a))
+      if (currentArticle.value?.id === id) {
+        currentArticle.value = updated
+      }
+      useToast().success(t('notifications.knowledgeBase.articleUnpublished'))
+      return updated
+    } catch (err) {
+      error.value = errorMessage(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function remove(id: string) {
     isLoading.value = true
     error.value = null
@@ -164,6 +206,8 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
     fetchBySlug,
     create,
     update,
+    publish,
+    unpublish,
     remove,
   }
 })

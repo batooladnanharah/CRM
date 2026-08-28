@@ -69,3 +69,11 @@ export function updateArticle(
 export function deleteArticle(id: string): Promise<void> {
   return apiRequest<void>(`/knowledge-base/articles/${id}`, { method: 'DELETE' })
 }
+
+export function publishArticle(id: string): Promise<KnowledgeBaseArticle> {
+  return apiRequest<KnowledgeBaseArticle>(`/knowledge-base/articles/${id}/publish`, { method: 'POST' })
+}
+
+export function unpublishArticle(id: string): Promise<KnowledgeBaseArticle> {
+  return apiRequest<KnowledgeBaseArticle>(`/knowledge-base/articles/${id}/unpublish`, { method: 'POST' })
+}

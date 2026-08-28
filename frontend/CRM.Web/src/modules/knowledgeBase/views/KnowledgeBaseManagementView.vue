@@ -44,10 +44,14 @@ function slugify(title: string): string {
 }
 
 function refetch() {
-  void store.fetchArticles({
+  // store.fetchArticles rethrows on failure so callers that want to chain
+  // can; refetch() is fire-and-forget from a click/mount handler and
+  // store.error already carries the message the template displays, so the
+  // rejection is swallowed here rather than left unhandled.
+  store.fetchArticles({
     status: statusFilter.value || undefined,
     tag: tagFilter.value.trim() || undefined,
-  })
+  }).catch(() => {})
 }
 
 onMounted(async () => {
@@ -161,6 +165,8 @@ function parseTags(text: string): string[] {
     .filter((tag) => tag.length > 0)
 }
 
+const isSaveDisabled = computed(() => store.isLoading || draftTitle.value.trim().length === 0)
+
 function isDraftValid(): boolean {
   return (
     draftTitle.value.trim().length > 0 &&
@@ -224,6 +230,30 @@ async function onDelete(article: KnowledgeBaseArticle) {
     // error surfaced via store.error
   }
 }
+
+const publishingId = ref<string | null>(null)
+
+async function onPublish(article: KnowledgeBaseArticle) {
+  publishingId.value = article.id
+  try {
+    await store.publish(article.id)
+  } catch {
+    // error surfaced via store.error
+  } finally {
+    publishingId.value = null
+  }
+}
+
+async function onUnpublish(article: KnowledgeBaseArticle) {
+  publishingId.value = article.id
+  try {
+    await store.unpublish(article.id)
+  } catch {
+    // error surfaced via store.error
+  } finally {
+    publishingId.value = null
+  }
+}
 </script>
 
 <template>
@@ -270,7 +300,10 @@ async function onDelete(article: KnowledgeBaseArticle) {
       </div>
     </div>
 
-    <AppAlert v-if="store.error" tone="danger" role="alert">{{ store.error }}</AppAlert>
+    <AppAlert v-if="store.error" tone="danger" role="alert" class="kb-error-alert">
+      {{ store.error }}
+      <AppButton variant="secondary" size="sm" type="button" @click="refetch">{{ t('common.retry') }}</AppButton>
+    </AppAlert>
 
     <form v-if="isAdding" class="surface kb-article-form" @submit.prevent="submitAdd">
       <div class="field">
@@ -317,7 +350,7 @@ async function onDelete(article: KnowledgeBaseArticle) {
         </select>
       </div>
       <div class="form-actions">
-        <AppButton type="submit" size="sm" :disabled="store.isLoading">{{ t('knowledgeBase.actions.save') }}</AppButton>
+        <AppButton type="submit" size="sm" :disabled="isSaveDisabled">{{ t('knowledgeBase.actions.save') }}</AppButton>
         <AppButton type="button" variant="secondary" size="sm" @click="cancelForm">{{ t('knowledgeBase.actions.cancel') }}</AppButton>
       </div>
     </form>
@@ -367,7 +400,7 @@ async function onDelete(article: KnowledgeBaseArticle) {
         </select>
       </div>
       <div class="form-actions">
-        <AppButton type="submit" size="sm" :disabled="store.isLoading">{{ t('knowledgeBase.actions.save') }}</AppButton>
+        <AppButton type="submit" size="sm" :disabled="isSaveDisabled">{{ t('knowledgeBase.actions.save') }}</AppButton>
         <AppButton type="button" variant="secondary" size="sm" @click="cancelForm">{{ t('knowledgeBase.actions.cancel') }}</AppButton>
       </div>
     </form>
@@ -411,7 +444,7 @@ async function onDelete(article: KnowledgeBaseArticle) {
                     </option>
                   </select>
                   <div class="form-actions">
-                    <AppButton type="submit" size="sm" :disabled="store.isLoading">
+                    <AppButton type="submit" size="sm" :disabled="isSaveDisabled">
                       {{ t('knowledgeBase.actions.save') }}
                     </AppButton>
                     <AppButton type="button" variant="secondary" size="sm" @click="cancelForm">{{ t('knowledgeBase.actions.cancel') }}</AppButton>
@@ -425,6 +458,26 @@ async function onDelete(article: KnowledgeBaseArticle) {
               <td>{{ t(`knowledgeBase.status.${article.status.toLowerCase()}`) }}</td>
               <td>
                 <AppButton variant="ghost" size="sm" type="button" @click="startEdit(article)">{{ t('knowledgeBase.actions.edit') }}</AppButton>
+                <AppButton
+                  v-if="article.status !== 'Published'"
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  :disabled="publishingId === article.id"
+                  @click="onPublish(article)"
+                >
+                  {{ publishingId === article.id ? t('knowledgeBase.form.publishing') : t('knowledgeBase.actions.publish') }}
+                </AppButton>
+                <AppButton
+                  v-else
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  :disabled="publishingId === article.id"
+                  @click="onUnpublish(article)"
+                >
+                  {{ publishingId === article.id ? t('knowledgeBase.form.unpublishing') : t('knowledgeBase.actions.unpublish') }}
+                </AppButton>
                 <AppButton variant="ghost" size="sm" type="button" @click="onDelete(article)">
                   {{ t('knowledgeBase.actions.delete') }}
                 </AppButton>
@@ -455,6 +508,13 @@ async function onDelete(article: KnowledgeBaseArticle) {
 .field-error {
   color: var(--color-status-danger);
   font-size: var(--font-size-sm);
+}
+
+.kb-error-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .form-actions {

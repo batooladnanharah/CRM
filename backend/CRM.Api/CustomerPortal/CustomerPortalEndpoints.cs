@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CRM.Api.Auth;
+using CRM.Api.KnowledgeBase;
 using CRM.Api.Security;
 using CRM.Api.Tickets;
 using Microsoft.AspNetCore.Http;
@@ -132,6 +133,62 @@ public static class CustomerPortalEndpoints
                 $"/api/customer/tickets/{entity.Id}", await ToDetailsResponseAsync(entity, db, ct));
         })
         .WithName("CreatePortalTicket");
+
+        // Published-only knowledge-base exposure. Draft/Archived articles
+        // and unknown ids are both 404 — never 403 — so a customer probing
+        // ids can't tell "not published" from "doesn't exist".
+        customer.MapGet("/knowledge-base/articles", async (
+            int? page, int? pageSize, ClaimsPrincipal principal, ICurrentCustomerAccessor accessor,
+            KnowledgeBaseDbContext kbDb, CancellationToken ct) =>
+        {
+            var customerId = await accessor.GetCurrentCustomerIdAsync(principal, ct);
+            if (customerId is null)
+            {
+                return Results.Forbid();
+            }
+
+            var resolvedPage = Math.Max(page ?? 1, 1);
+            var resolvedPageSize = Math.Clamp(pageSize ?? 20, 1, 100);
+
+            var published = kbDb.Articles.AsNoTracking()
+                .Where(a => a.Status == KnowledgeBaseArticleStatus.Published);
+
+            var total = await published.CountAsync(ct);
+            var items = await published
+                .OrderByDescending(a => a.PublishedAtUtc)
+                .ThenByDescending(a => a.Id)
+                .Skip((resolvedPage - 1) * resolvedPageSize)
+                .Take(resolvedPageSize)
+                .Select(a => new CustomerKnowledgeBaseArticleListItemResponse(
+                    a.Id, a.Title, a.Slug, a.Tags, a.PublishedAtUtc!.Value))
+                .ToListAsync(ct);
+
+            return Results.Ok(new CustomerKnowledgeBaseArticleListResponse(
+                items, total, resolvedPage, resolvedPageSize));
+        })
+        .WithName("ListPortalKnowledgeBaseArticles");
+
+        customer.MapGet("/knowledge-base/articles/{id:guid}", async (
+            Guid id, ClaimsPrincipal principal, ICurrentCustomerAccessor accessor, KnowledgeBaseDbContext kbDb,
+            CancellationToken ct) =>
+        {
+            var customerId = await accessor.GetCurrentCustomerIdAsync(principal, ct);
+            if (customerId is null)
+            {
+                return Results.Forbid();
+            }
+
+            var entity = await kbDb.Articles.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == id && a.Status == KnowledgeBaseArticleStatus.Published, ct);
+            if (entity is null)
+            {
+                return Results.NotFound();
+            }
+
+            return Results.Ok(new CustomerKnowledgeBaseArticleDetailsResponse(
+                entity.Id, entity.Title, entity.Slug, entity.Body, entity.Tags, entity.PublishedAtUtc!.Value));
+        })
+        .WithName("GetPortalKnowledgeBaseArticle");
     }
 
     private static CustomerTicketListItemResponse ToListItemResponse(Ticket t) => new(

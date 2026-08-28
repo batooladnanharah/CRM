@@ -10,19 +10,31 @@ import type {
   deleteArticle,
   getArticle,
   listArticles,
+  publishArticle,
+  unpublishArticle,
   updateArticle,
 } from '@/api/knowledgeBase'
 import type { KnowledgeBaseArticle } from '@/types/knowledgeBase'
 
-const { listArticlesMock, createArticleMock, updateArticleMock, deleteArticleMock, getArticleMock, confirmMock } =
-  vi.hoisted(() => ({
-    listArticlesMock: vi.fn<typeof listArticles>(),
-    createArticleMock: vi.fn<typeof createArticle>(),
-    updateArticleMock: vi.fn<typeof updateArticle>(),
-    deleteArticleMock: vi.fn<typeof deleteArticle>(),
-    getArticleMock: vi.fn<typeof getArticle>(),
-    confirmMock: vi.fn<() => Promise<boolean>>(),
-  }))
+const {
+  listArticlesMock,
+  createArticleMock,
+  updateArticleMock,
+  deleteArticleMock,
+  getArticleMock,
+  publishArticleMock,
+  unpublishArticleMock,
+  confirmMock,
+} = vi.hoisted(() => ({
+  listArticlesMock: vi.fn<typeof listArticles>(),
+  createArticleMock: vi.fn<typeof createArticle>(),
+  updateArticleMock: vi.fn<typeof updateArticle>(),
+  deleteArticleMock: vi.fn<typeof deleteArticle>(),
+  getArticleMock: vi.fn<typeof getArticle>(),
+  publishArticleMock: vi.fn<typeof publishArticle>(),
+  unpublishArticleMock: vi.fn<typeof unpublishArticle>(),
+  confirmMock: vi.fn<() => Promise<boolean>>(),
+}))
 
 vi.mock('@/api/knowledgeBase', () => ({
   listArticles: listArticlesMock,
@@ -32,6 +44,8 @@ vi.mock('@/api/knowledgeBase', () => ({
   createArticle: createArticleMock,
   updateArticle: updateArticleMock,
   deleteArticle: deleteArticleMock,
+  publishArticle: publishArticleMock,
+  unpublishArticle: unpublishArticleMock,
 }))
 
 vi.mock('@/composables/useConfirm', () => ({ confirm: confirmMock }))
@@ -78,6 +92,8 @@ beforeEach(() => {
   updateArticleMock.mockReset()
   deleteArticleMock.mockReset()
   getArticleMock.mockReset()
+  publishArticleMock.mockReset()
+  unpublishArticleMock.mockReset()
   confirmMock.mockReset()
   listArticlesMock.mockResolvedValue({ items: [], total: 0 })
 })
@@ -205,5 +221,80 @@ describe('KnowledgeBaseManagementView', () => {
     expect(getArticleMock).toHaveBeenCalledWith('1')
     const titleInput = wrapper.find('.kb-article-form input[type="text"]')
     expect((titleInput.element as HTMLInputElement).value).toBe('Deep Linked Article')
+  })
+
+  it('shows a Publish button for a Draft article and publishes it', async () => {
+    listArticlesMock.mockResolvedValue({ items: [makeArticle({ id: '1', status: 'Draft' })], total: 1 })
+    publishArticleMock.mockResolvedValue(makeArticle({ id: '1', status: 'Published', publishedAtUtc: '2026-01-02T00:00:00Z' }))
+
+    const wrapper = await mountView()
+    await flushPromises()
+
+    const publishButton = wrapper.findAll('button').find((b) => b.text() === 'Publish')!
+    expect(wrapper.findAll('button').find((b) => b.text() === 'Unpublish')).toBeUndefined()
+
+    await publishButton.trigger('click')
+    await flushPromises()
+
+    expect(publishArticleMock).toHaveBeenCalledWith('1')
+    expect(wrapper.findAll('button').find((b) => b.text() === 'Unpublish')).toBeTruthy()
+  })
+
+  it('shows an Unpublish button for a Published article and unpublishes it', async () => {
+    listArticlesMock.mockResolvedValue({
+      items: [makeArticle({ id: '1', status: 'Published', publishedAtUtc: '2026-01-01T00:00:00Z' })],
+      total: 1,
+    })
+    unpublishArticleMock.mockResolvedValue(makeArticle({ id: '1', status: 'Draft' }))
+
+    const wrapper = await mountView()
+    await flushPromises()
+
+    expect(wrapper.findAll('button').find((b) => b.text() === 'Publish')).toBeUndefined()
+    const unpublishButton = wrapper.findAll('button').find((b) => b.text() === 'Unpublish')!
+
+    await unpublishButton.trigger('click')
+    await flushPromises()
+
+    expect(unpublishArticleMock).toHaveBeenCalledWith('1')
+    expect(wrapper.findAll('button').find((b) => b.text() === 'Publish')).toBeTruthy()
+  })
+
+  it('shows an error state with a retry action when the list fails to load', async () => {
+    listArticlesMock.mockReset()
+    listArticlesMock.mockRejectedValueOnce(new Error('network down'))
+    listArticlesMock.mockResolvedValueOnce({ items: [makeArticle({ title: 'Recovered Article' })], total: 1 })
+
+    const wrapper = await mountView()
+    await flushPromises()
+
+    expect(listArticlesMock).toHaveBeenCalledTimes(1)
+
+    const retryButton = wrapper.findAll('button').find((b) => /retry/i.test(b.text()))
+    expect(retryButton).toBeTruthy()
+
+    await retryButton!.trigger('click')
+    await flushPromises()
+
+    expect(listArticlesMock).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('Recovered Article')
+  })
+
+  it('blocks submit when the title is whitespace-only', async () => {
+    const wrapper = await mountView()
+    await flushPromises()
+
+    await wrapper.find('button').trigger('click')
+    await wrapper.find('#kb-title').setValue('   ')
+    await wrapper.find('#kb-slug').setValue('some-slug')
+    await flushPromises()
+
+    const submitButton = wrapper.findAll('button').find((b) => b.text() === 'Save')!
+    expect(submitButton.attributes('disabled')).toBeDefined()
+
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(createArticleMock).not.toHaveBeenCalled()
   })
 })

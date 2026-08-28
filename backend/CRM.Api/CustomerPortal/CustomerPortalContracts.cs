@@ -47,3 +47,27 @@ public record CustomerDashboardResponse(
     int PendingCount,
     int ResolvedCount,
     IReadOnlyList<CustomerTicketListItemResponse> RecentTickets);
+
+// Customer-facing knowledge-base article shape: no AuthorId (internal/CRM
+// only) and no Status (every article the portal returns is Published by
+// definition, so echoing the status back adds nothing).
+public record CustomerKnowledgeBaseArticleListItemResponse(
+    Guid Id,
+    string Title,
+    string Slug,
+    string[] Tags,
+    DateTime PublishedAtUtc);
+
+public record CustomerKnowledgeBaseArticleDetailsResponse(
+    Guid Id,
+    string Title,
+    string Slug,
+    string Body,
+    string[] Tags,
+    DateTime PublishedAtUtc);
+
+public record CustomerKnowledgeBaseArticleListResponse(
+    IReadOnlyList<CustomerKnowledgeBaseArticleListItemResponse> Items,
+    int Total,
+    int Page,
+    int PageSize);

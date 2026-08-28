@@ -2,6 +2,8 @@ import { apiRequest } from './http'
 import type {
   CreateCustomerTicketPayload,
   CustomerDashboard,
+  CustomerKnowledgeBaseArticleDetails,
+  CustomerKnowledgeBaseArticleListResult,
   CustomerTicketDetails,
   CustomerTicketListItem,
 } from '@/types/customerPortal'
@@ -23,4 +25,16 @@ export function createPortalTicket(payload: CreateCustomerTicketPayload): Promis
     method: 'POST',
     body: JSON.stringify(payload),
   })
+}
+
+export function fetchPortalKnowledgeBaseArticles(
+  page = 1, pageSize = 20,
+): Promise<CustomerKnowledgeBaseArticleListResult> {
+  return apiRequest<CustomerKnowledgeBaseArticleListResult>(
+    `/customer/knowledge-base/articles?page=${page}&pageSize=${pageSize}`, { method: 'GET' },
+  )
+}
+
+export function fetchPortalKnowledgeBaseArticle(id: string): Promise<CustomerKnowledgeBaseArticleDetails> {
+  return apiRequest<CustomerKnowledgeBaseArticleDetails>(`/customer/knowledge-base/articles/${id}`, { method: 'GET' })
 }

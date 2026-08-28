@@ -638,6 +638,44 @@ describe('router guards — customer portal', () => {
 
     expect(router.currentRoute.value.name).toBe('portal-dashboard')
   })
+
+  it('allows a customer-role user to visit /portal/knowledge-base and /portal/knowledge-base/:id', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Portal Customer', email: 'customer@crm.local', roles: ['customer'] }
+
+    const router = createAppRouter()
+
+    await router.push('/portal/knowledge-base')
+    await router.isReady()
+    expect(router.currentRoute.value.name).toBe('portal-knowledge-base-list')
+
+    await router.push('/portal/knowledge-base/abc-123')
+    await router.isReady()
+    expect(router.currentRoute.value.name).toBe('portal-knowledge-base-article')
+  })
+
+  it('redirects an unauthenticated visit to /portal/knowledge-base to /login', async () => {
+    const router = createAppRouter()
+
+    await router.push('/portal/knowledge-base')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/login')
+  })
+
+  it('redirects an agent visit to /portal/knowledge-base to /dashboard', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
+
+    const router = createAppRouter()
+
+    await router.push('/portal/knowledge-base')
+    await router.isReady()
+
+    expect(router.currentRoute.value.name).toBe('dashboard')
+  })
 })
 
 describe('router guards — reports', () => {

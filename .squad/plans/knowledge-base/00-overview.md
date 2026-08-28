@@ -8,6 +8,7 @@ Entry point for the **knowledge-base** feature. Stories execute in order by thei
 |----|------|-------|------------|------------|
 | _add rows as stories are planned_ |
 | 24 | `24-story-crm-102.md` | Knowledge Base Articles & Search | CRM-102 | — |
+| 37 | `37-story-crm-64.md` | KB-001 — Knowledge Base Articles | CRM-64 | — |
 
 ## Dependency notes
 

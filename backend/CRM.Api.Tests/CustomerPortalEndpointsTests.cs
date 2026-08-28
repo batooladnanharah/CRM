@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CRM.Api.Auth;
 using CRM.Api.CustomerPortal;
+using CRM.Api.KnowledgeBase;
 using CRM.Api.Tickets;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -237,6 +238,94 @@ public class CustomerPortalEndpointsTests : IClassFixture<CustomWebApplicationFa
         Assert.Single(body.History);
         Assert.Equal("InProgress", body.History[0].NewValue);
     }
+
+    private Guid CreateArticle(
+        string title, string slug, KnowledgeBaseArticleStatus status, string body = "Some help content.")
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KnowledgeBaseDbContext>();
+        var now = DateTime.UtcNow;
+        var entity = new KnowledgeBaseArticle
+        {
+            Id = Guid.NewGuid(),
+            Title = title,
+            Slug = slug,
+            Body = body,
+            Tags = [],
+            Status = status,
+            AuthorId = Guid.NewGuid(),
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            PublishedAtUtc = status == KnowledgeBaseArticleStatus.Published ? now : null,
+        };
+        db.Articles.Add(entity);
+        db.SaveChanges();
+        return entity.Id;
+    }
+
+    [Fact]
+    public async Task Portal_ListArticles_ReturnsOnlyPublished()
+    {
+        var client = await AuthenticatedClientAsync();
+        CreateArticle("Published Help", "published-help-list", KnowledgeBaseArticleStatus.Published);
+        CreateArticle("Draft Help", "draft-help-list", KnowledgeBaseArticleStatus.Draft);
+        CreateArticle("Archived Help", "archived-help-list", KnowledgeBaseArticleStatus.Archived);
+
+        var response = await client.GetAsync("/api/customer/knowledge-base/articles");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<CustomerKnowledgeBaseArticleListResponse>();
+        Assert.Contains(body!.Items, a => a.Title == "Published Help");
+        Assert.DoesNotContain(body.Items, a => a.Title == "Draft Help");
+        Assert.DoesNotContain(body.Items, a => a.Title == "Archived Help");
+    }
+
+    [Fact]
+    public async Task Portal_GetArticle_ReturnsPublished()
+    {
+        var client = await AuthenticatedClientAsync();
+        var id = CreateArticle(
+            "Getting Started", "getting-started-portal", KnowledgeBaseArticleStatus.Published, "Full body text.");
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/articles/{id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<CustomerKnowledgeBaseArticleDetailsResponse>();
+        Assert.Equal("Getting Started", body!.Title);
+        Assert.Equal("Full body text.", body.Body);
+    }
+
+    [Fact]
+    public async Task Portal_GetArticle_ReturnsNotFoundForDraft()
+    {
+        var client = await AuthenticatedClientAsync();
+        var id = CreateArticle("Draft Article", "draft-article-portal", KnowledgeBaseArticleStatus.Draft);
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/articles/{id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Portal_GetArticle_ReturnsNotFoundForArchived()
+    {
+        var client = await AuthenticatedClientAsync();
+        var id = CreateArticle("Archived Article", "archived-article-portal", KnowledgeBaseArticleStatus.Archived);
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/articles/{id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Portal_GetArticle_ReturnsNotFoundForMissingId()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/articles/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
 
 // Isolated from CustomerPortalEndpointsTests: dashboard counts are exact
@@ -310,5 +399,150 @@ public class CustomerPortalDashboardTests : IClassFixture<CustomWebApplicationFa
         Assert.Equal(1, body.PendingCount);
         Assert.Equal(1, body.ResolvedCount);
         Assert.All(body.RecentTickets, t => Assert.DoesNotContain("Someone Else's", t.Title));
+    }
+}
+
+// Isolated from the other CustomerPortal test classes for the same reason as
+// CustomerPortalDashboardTests: articles created here don't interact with
+// ticket data, but keeping this KB coverage in its own fixture-scoped class
+// avoids any future cross-test coupling as the portal KB surface grows.
+public class CustomerPortalKnowledgeBaseEndpointsTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly CustomWebApplicationFactory _factory;
+    private readonly HttpClient _client;
+
+    public CustomerPortalKnowledgeBaseEndpointsTests(CustomWebApplicationFactory factory)
+    {
+        _factory = factory;
+        factory.SeedUsers();
+        factory.SeedPortalCustomers();
+        _client = factory.CreateClient();
+    }
+
+    private async Task<HttpClient> AuthenticatedClientAsync()
+    {
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new
+        {
+            email = CustomWebApplicationFactory.PortalCustomerEmail,
+            password = CustomWebApplicationFactory.PortalCustomerPassword,
+        });
+        var body = await login.Content.ReadFromJsonAsync<LoginResponse>();
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body!.Token);
+        return client;
+    }
+
+    private Guid SeedArticle(
+        string title, string slug, KnowledgeBaseArticleStatus status, string body = "Article body.")
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KnowledgeBaseDbContext>();
+        var now = DateTime.UtcNow;
+        var article = new KnowledgeBaseArticle
+        {
+            Id = Guid.NewGuid(),
+            Title = title,
+            Slug = slug,
+            Body = body,
+            Tags = [],
+            Status = status,
+            AuthorId = Guid.NewGuid(),
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            PublishedAtUtc = status == KnowledgeBaseArticleStatus.Published ? now : null,
+        };
+        db.Articles.Add(article);
+        db.SaveChanges();
+        return article.Id;
+    }
+
+    [Fact]
+    public async Task ListArticles_ReturnsOnlyPublished()
+    {
+        var client = await AuthenticatedClientAsync();
+        SeedArticle("Published FAQ", "portal-published-faq", KnowledgeBaseArticleStatus.Published);
+        SeedArticle("Draft FAQ", "portal-draft-faq", KnowledgeBaseArticleStatus.Draft);
+        SeedArticle("Archived FAQ", "portal-archived-faq", KnowledgeBaseArticleStatus.Archived);
+
+        var response = await client.GetAsync("/api/customer/knowledge-base/articles");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<CustomerKnowledgeBaseArticleListResponse>();
+        Assert.Contains(result!.Items, a => a.Slug == "portal-published-faq");
+        Assert.DoesNotContain(result.Items, a => a.Slug == "portal-draft-faq");
+        Assert.DoesNotContain(result.Items, a => a.Slug == "portal-archived-faq");
+    }
+
+    [Fact]
+    public async Task GetArticle_ReturnsPublishedArticle()
+    {
+        var client = await AuthenticatedClientAsync();
+        var id = SeedArticle(
+            "Getting Started", "portal-getting-started", KnowledgeBaseArticleStatus.Published, "Full body text.");
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/articles/{id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<CustomerKnowledgeBaseArticleDetailsResponse>();
+        Assert.Equal("Getting Started", body!.Title);
+        Assert.Equal("Full body text.", body.Body);
+    }
+
+    [Fact]
+    public async Task GetArticle_Returns404_ForDraftArticle()
+    {
+        var client = await AuthenticatedClientAsync();
+        var id = SeedArticle("Draft Only", "portal-draft-only", KnowledgeBaseArticleStatus.Draft);
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/articles/{id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetArticle_Returns404_ForArchivedArticle()
+    {
+        var client = await AuthenticatedClientAsync();
+        var id = SeedArticle("Archived Only", "portal-archived-only", KnowledgeBaseArticleStatus.Archived);
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/articles/{id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetArticle_Returns404_ForMissingArticle_SameAsDraft()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/articles/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListArticles_ReturnsUnauthorized_WhenAnonymous()
+    {
+        var response = await _client.GetAsync("/api/customer/knowledge-base/articles");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AgentToken_Cannot_Access_PortalKnowledgeBase()
+    {
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new
+        {
+            email = CustomWebApplicationFactory.ActiveEmail,
+            password = CustomWebApplicationFactory.ActivePassword,
+        });
+        var loginBody = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginBody!.Token);
+
+        var response = await client.GetAsync("/api/customer/knowledge-base/articles");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }
