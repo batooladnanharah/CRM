@@ -9,7 +9,11 @@ import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import type { KnowledgeBaseArticle, KnowledgeBaseArticleStatus } from '@/types/knowledgeBase'
+import type {
+  KnowledgeBaseArticle,
+  KnowledgeBaseArticleCategoryRef,
+  KnowledgeBaseArticleStatus,
+} from '@/types/knowledgeBase'
 
 const STATUSES: KnowledgeBaseArticleStatus[] = ['Draft', 'Published', 'Archived']
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -32,7 +36,10 @@ const draftSlugTouched = ref(false)
 const draftBody = ref('')
 const draftTagsText = ref('')
 const draftStatus = ref<KnowledgeBaseArticleStatus>('Draft')
+const draftCategoryId = ref('')
+const legacyInactiveCategory = ref<KnowledgeBaseArticleCategoryRef | null>(null)
 const slugError = ref<string | null>(null)
+const categoryError = ref<string | null>(null)
 const conflictError = ref(false)
 
 function slugify(title: string): string {
@@ -51,11 +58,17 @@ function refetch() {
   store.fetchArticles({
     status: statusFilter.value || undefined,
     tag: tagFilter.value.trim() || undefined,
+    categoryId: store.selectedCategoryId || undefined,
   }).catch(() => {})
+}
+
+function onCategoryFilterChange() {
+  void store.setArticleCategoryFilter(store.selectedCategoryId || null)
 }
 
 onMounted(async () => {
   refetch()
+  void store.fetchCategories()
 
   // Reached from KnowledgeBaseSearchDialog via /knowledge-base/:id — open
   // that article directly in the edit form rather than requiring the user
@@ -113,7 +126,10 @@ function resetDraft() {
   draftBody.value = ''
   draftTagsText.value = ''
   draftStatus.value = 'Draft'
+  draftCategoryId.value = ''
+  legacyInactiveCategory.value = null
   slugError.value = null
+  categoryError.value = null
   conflictError.value = false
 }
 
@@ -132,7 +148,15 @@ function startEdit(article: KnowledgeBaseArticle) {
   draftBody.value = article.body
   draftTagsText.value = article.tags.join(', ')
   draftStatus.value = article.status
+  draftCategoryId.value = article.categoryId
+  // If the article's current category is inactive, keep it as a labeled,
+  // pre-selected option in the picker so the manager can see and keep it
+  // (or move to an active one) — but not switch back to it once they've
+  // moved away, per the product rule that inactive categories are never
+  // re-selectable through the picker.
+  legacyInactiveCategory.value = article.category && !article.category.isActive ? article.category : null
   slugError.value = null
+  categoryError.value = null
   conflictError.value = false
 }
 
@@ -165,13 +189,16 @@ function parseTags(text: string): string[] {
     .filter((tag) => tag.length > 0)
 }
 
-const isSaveDisabled = computed(() => store.isLoading || draftTitle.value.trim().length === 0)
+const isSaveDisabled = computed(
+  () => store.isLoading || draftTitle.value.trim().length === 0 || draftCategoryId.value.trim().length === 0,
+)
 
 function isDraftValid(): boolean {
   return (
     draftTitle.value.trim().length > 0 &&
     draftSlug.value.trim().length > 0 &&
-    SLUG_PATTERN.test(draftSlug.value.trim())
+    SLUG_PATTERN.test(draftSlug.value.trim()) &&
+    draftCategoryId.value.trim().length > 0
   )
 }
 
@@ -182,6 +209,7 @@ function buildPayload() {
     body: draftBody.value,
     tags: parseTags(draftTagsText.value),
     status: draftStatus.value,
+    categoryId: draftCategoryId.value,
   }
 }
 
@@ -298,6 +326,15 @@ async function onUnpublish(article: KnowledgeBaseArticle) {
           @change="onFilterChange"
         />
       </div>
+      <div class="toolbar-field">
+        <label for="kb-category-filter">{{ t('knowledgeBase.filters.category') }}</label>
+        <select id="kb-category-filter" v-model="store.selectedCategoryId" @change="onCategoryFilterChange">
+          <option :value="null">{{ t('knowledgeBase.filters.allCategories') }}</option>
+          <option v-for="category in store.categories" :key="category.id" :value="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+      </div>
     </div>
 
     <AppAlert v-if="store.error" tone="danger" role="alert" class="kb-error-alert">
@@ -340,6 +377,23 @@ async function onUnpublish(article: KnowledgeBaseArticle) {
       <div class="field">
         <label for="kb-tags">{{ t('knowledgeBase.fields.tags') }}</label>
         <input id="kb-tags" v-model="draftTagsText" type="text" :placeholder="t('knowledgeBase.fields.tagsPlaceholder')" />
+      </div>
+      <div class="field">
+        <label for="kb-category">{{ t('knowledgeBase.fields.category') }}</label>
+        <select id="kb-category" v-model="draftCategoryId">
+          <option value="" disabled>{{ t('knowledgeBase.fields.categoryPlaceholder') }}</option>
+          <option
+            v-if="legacyInactiveCategory"
+            :value="legacyInactiveCategory.id"
+            disabled
+          >
+            {{ legacyInactiveCategory.name }} ({{ t('knowledgeBase.categories.status.inactive') }})
+          </option>
+          <option v-for="category in store.activeCategories" :key="category.id" :value="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+        <p v-if="categoryError" role="alert" class="field-error">{{ categoryError }}</p>
       </div>
       <div class="field">
         <label for="kb-status">{{ t('knowledgeBase.fields.status') }}</label>
@@ -392,6 +446,23 @@ async function onUnpublish(article: KnowledgeBaseArticle) {
         <input id="kb-tags" v-model="draftTagsText" type="text" :placeholder="t('knowledgeBase.fields.tagsPlaceholder')" />
       </div>
       <div class="field">
+        <label for="kb-category">{{ t('knowledgeBase.fields.category') }}</label>
+        <select id="kb-category" v-model="draftCategoryId">
+          <option value="" disabled>{{ t('knowledgeBase.fields.categoryPlaceholder') }}</option>
+          <option
+            v-if="legacyInactiveCategory"
+            :value="legacyInactiveCategory.id"
+            disabled
+          >
+            {{ legacyInactiveCategory.name }} ({{ t('knowledgeBase.categories.status.inactive') }})
+          </option>
+          <option v-for="category in store.activeCategories" :key="category.id" :value="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+        <p v-if="categoryError" role="alert" class="field-error">{{ categoryError }}</p>
+      </div>
+      <div class="field">
         <label for="kb-status">{{ t('knowledgeBase.fields.status') }}</label>
         <select id="kb-status" v-model="draftStatus">
           <option v-for="status in STATUSES" :key="status" :value="status">
@@ -438,6 +509,20 @@ async function onUnpublish(article: KnowledgeBaseArticle) {
                   </p>
                   <textarea v-model="draftBody" maxlength="20000" rows="8"></textarea>
                   <input v-model="draftTagsText" type="text" :placeholder="t('knowledgeBase.fields.tagsPlaceholder')" />
+                  <select v-model="draftCategoryId">
+                    <option value="" disabled>{{ t('knowledgeBase.fields.categoryPlaceholder') }}</option>
+                    <option
+                      v-if="legacyInactiveCategory"
+                      :value="legacyInactiveCategory.id"
+                      disabled
+                    >
+                      {{ legacyInactiveCategory.name }} ({{ t('knowledgeBase.categories.status.inactive') }})
+                    </option>
+                    <option v-for="category in store.activeCategories" :key="category.id" :value="category.id">
+                      {{ category.name }}
+                    </option>
+                  </select>
+                  <p v-if="categoryError" role="alert" class="field-error">{{ categoryError }}</p>
                   <select v-model="draftStatus">
                     <option v-for="status in STATUSES" :key="status" :value="status">
                       {{ t(`knowledgeBase.status.${status.toLowerCase()}`) }}

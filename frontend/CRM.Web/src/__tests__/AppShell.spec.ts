@@ -28,6 +28,7 @@ function makeRouter(): Router {
       { path: '/customers', name: 'customers', component: { template: '<div />' } },
       { path: '/tickets', name: 'tickets-list', component: { template: '<div />' } },
       { path: '/knowledge-base', name: 'knowledge-base-management', component: { template: '<div />' } },
+      { path: '/knowledge-base/categories', name: 'knowledge-base-categories', component: { template: '<div />' } },
       { path: '/settings/quick-replies', name: 'quick-replies-management', component: { template: '<div />' } },
       {
         path: '/communication-channels',

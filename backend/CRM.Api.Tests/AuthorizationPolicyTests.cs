@@ -140,6 +140,7 @@ public class AuthorizationPolicyTests : IClassFixture<CustomWebApplicationFactor
             Permissions.TicketsManage,
             Permissions.QuickRepliesView,
             Permissions.KnowledgeBaseView,
+            Permissions.KnowledgeBaseCategoriesView,
             Permissions.CommunicationChannelsView,
         };
 

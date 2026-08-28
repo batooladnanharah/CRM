@@ -1,11 +1,14 @@
 import { apiRequest } from './http'
 import type {
   CreateKnowledgeBaseArticlePayload,
+  CreateKnowledgeBaseCategoryPayload,
   KnowledgeBaseArticle,
+  KnowledgeBaseCategory,
   KnowledgeBaseListQuery,
   KnowledgeBaseSearchQuery,
   KnowledgeBaseSearchResult,
   UpdateKnowledgeBaseArticlePayload,
+  UpdateKnowledgeBaseCategoryPayload,
 } from '@/types/knowledgeBase'
 
 function buildQueryString(params: Record<string, string | number | undefined>): string {
@@ -23,6 +26,7 @@ export function listArticles(query: KnowledgeBaseListQuery = {}): Promise<Knowle
   const path = `/knowledge-base/articles${buildQueryString({
     status: query.status,
     tag: query.tag,
+    categoryId: query.categoryId,
     page: query.page,
     pageSize: query.pageSize,
   })}`
@@ -76,4 +80,38 @@ export function publishArticle(id: string): Promise<KnowledgeBaseArticle> {
 
 export function unpublishArticle(id: string): Promise<KnowledgeBaseArticle> {
   return apiRequest<KnowledgeBaseArticle>(`/knowledge-base/articles/${id}/unpublish`, { method: 'POST' })
+}
+
+export function listCategories(query: { activeOnly?: boolean } = {}): Promise<KnowledgeBaseCategory[]> {
+  const path = `/knowledge-base/categories${buildQueryString({
+    activeOnly: query.activeOnly ? 'true' : undefined,
+  })}`
+  return apiRequest<{ items: KnowledgeBaseCategory[] }>(path, { method: 'GET' }).then((res) => res.items)
+}
+
+export function getCategory(id: string): Promise<KnowledgeBaseCategory> {
+  return apiRequest<KnowledgeBaseCategory>(`/knowledge-base/categories/${id}`, { method: 'GET' })
+}
+
+export function createCategory(payload: CreateKnowledgeBaseCategoryPayload): Promise<KnowledgeBaseCategory> {
+  return apiRequest<KnowledgeBaseCategory>('/knowledge-base/categories', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateCategory(
+  id: string, payload: UpdateKnowledgeBaseCategoryPayload,
+): Promise<KnowledgeBaseCategory> {
+  return apiRequest<KnowledgeBaseCategory>(`/knowledge-base/categories/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function setCategoryStatus(id: string, isActive: boolean): Promise<KnowledgeBaseCategory> {
+  return apiRequest<KnowledgeBaseCategory>(`/knowledge-base/categories/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isActive }),
+  })
 }

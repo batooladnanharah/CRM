@@ -45,6 +45,7 @@ const routeTitleKeys: Record<string, string> = {
   'admin-audit-log': 'security.audit.title',
   'knowledge-base-management': 'knowledgeBase.title',
   'knowledge-base-edit': 'knowledgeBase.title',
+  'knowledge-base-categories': 'knowledgeBase.categories.title',
   'portal-dashboard': 'portal.dashboard.title',
   'portal-tickets-list': 'portal.tickets.title',
   'portal-ticket-create': 'portal.ticket.submit.title',
@@ -70,6 +71,13 @@ const navigation = computed(() => {
       label: t('knowledgeBase.nav'),
       to: { name: 'knowledge-base-management' },
       icon: '📖',
+    })
+  }
+  if (authStore.can(Permissions.KnowledgeBaseCategoriesManage)) {
+    items.push({
+      label: t('knowledgeBase.categories.nav'),
+      to: { name: 'knowledge-base-categories' },
+      icon: '🗂',
     })
   }
   if (authStore.can(Permissions.QuickRepliesManage)) {

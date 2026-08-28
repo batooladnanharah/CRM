@@ -71,3 +71,10 @@ public record CustomerKnowledgeBaseArticleListResponse(
     int Total,
     int Page,
     int PageSize);
+
+// Customer-facing category shape — an ArticleCount of Published articles
+// only (Draft/Archived articles are invisible to the portal, so they never
+// count) and no IsActive: an inactive category never reaches this list in
+// the first place (see ListPortalKnowledgeBaseCategories), so echoing the
+// flag back would always read "true" and adds nothing.
+public record CustomerKnowledgeBaseCategoryResponse(Guid Id, string Name, string? Description, int ArticleCount);

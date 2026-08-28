@@ -337,6 +337,90 @@ if (app.Environment.IsDevelopment())
     var ticketDb = scope.ServiceProvider.GetRequiredService<TicketDbContext>();
     ticketDb.Database.Migrate();
 
+    if (!ticketDb.EscalationRules.Any())
+    {
+        var now = DateTimeOffset.UtcNow;
+        ticketDb.EscalationRules.AddRange(
+            new EscalationRule
+            {
+                Id = Guid.NewGuid(),
+                Name = "Notify agent when at risk",
+                Trigger = EscalationTrigger.AtRisk,
+                IsActive = true,
+                NotifyAgent = true,
+                NotifyManager = false,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new EscalationRule
+            {
+                Id = Guid.NewGuid(),
+                Name = "Notify agent and manager on breach",
+                Trigger = EscalationTrigger.Breached,
+                IsActive = true,
+                NotifyAgent = true,
+                NotifyManager = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
+        ticketDb.SaveChanges();
+    }
+
+    const string SlaSeedPolicyName = "Default (dev seed)";
+    var seedPolicy = ticketDb.SlaPolicies.FirstOrDefault(p => p.Name == SlaSeedPolicyName);
+    if (seedPolicy is null)
+    {
+        var nowUtc = DateTime.UtcNow;
+        seedPolicy = new SlaPolicy
+        {
+            Id = Guid.NewGuid(),
+            Name = SlaSeedPolicyName,
+            Channel = null,
+            Priority = TicketPriority.Normal,
+            FirstResponseMinutes = 30,
+            ResolutionMinutes = 60,
+            IsDefault = !ticketDb.SlaPolicies.Any(),
+            IsActive = true,
+            CreatedAtUtc = nowUtc,
+            UpdatedAtUtc = nowUtc,
+        };
+        ticketDb.SlaPolicies.Add(seedPolicy);
+        ticketDb.SaveChanges();
+    }
+
+    const string SlaSmokeTestTicketTitle = "Cannot access dashboard (SLA smoke-test seed)";
+    if (!ticketDb.Tickets.Any(t => t.Title == SlaSmokeTestTicketTitle))
+    {
+        var seedAgent = db.Users.FirstOrDefault(u => u.Roles.Contains(Roles.Agent));
+        var seedCustomer = customerDb.Customers.FirstOrDefault();
+        if (seedAgent is not null && seedCustomer is not null)
+        {
+            // Created far enough in the past that both the first-response and
+            // resolution windows are already overdue — the SLA worker's very
+            // first tick after startup will observe a Breached status for
+            // this ticket and fire the seeded escalation rules immediately,
+            // rather than requiring the smoke tester to wait out a real SLA
+            // window.
+            var createdAtUtc = DateTime.UtcNow.AddMinutes(-120);
+            ticketDb.Tickets.Add(new Ticket
+            {
+                Id = Guid.NewGuid(),
+                CustomerId = seedCustomer.Id,
+                Title = SlaSmokeTestTicketTitle,
+                Description = "Seeded ticket already past its SLA window so escalation rules fire on the first worker tick.",
+                Status = TicketStatus.Open,
+                Priority = TicketPriority.Normal,
+                AssigneeUserId = seedAgent.Id,
+                CreatedAtUtc = createdAtUtc,
+                UpdatedAtUtc = createdAtUtc,
+                SlaPolicyId = seedPolicy.Id,
+                FirstResponseDueAtUtc = createdAtUtc.AddMinutes(seedPolicy.FirstResponseMinutes),
+                ResolutionDueAtUtc = createdAtUtc.AddMinutes(seedPolicy.ResolutionMinutes),
+            });
+            ticketDb.SaveChanges();
+        }
+    }
+
     var quickReplyDb = scope.ServiceProvider.GetRequiredService<QuickReplyDbContext>();
     quickReplyDb.Database.Migrate();
 
@@ -348,6 +432,42 @@ if (app.Environment.IsDevelopment())
 
     var notificationsDb = scope.ServiceProvider.GetRequiredService<NotificationsDbContext>();
     notificationsDb.Database.Migrate();
+
+    if (!notificationsDb.Notifications.Any())
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var seededUser in db.Users)
+        {
+            var isAdmin = seededUser.Roles.Contains(Roles.Admin);
+            notificationsDb.Notifications.AddRange(
+                new Notification
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = seededUser.Id,
+                    Type = NotificationType.SlaAtRisk,
+                    Title = "SLA At Risk",
+                    Message = isAdmin
+                        ? "A ticket assigned in your team is approaching its response SLA."
+                        : "A ticket assigned to you is approaching its response SLA.",
+                    IsRead = false,
+                    CreatedAt = now.AddHours(-2),
+                },
+                new Notification
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = seededUser.Id,
+                    Type = NotificationType.SlaBreached,
+                    Title = "SLA Breached",
+                    Message = isAdmin
+                        ? "A ticket in your team has breached its resolution SLA."
+                        : "A ticket assigned to you has breached its resolution SLA.",
+                    IsRead = true,
+                    CreatedAt = now.AddDays(-1),
+                    ReadAt = now.AddHours(-20),
+                });
+        }
+        notificationsDb.SaveChanges();
+    }
 }
 
 var summaries = new[]
@@ -438,6 +558,7 @@ app.MapSlaPolicyEndpoints();
 app.MapEscalationRuleEndpoints();
 app.MapNotificationEndpoints();
 app.MapKnowledgeBaseEndpoints();
+app.MapKnowledgeBaseCategoryEndpoints();
 app.MapCustomerPortalEndpoints();
 app.MapReportsEndpoints();
 app.MapSecurityAdminEndpoints();

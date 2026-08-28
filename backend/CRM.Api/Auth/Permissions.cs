@@ -20,6 +20,9 @@ public static class Permissions
     public const string KnowledgeBaseView = "kb.view";
     public const string KnowledgeBaseManage = "kb.manage";
 
+    public const string KnowledgeBaseCategoriesView = "kb.categories.view";
+    public const string KnowledgeBaseCategoriesManage = "kb.categories.manage";
+
     public const string CommunicationChannelsView = "channels.view";
     public const string CommunicationChannelsManage = "channels.manage";
 
@@ -35,6 +38,7 @@ public static class Permissions
         TicketsManage, TicketsEscalate,
         QuickRepliesView, QuickRepliesManage,
         KnowledgeBaseView, KnowledgeBaseManage,
+        KnowledgeBaseCategoriesView, KnowledgeBaseCategoriesManage,
         CommunicationChannelsView, CommunicationChannelsManage,
         SlaManage, ManageSlaEscalationRules, ReportsView, SecurityAdmin, PortalAccess,
     ];

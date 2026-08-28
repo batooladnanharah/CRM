@@ -72,3 +72,10 @@ export interface CustomerKnowledgeBaseArticleListResult {
   page: number
   pageSize: number
 }
+
+export interface CustomerKnowledgeBaseCategorySummary {
+  id: string
+  name: string
+  description: string | null
+  articleCount: number
+}

@@ -5,27 +5,26 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory, type Router } from 'vue-router'
 import PortalKnowledgeBaseListView from '@/modules/customerPortal/views/PortalKnowledgeBaseListView.vue'
 import { i18n } from '@/i18n'
-import type { CustomerKnowledgeBaseArticleListItem } from '@/types/customerPortal'
+import type { CustomerKnowledgeBaseCategorySummary } from '@/types/customerPortal'
 
-function makeArticle(
-  overrides: Partial<CustomerKnowledgeBaseArticleListItem> = {},
-): CustomerKnowledgeBaseArticleListItem {
+function makeCategory(
+  overrides: Partial<CustomerKnowledgeBaseCategorySummary> = {},
+): CustomerKnowledgeBaseCategorySummary {
   return {
     id: '1',
-    title: 'Resetting Your Password',
-    slug: 'resetting-your-password',
-    tags: ['account'],
-    publishedAtUtc: '2026-01-01T00:00:00Z',
+    name: 'Billing',
+    description: 'Billing related articles',
+    articleCount: 3,
     ...overrides,
   }
 }
 
 function makeFakeStore(overrides: Record<string, unknown> = {}) {
   return reactive({
-    articles: [] as CustomerKnowledgeBaseArticleListItem[],
-    articlesLoading: false,
-    articlesError: null as string | null,
-    fetchArticles: vi.fn<() => Promise<void>>(),
+    portalCategories: [] as CustomerKnowledgeBaseCategorySummary[],
+    portalCategoriesLoading: false,
+    portalCategoriesError: null as string | null,
+    fetchPortalCategories: vi.fn<() => Promise<void>>(),
     ...overrides,
   })
 }
@@ -48,7 +47,7 @@ function makeRouter(): Router {
     history: createWebHistory(),
     routes: [
       { path: '/portal/knowledge-base', name: 'portal-knowledge-base-list', component: PortalKnowledgeBaseListView },
-      { path: '/portal/knowledge-base/:id', name: 'portal-knowledge-base-article', component: { template: '<div />' } },
+      { path: '/portal/knowledge-base/category/:id', name: 'portal-knowledge-base-category', component: { template: '<div />' } },
     ],
   })
 }
@@ -69,48 +68,50 @@ beforeEach(() => {
 })
 
 describe('PortalKnowledgeBaseListView', () => {
-  it('calls fetchArticles on mount', async () => {
+  it('calls fetchPortalCategories on mount', async () => {
     await mountView()
 
-    expect(fakeStore.fetchArticles).toHaveBeenCalledOnce()
+    expect(fakeStore.fetchPortalCategories).toHaveBeenCalledOnce()
   })
 
-  it('renders published articles from the store', async () => {
-    fakeStore = makeFakeStore({ articles: [makeArticle({ title: 'Billing FAQ' })] })
+  it('renders category cards with article counts', async () => {
+    fakeStore = makeFakeStore({ portalCategories: [makeCategory({ name: 'Billing FAQ', articleCount: 5 })] })
     const wrapper = await mountView()
 
     expect(wrapper.text()).toContain('Billing FAQ')
+    expect(wrapper.text()).toContain('5')
   })
 
   it('shows the loading state', async () => {
-    fakeStore = makeFakeStore({ articlesLoading: true })
+    fakeStore = makeFakeStore({ portalCategoriesLoading: true })
     const wrapper = await mountView()
 
     expect(wrapper.text()).toContain('Loading help articles')
   })
 
-  it('shows the empty state when the response is empty', async () => {
+  it('hides categories and shows the empty state when the response is empty', async () => {
     const wrapper = await mountView()
 
-    expect(wrapper.text()).toContain('No help articles are available yet.')
+    expect(wrapper.text()).toContain('No help categories are available.')
+    expect(wrapper.findAll('.category-card').length).toBe(0)
   })
 
   it('shows the error state with a retry action', async () => {
-    fakeStore = makeFakeStore({ articlesError: 'errorLoad' })
+    fakeStore = makeFakeStore({ portalCategoriesError: 'errorLoad' })
     const wrapper = await mountView()
 
     const retryButton = wrapper.findAll('button').find((b) => b.text() === 'Retry')!
     await retryButton.trigger('click')
 
-    expect(fakeStore.fetchArticles).toHaveBeenCalledTimes(2)
+    expect(fakeStore.fetchPortalCategories).toHaveBeenCalledTimes(2)
   })
 
-  it('navigates to the article view when a row is clicked', async () => {
-    fakeStore = makeFakeStore({ articles: [makeArticle({ id: 'article-42' })] })
+  it('navigates to the category view when a card is clicked', async () => {
+    fakeStore = makeFakeStore({ portalCategories: [makeCategory({ id: 'cat-42' })] })
     const wrapper = await mountView()
 
-    await wrapper.find('tbody tr').trigger('click')
+    await wrapper.find('.category-card').trigger('click')
 
-    expect(pushMock).toHaveBeenCalledWith({ name: 'portal-knowledge-base-article', params: { id: 'article-42' } })
+    expect(pushMock).toHaveBeenCalledWith({ name: 'portal-knowledge-base-category', params: { id: 'cat-42' } })
   })
 })

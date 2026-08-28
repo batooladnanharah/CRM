@@ -14,6 +14,9 @@ public class KnowledgeBaseArticle
     // No cross-context navigation to the author — same style as QuickReply.CreatedByUserId.
     public Guid AuthorId { get; set; }
 
+    public Guid CategoryId { get; set; }
+    public KnowledgeBaseCategory? Category { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 

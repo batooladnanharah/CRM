@@ -7,12 +7,15 @@ import {
   fetchPortalKnowledgeBaseArticles,
   fetchPortalTicket,
   fetchPortalTickets,
+  listPortalCategories,
+  listPortalCategoryArticles,
 } from '@/api/customerPortal'
 import type {
   CreateCustomerTicketPayload,
   CustomerDashboard,
   CustomerKnowledgeBaseArticleDetails,
   CustomerKnowledgeBaseArticleListItem,
+  CustomerKnowledgeBaseCategorySummary,
   CustomerTicketDetails,
   CustomerTicketListItem,
 } from '@/types/customerPortal'
@@ -34,6 +37,14 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
   const articlesError = ref<string | null>(null)
   const articleLoading = ref(false)
   const articleError = ref<string | null>(null)
+
+  const portalCategories = ref<CustomerKnowledgeBaseCategorySummary[]>([])
+  const portalCategoriesLoading = ref(false)
+  const portalCategoriesError = ref<string | null>(null)
+
+  const portalCategoryArticles = ref<CustomerKnowledgeBaseArticleListItem[]>([])
+  const portalCategoryArticlesLoading = ref(false)
+  const portalCategoryArticlesError = ref<string | null>(null)
 
   async function fetchDashboard() {
     loading.value = true
@@ -121,6 +132,32 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
     }
   }
 
+  async function fetchPortalCategories() {
+    portalCategoriesLoading.value = true
+    portalCategoriesError.value = null
+
+    try {
+      portalCategories.value = await listPortalCategories()
+    } catch {
+      portalCategoriesError.value = 'errorLoad'
+    } finally {
+      portalCategoriesLoading.value = false
+    }
+  }
+
+  async function fetchPortalCategoryArticles(id: string) {
+    portalCategoryArticlesLoading.value = true
+    portalCategoryArticlesError.value = null
+
+    try {
+      portalCategoryArticles.value = await listPortalCategoryArticles(id)
+    } catch {
+      portalCategoryArticlesError.value = 'errorLoad'
+    } finally {
+      portalCategoryArticlesLoading.value = false
+    }
+  }
+
   return {
     dashboard,
     tickets,
@@ -143,5 +180,13 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
     articleError,
     fetchArticles,
     fetchArticle,
+    portalCategories,
+    portalCategoriesLoading,
+    portalCategoriesError,
+    portalCategoryArticles,
+    portalCategoryArticlesLoading,
+    portalCategoryArticlesError,
+    fetchPortalCategories,
+    fetchPortalCategoryArticles,
   }
 })

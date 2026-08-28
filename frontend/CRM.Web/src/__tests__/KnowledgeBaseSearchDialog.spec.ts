@@ -35,6 +35,8 @@ function makeArticle(overrides: Partial<KnowledgeBaseArticle> = {}): KnowledgeBa
     tags: ['account', 'password'],
     status: 'Published',
     authorId: 'user-1',
+    categoryId: 'cat-1',
+    category: { id: 'cat-1', name: 'Account', isActive: true },
     createdAtUtc: '2026-01-01T00:00:00Z',
     updatedAtUtc: '2026-01-01T00:00:00Z',
     publishedAtUtc: '2026-01-01T00:00:00Z',

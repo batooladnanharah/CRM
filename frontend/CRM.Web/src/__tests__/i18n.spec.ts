@@ -138,6 +138,62 @@ describe('i18n key parity', () => {
       expect(enKeys.has(key), `missing key: ${key}`).toBe(true)
     }
   })
+
+  it('has a knowledgeBase.categories.* namespace that CRM-65 introduces, with non-empty values in en and ar', () => {
+    const enKeys = new Set(collectKeyPaths(en))
+
+    const expectedKeys = [
+      'knowledgeBase.categories.nav',
+      'knowledgeBase.categories.title',
+      'knowledgeBase.categories.new',
+      'knowledgeBase.categories.editTitle',
+      'knowledgeBase.categories.edit',
+      'knowledgeBase.categories.activate',
+      'knowledgeBase.categories.deactivate',
+      'knowledgeBase.categories.empty',
+      'knowledgeBase.categories.loading',
+      'knowledgeBase.categories.emptyPortal',
+      'knowledgeBase.categories.emptyArticles',
+      'knowledgeBase.categories.articleCount',
+      'knowledgeBase.categories.columns.name',
+      'knowledgeBase.categories.columns.status',
+      'knowledgeBase.categories.columns.actions',
+      'knowledgeBase.categories.fields.name',
+      'knowledgeBase.categories.fields.description',
+      'knowledgeBase.categories.fields.status',
+      'knowledgeBase.categories.status.active',
+      'knowledgeBase.categories.status.inactive',
+      'knowledgeBase.categories.validation.nameRequired',
+      'knowledgeBase.categories.validation.nameTooLong',
+      'knowledgeBase.categories.validation.descriptionTooLong',
+      'knowledgeBase.categories.errors.duplicate',
+      'knowledgeBase.categories.errors.saveFailed',
+      'knowledgeBase.filters.category',
+      'knowledgeBase.filters.allCategories',
+      'knowledgeBase.fields.category',
+      'knowledgeBase.fields.categoryPlaceholder',
+    ]
+
+    for (const key of expectedKeys) {
+      expect(enKeys.has(key), `missing key: ${key}`).toBe(true)
+    }
+
+    function getPath(obj: unknown, path: string): unknown {
+      return path.split('.').reduce<unknown>((acc, segment) => {
+        if (acc && typeof acc === 'object') {
+          return (acc as Record<string, unknown>)[segment]
+        }
+        return undefined
+      }, obj)
+    }
+
+    for (const key of expectedKeys) {
+      const enValue = getPath(en, key)
+      const arValue = getPath(ar, key)
+      expect(typeof enValue === 'string' && enValue.trim().length > 0, `en.${key} should be non-empty`).toBe(true)
+      expect(typeof arValue === 'string' && arValue.trim().length > 0, `ar.${key} should be non-empty`).toBe(true)
+    }
+  })
 })
 
 describe('RTL direction toggling (CRM-92)', () => {

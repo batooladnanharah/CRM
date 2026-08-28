@@ -4,16 +4,20 @@ import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
 import { ApiError } from '@/api/http'
 import type {
   createArticle,
+  createCategory,
   deleteArticle,
   getArticle,
   getArticleBySlug,
   listArticles,
+  listCategories,
   publishArticle,
   searchArticles,
+  setCategoryStatus,
   unpublishArticle,
   updateArticle,
+  updateCategory,
 } from '@/api/knowledgeBase'
-import type { KnowledgeBaseArticle } from '@/types/knowledgeBase'
+import type { KnowledgeBaseArticle, KnowledgeBaseCategory } from '@/types/knowledgeBase'
 
 const {
   listArticlesMock,
@@ -25,6 +29,10 @@ const {
   deleteArticleMock,
   publishArticleMock,
   unpublishArticleMock,
+  listCategoriesMock,
+  createCategoryMock,
+  updateCategoryMock,
+  setCategoryStatusMock,
   toastMock,
 } = vi.hoisted(() => ({
   listArticlesMock: vi.fn<typeof listArticles>(),
@@ -36,6 +44,10 @@ const {
   deleteArticleMock: vi.fn<typeof deleteArticle>(),
   publishArticleMock: vi.fn<typeof publishArticle>(),
   unpublishArticleMock: vi.fn<typeof unpublishArticle>(),
+  listCategoriesMock: vi.fn<typeof listCategories>(),
+  createCategoryMock: vi.fn<typeof createCategory>(),
+  updateCategoryMock: vi.fn<typeof updateCategory>(),
+  setCategoryStatusMock: vi.fn<typeof setCategoryStatus>(),
   toastMock: {
     success: vi.fn<(input: unknown) => string>(),
     error: vi.fn<(input: unknown) => string>(),
@@ -58,6 +70,10 @@ vi.mock('@/api/knowledgeBase', () => ({
   deleteArticle: deleteArticleMock,
   publishArticle: publishArticleMock,
   unpublishArticle: unpublishArticleMock,
+  listCategories: listCategoriesMock,
+  createCategory: createCategoryMock,
+  updateCategory: updateCategoryMock,
+  setCategoryStatus: setCategoryStatusMock,
 }))
 
 function makeArticle(overrides: Partial<KnowledgeBaseArticle> = {}): KnowledgeBaseArticle {
@@ -69,9 +85,23 @@ function makeArticle(overrides: Partial<KnowledgeBaseArticle> = {}): KnowledgeBa
     tags: ['account'],
     status: 'Draft',
     authorId: 'user-1',
+    categoryId: 'cat-1',
+    category: { id: 'cat-1', name: 'Account', isActive: true },
     createdAtUtc: '2026-01-01T00:00:00Z',
     updatedAtUtc: '2026-01-01T00:00:00Z',
     publishedAtUtc: null,
+    ...overrides,
+  }
+}
+
+function makeCategory(overrides: Partial<KnowledgeBaseCategory> = {}): KnowledgeBaseCategory {
+  return {
+    id: 'cat-1',
+    name: 'Account',
+    description: null,
+    isActive: true,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,
   }
 }
@@ -87,6 +117,10 @@ beforeEach(() => {
   deleteArticleMock.mockReset()
   publishArticleMock.mockReset()
   unpublishArticleMock.mockReset()
+  listCategoriesMock.mockReset()
+  createCategoryMock.mockReset()
+  updateCategoryMock.mockReset()
+  setCategoryStatusMock.mockReset()
   toastMock.success.mockReset()
   toastMock.error.mockReset()
 })
@@ -174,7 +208,7 @@ describe('knowledgeBase store', () => {
 
     createArticleMock.mockResolvedValue(makeArticle({ id: '2', title: 'Apple Article' }))
     const result = await store.create({
-      title: 'Apple Article', slug: 'apple-article', body: 'Body', tags: [], status: 'Draft',
+      title: 'Apple Article', slug: 'apple-article', body: 'Body', tags: [], status: 'Draft', categoryId: 'cat-1',
     })
 
     expect(result.title).toBe('Apple Article')
@@ -187,7 +221,7 @@ describe('knowledgeBase store', () => {
 
     const store = useKnowledgeBaseStore()
     await expect(
-      store.create({ title: 'Title', slug: 'slug', body: 'Body', tags: [], status: 'Draft' }),
+      store.create({ title: 'Title', slug: 'slug', body: 'Body', tags: [], status: 'Draft', categoryId: 'cat-1' }),
     ).rejects.toThrow('slug_conflict')
 
     expect(store.error).toBe('slug_conflict')
@@ -200,7 +234,7 @@ describe('knowledgeBase store', () => {
 
     const updated = makeArticle({ id: '1', title: 'Updated' })
     updateArticleMock.mockResolvedValue(updated)
-    await store.update('1', { title: 'Updated', slug: 'resetting-your-password', body: 'Body', tags: [], status: 'Draft' })
+    await store.update('1', { title: 'Updated', slug: 'resetting-your-password', body: 'Body', tags: [], status: 'Draft', categoryId: 'cat-1' })
 
     expect(store.articles[0]).toEqual(updated)
     expect(toastMock.success).toHaveBeenCalledTimes(1)
@@ -211,7 +245,7 @@ describe('knowledgeBase store', () => {
 
     const store = useKnowledgeBaseStore()
     await expect(
-      store.update('1', { title: 'Title', slug: 'slug', body: 'Body', tags: [], status: 'Draft' }),
+      store.update('1', { title: 'Title', slug: 'slug', body: 'Body', tags: [], status: 'Draft', categoryId: 'cat-1' }),
     ).rejects.toThrow('failed')
 
     expect(store.error).toBe('errorLoad')
@@ -250,7 +284,7 @@ describe('knowledgeBase store', () => {
     await store.unpublish('1')
 
     expect(unpublishArticleMock).toHaveBeenCalledWith('1')
-    expect(store.articles[0].status).toBe('Draft')
+    expect(store.articles[0]?.status).toBe('Draft')
   })
 
   it('unpublish() sets error and rethrows on failure', async () => {
@@ -339,5 +373,113 @@ describe('knowledgeBase store', () => {
 
     expect(listArticlesMock).toHaveBeenCalledWith({ page: 3, pageSize: 10 })
     expect(store.total).toBe(42)
+  })
+})
+
+describe('knowledgeBase store — categories', () => {
+  it('fetchCategories() populates categories on success', async () => {
+    listCategoriesMock.mockResolvedValue([makeCategory()])
+
+    const store = useKnowledgeBaseStore()
+    await store.fetchCategories()
+
+    expect(store.categories).toEqual([makeCategory()])
+    expect(store.categoriesLoading).toBe(false)
+    expect(store.categoriesError).toBeNull()
+  })
+
+  it('fetchCategories() sets categoriesError and rethrows on failure', async () => {
+    listCategoriesMock.mockRejectedValue(new Error('network down'))
+
+    const store = useKnowledgeBaseStore()
+    await expect(store.fetchCategories()).rejects.toThrow('network down')
+
+    expect(store.categoriesError).toBe('errorLoad')
+  })
+
+  it('activeCategories only returns active categories', async () => {
+    listCategoriesMock.mockResolvedValue([
+      makeCategory({ id: 'a', name: 'Active One', isActive: true }),
+      makeCategory({ id: 'b', name: 'Inactive One', isActive: false }),
+    ])
+
+    const store = useKnowledgeBaseStore()
+    await store.fetchCategories()
+
+    expect(store.activeCategories.map((c) => c.id)).toEqual(['a'])
+  })
+
+  it('createCategory() appends the created category', async () => {
+    createCategoryMock.mockResolvedValue(makeCategory({ id: 'new-1', name: 'Billing' }))
+
+    const store = useKnowledgeBaseStore()
+    const result = await store.createCategory({ name: 'Billing', description: null })
+
+    expect(result.name).toBe('Billing')
+    expect(store.categories.map((c) => c.name)).toEqual(['Billing'])
+  })
+
+  it('createCategory() sets categoriesError and rethrows on failure (duplicate name)', async () => {
+    createCategoryMock.mockRejectedValue(new ApiError(409, 'duplicate'))
+
+    const store = useKnowledgeBaseStore()
+    await expect(store.createCategory({ name: 'Billing', description: null })).rejects.toThrow('duplicate')
+
+    expect(store.categoriesError).toBe('duplicate')
+  })
+
+  it('updateCategory() replaces the category in place', async () => {
+    listCategoriesMock.mockResolvedValue([makeCategory({ id: '1', name: 'Original' })])
+    const store = useKnowledgeBaseStore()
+    await store.fetchCategories()
+
+    updateCategoryMock.mockResolvedValue(makeCategory({ id: '1', name: 'Updated' }))
+    await store.updateCategory('1', { name: 'Updated', description: null })
+
+    expect(store.categories[0]?.name).toBe('Updated')
+  })
+
+  it('activateCategory() calls setCategoryStatus with isActive true', async () => {
+    listCategoriesMock.mockResolvedValue([makeCategory({ id: '1', isActive: false })])
+    const store = useKnowledgeBaseStore()
+    await store.fetchCategories()
+
+    setCategoryStatusMock.mockResolvedValue(makeCategory({ id: '1', isActive: true }))
+    await store.activateCategory('1')
+
+    expect(setCategoryStatusMock).toHaveBeenCalledWith('1', true)
+    expect(store.categories[0]?.isActive).toBe(true)
+  })
+
+  it('deactivateCategory() calls setCategoryStatus with isActive false', async () => {
+    listCategoriesMock.mockResolvedValue([makeCategory({ id: '1', isActive: true })])
+    const store = useKnowledgeBaseStore()
+    await store.fetchCategories()
+
+    setCategoryStatusMock.mockResolvedValue(makeCategory({ id: '1', isActive: false }))
+    await store.deactivateCategory('1')
+
+    expect(setCategoryStatusMock).toHaveBeenCalledWith('1', false)
+    expect(store.categories[0]?.isActive).toBe(false)
+  })
+
+  it('setArticleCategoryFilter() sets selectedCategoryId and refetches articles with categoryId', async () => {
+    listArticlesMock.mockResolvedValue({ items: [], total: 0 })
+
+    const store = useKnowledgeBaseStore()
+    await store.setArticleCategoryFilter('cat-1')
+
+    expect(store.selectedCategoryId).toBe('cat-1')
+    expect(listArticlesMock).toHaveBeenCalledWith({ categoryId: 'cat-1' })
+  })
+
+  it('setArticleCategoryFilter(null) clears the filter and refetches without categoryId', async () => {
+    listArticlesMock.mockResolvedValue({ items: [], total: 0 })
+
+    const store = useKnowledgeBaseStore()
+    await store.setArticleCategoryFilter(null)
+
+    expect(store.selectedCategoryId).toBeNull()
+    expect(listArticlesMock).toHaveBeenCalledWith({ categoryId: undefined })
   })
 })

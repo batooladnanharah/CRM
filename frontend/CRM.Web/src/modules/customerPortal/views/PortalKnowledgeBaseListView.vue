@@ -1,36 +1,26 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCustomerPortalStore } from '@/stores/customerPortal'
-import { useLocale } from '@/composables/useLocale'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 
 const { t } = useI18n()
-const { locale } = useLocale()
 const router = useRouter()
 const store = useCustomerPortalStore()
 
-const dateFormatter = computed(
-  () => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }),
-)
-
-function formatDate(value: string): string {
-  return dateFormatter.value.format(new Date(value))
+function loadCategories() {
+  void store.fetchPortalCategories()
 }
 
-function loadArticles() {
-  void store.fetchArticles()
+function onCardClick(id: string) {
+  router.push({ name: 'portal-knowledge-base-category', params: { id } })
 }
 
-function onRowClick(id: string) {
-  router.push({ name: 'portal-knowledge-base-article', params: { id } })
-}
-
-onMounted(loadArticles)
+onMounted(loadCategories)
 </script>
 
 <template>
@@ -42,35 +32,29 @@ onMounted(loadArticles)
       </div>
     </div>
 
-    <LoadingState v-if="store.articlesLoading" :label="t('portal.helpCentre.loading')" />
-    <AppAlert v-else-if="store.articlesError" tone="danger" class="portal-error">
+    <LoadingState v-if="store.portalCategoriesLoading" :label="t('portal.helpCentre.loading')" />
+    <AppAlert v-else-if="store.portalCategoriesError" tone="danger" class="portal-error">
       {{ t('portal.helpCentre.error') }}
-      <AppButton variant="secondary" size="sm" type="button" @click="loadArticles">
+      <AppButton variant="secondary" size="sm" type="button" @click="loadCategories">
         {{ t('portal.helpCentre.retry') }}
       </AppButton>
     </AppAlert>
-    <EmptyState v-else-if="store.articles.length === 0" :title="t('portal.helpCentre.empty')" />
+    <EmptyState v-else-if="store.portalCategories.length === 0" :title="t('knowledgeBase.categories.emptyPortal')" />
 
-    <div v-else class="surface table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>{{ t('knowledgeBase.fields.title') }}</th>
-            <th>{{ t('portal.helpCentre.publishedOn', { date: '' }).split(' ')[0] }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="article in store.articles"
-            :key="article.id"
-            class="clickable-row"
-            @click="onRowClick(article.id)"
-          >
-            <td dir="auto">{{ article.title }}</td>
-            <td>{{ formatDate(article.publishedAtUtc) }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-else class="category-grid">
+      <button
+        v-for="category in store.portalCategories"
+        :key="category.id"
+        type="button"
+        class="surface category-card"
+        @click="onCardClick(category.id)"
+      >
+        <h3 dir="auto">{{ category.name }}</h3>
+        <p v-if="category.description" class="category-card-description" dir="auto">{{ category.description }}</p>
+        <p class="category-card-count">
+          {{ t('knowledgeBase.categories.articleCount', { count: category.articleCount }) }}
+        </p>
+      </button>
     </div>
   </div>
 </template>
@@ -88,7 +72,28 @@ onMounted(loadArticles)
   margin-bottom: var(--space-5);
 }
 
-.clickable-row {
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-4);
+}
+
+.category-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  text-align: start;
   cursor: pointer;
+}
+
+.category-card-description {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.category-card-count {
+  font-weight: 600;
 }
 </style>

@@ -189,6 +189,80 @@ public static class CustomerPortalEndpoints
                 entity.Id, entity.Title, entity.Slug, entity.Body, entity.Tags, entity.PublishedAtUtc!.Value));
         })
         .WithName("GetPortalKnowledgeBaseArticle");
+
+        // Active categories only, and only those with at least one Published
+        // article — an active-but-empty (or active-but-all-draft) category
+        // would otherwise show up as a dead end in the portal's category
+        // list. Grouped projection (group-by CategoryId over Published
+        // articles, then joined back to active categories) avoids N+1
+        // per-category count queries.
+        customer.MapGet("/knowledge-base/categories", async (
+            ClaimsPrincipal principal, ICurrentCustomerAccessor accessor, KnowledgeBaseDbContext kbDb,
+            CancellationToken ct) =>
+        {
+            var customerId = await accessor.GetCurrentCustomerIdAsync(principal, ct);
+            if (customerId is null)
+            {
+                return Results.Forbid();
+            }
+
+            var publishedCounts = kbDb.Articles.AsNoTracking()
+                .Where(a => a.Status == KnowledgeBaseArticleStatus.Published)
+                .GroupBy(a => a.CategoryId)
+                .Select(g => new { CategoryId = g.Key, Count = g.Count() });
+
+            var items = await kbDb.Categories.AsNoTracking()
+                .Where(c => c.IsActive)
+                .Join(publishedCounts, c => c.Id, g => g.CategoryId, (c, g) => new CustomerKnowledgeBaseCategoryResponse(
+                    c.Id, c.Name, c.Description, g.Count))
+                .Where(r => r.ArticleCount > 0)
+                .OrderBy(r => r.Name)
+                .ToListAsync(ct);
+
+            return Results.Ok(items);
+        })
+        .WithName("ListPortalKnowledgeBaseCategories");
+
+        customer.MapGet("/knowledge-base/categories/{id:guid}/articles", async (
+            Guid id, int? page, int? pageSize, ClaimsPrincipal principal, ICurrentCustomerAccessor accessor,
+            KnowledgeBaseDbContext kbDb, CancellationToken ct) =>
+        {
+            var customerId = await accessor.GetCurrentCustomerIdAsync(principal, ct);
+            if (customerId is null)
+            {
+                return Results.Forbid();
+            }
+
+            // Missing id and inactive category both 404 — an inactive
+            // category is not customer-visible, matching the article-level
+            // "draft/archived and unknown id both 404" convention above.
+            var category = await kbDb.Categories.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive, ct);
+            if (category is null)
+            {
+                return Results.NotFound();
+            }
+
+            var resolvedPage = Math.Max(page ?? 1, 1);
+            var resolvedPageSize = Math.Clamp(pageSize ?? 20, 1, 100);
+
+            var published = kbDb.Articles.AsNoTracking()
+                .Where(a => a.Status == KnowledgeBaseArticleStatus.Published && a.CategoryId == id);
+
+            var total = await published.CountAsync(ct);
+            var items = await published
+                .OrderByDescending(a => a.PublishedAtUtc)
+                .ThenByDescending(a => a.Id)
+                .Skip((resolvedPage - 1) * resolvedPageSize)
+                .Take(resolvedPageSize)
+                .Select(a => new CustomerKnowledgeBaseArticleListItemResponse(
+                    a.Id, a.Title, a.Slug, a.Tags, a.PublishedAtUtc!.Value))
+                .ToListAsync(ct);
+
+            return Results.Ok(new CustomerKnowledgeBaseArticleListResponse(
+                items, total, resolvedPage, resolvedPageSize));
+        })
+        .WithName("ListPortalKnowledgeBaseCategoryArticles");
     }
 
     private static CustomerTicketListItemResponse ToListItemResponse(Ticket t) => new(

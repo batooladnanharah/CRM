@@ -18,6 +18,7 @@ public static class RolePermissions
                 Permissions.TicketsManage,
                 Permissions.QuickRepliesView,
                 Permissions.KnowledgeBaseView,
+                Permissions.KnowledgeBaseCategoriesView,
                 Permissions.CommunicationChannelsView,
             },
             [Roles.Customer] = new HashSet<string> { Permissions.PortalAccess },

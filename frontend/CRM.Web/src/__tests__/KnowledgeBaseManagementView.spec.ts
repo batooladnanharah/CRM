@@ -10,11 +10,12 @@ import type {
   deleteArticle,
   getArticle,
   listArticles,
+  listCategories,
   publishArticle,
   unpublishArticle,
   updateArticle,
 } from '@/api/knowledgeBase'
-import type { KnowledgeBaseArticle } from '@/types/knowledgeBase'
+import type { KnowledgeBaseArticle, KnowledgeBaseCategory } from '@/types/knowledgeBase'
 
 const {
   listArticlesMock,
@@ -24,6 +25,7 @@ const {
   getArticleMock,
   publishArticleMock,
   unpublishArticleMock,
+  listCategoriesMock,
   confirmMock,
 } = vi.hoisted(() => ({
   listArticlesMock: vi.fn<typeof listArticles>(),
@@ -33,6 +35,7 @@ const {
   getArticleMock: vi.fn<typeof getArticle>(),
   publishArticleMock: vi.fn<typeof publishArticle>(),
   unpublishArticleMock: vi.fn<typeof unpublishArticle>(),
+  listCategoriesMock: vi.fn<typeof listCategories>(),
   confirmMock: vi.fn<() => Promise<boolean>>(),
 }))
 
@@ -46,9 +49,22 @@ vi.mock('@/api/knowledgeBase', () => ({
   deleteArticle: deleteArticleMock,
   publishArticle: publishArticleMock,
   unpublishArticle: unpublishArticleMock,
+  listCategories: listCategoriesMock,
+  createCategory: vi.fn<() => void>(),
+  updateCategory: vi.fn<() => void>(),
+  setCategoryStatus: vi.fn<() => void>(),
 }))
 
 vi.mock('@/composables/useConfirm', () => ({ confirm: confirmMock }))
+
+const ACTIVE_CATEGORY: KnowledgeBaseCategory = {
+  id: 'cat-1',
+  name: 'Account',
+  description: null,
+  isActive: true,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}
 
 function makeArticle(overrides: Partial<KnowledgeBaseArticle> = {}): KnowledgeBaseArticle {
   return {
@@ -59,6 +75,8 @@ function makeArticle(overrides: Partial<KnowledgeBaseArticle> = {}): KnowledgeBa
     tags: ['account'],
     status: 'Draft',
     authorId: 'user-1',
+    categoryId: 'cat-1',
+    category: { id: 'cat-1', name: 'Account', isActive: true },
     createdAtUtc: '2026-01-01T00:00:00Z',
     updatedAtUtc: '2026-01-01T00:00:00Z',
     publishedAtUtc: null,
@@ -94,8 +112,10 @@ beforeEach(() => {
   getArticleMock.mockReset()
   publishArticleMock.mockReset()
   unpublishArticleMock.mockReset()
+  listCategoriesMock.mockReset()
   confirmMock.mockReset()
   listArticlesMock.mockResolvedValue({ items: [], total: 0 })
+  listCategoriesMock.mockResolvedValue([ACTIVE_CATEGORY])
 })
 
 describe('KnowledgeBaseManagementView', () => {
@@ -123,6 +143,7 @@ describe('KnowledgeBaseManagementView', () => {
 
     await wrapper.find('button').trigger('click')
     await wrapper.find('#kb-title').setValue('New Article')
+    await wrapper.find('#kb-category').setValue('cat-1')
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
@@ -132,6 +153,7 @@ describe('KnowledgeBaseManagementView', () => {
       body: '',
       tags: [],
       status: 'Draft',
+      categoryId: 'cat-1',
     })
     expect(wrapper.text()).toContain('New Article')
   })
@@ -159,6 +181,7 @@ describe('KnowledgeBaseManagementView', () => {
     await wrapper.find('button').trigger('click')
     await wrapper.find('#kb-title').setValue('Duplicate Title')
     await wrapper.find('#kb-slug').setValue('duplicate-slug')
+    await wrapper.find('#kb-category').setValue('cat-1')
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
@@ -208,6 +231,7 @@ describe('KnowledgeBaseManagementView', () => {
       body: 'Steps to reset your password.',
       tags: ['account'],
       status: 'Draft',
+      categoryId: 'cat-1',
     })
     expect(wrapper.text()).toContain('Updated Title')
   })
@@ -287,6 +311,7 @@ describe('KnowledgeBaseManagementView', () => {
     await wrapper.find('button').trigger('click')
     await wrapper.find('#kb-title').setValue('   ')
     await wrapper.find('#kb-slug').setValue('some-slug')
+    await wrapper.find('#kb-category').setValue('cat-1')
     await flushPromises()
 
     const submitButton = wrapper.findAll('button').find((b) => b.text() === 'Save')!
@@ -296,5 +321,82 @@ describe('KnowledgeBaseManagementView', () => {
     await flushPromises()
 
     expect(createArticleMock).not.toHaveBeenCalled()
+  })
+
+  it('blocks submit when no category is selected', async () => {
+    const wrapper = await mountView()
+    await flushPromises()
+
+    await wrapper.find('button').trigger('click')
+    await wrapper.find('#kb-title').setValue('Some Title')
+    await wrapper.find('#kb-slug').setValue('some-slug')
+    await flushPromises()
+
+    const submitButton = wrapper.findAll('button').find((b) => b.text() === 'Save')!
+    expect(submitButton.attributes('disabled')).toBeDefined()
+  })
+
+  it('renders the category filter and refetches articles with categoryId on change', async () => {
+    listCategoriesMock.mockResolvedValue([ACTIVE_CATEGORY, {
+      id: 'cat-2', name: 'Shipping', description: null, isActive: true,
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    }])
+
+    const wrapper = await mountView()
+    await flushPromises()
+
+    const filterSelect = wrapper.find('#kb-category-filter')
+    expect(filterSelect.exists()).toBe(true)
+
+    await filterSelect.setValue('cat-2')
+    await flushPromises()
+
+    expect(listArticlesMock).toHaveBeenCalledWith({ categoryId: 'cat-2' })
+  })
+
+  it('article form category picker only lists active categories', async () => {
+    listCategoriesMock.mockResolvedValue([
+      ACTIVE_CATEGORY,
+      {
+        id: 'cat-inactive', name: 'Archived Topic', description: null, isActive: false,
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+      },
+    ])
+
+    const wrapper = await mountView()
+    await flushPromises()
+
+    await wrapper.find('button').trigger('click')
+    await flushPromises()
+
+    const options = wrapper.find('#kb-category').findAll('option')
+    const optionTexts = options.map((o) => o.text())
+    expect(optionTexts.some((text) => text.includes('Account'))).toBe(true)
+    expect(optionTexts.some((text) => text.includes('Archived Topic'))).toBe(false)
+  })
+
+  it('edit form retains the article legacy inactive category as a labeled, disabled option', async () => {
+    listArticlesMock.mockResolvedValue({
+      items: [makeArticle({
+        id: '1',
+        categoryId: 'cat-inactive',
+        category: { id: 'cat-inactive', name: 'Archived Topic', isActive: false },
+      })],
+      total: 1,
+    })
+
+    const wrapper = await mountView()
+    await flushPromises()
+
+    const editButton = wrapper.findAll('button').find((b) => b.text() === 'Edit')!
+    await editButton.trigger('click')
+    await flushPromises()
+
+    const categorySelect = wrapper.find('.kb-article-inline-form select:first-of-type')
+    expect(wrapper.text()).toContain('Archived Topic')
+    expect((categorySelect.element as HTMLSelectElement).value).toBe('cat-inactive')
+
+    const inactiveOption = wrapper.findAll('option').find((o) => o.text().includes('Archived Topic'))!
+    expect(inactiveOption.attributes('disabled')).toBeDefined()
   })
 })

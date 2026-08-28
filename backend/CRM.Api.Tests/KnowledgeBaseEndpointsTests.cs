@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CRM.Api.Auth;
 using CRM.Api.KnowledgeBase;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CRM.Api.Tests;
 
@@ -10,12 +11,32 @@ public class KnowledgeBaseEndpointsTests : IClassFixture<CustomWebApplicationFac
 {
     private readonly CustomWebApplicationFactory _factory;
     private readonly HttpClient _client;
+    private readonly Guid _defaultCategoryId;
 
     public KnowledgeBaseEndpointsTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
         factory.SeedUsers();
         _client = factory.CreateClient();
+        _defaultCategoryId = SeedCategory("Default Category");
+    }
+
+    private Guid SeedCategory(string name, bool isActive = true)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KnowledgeBaseDbContext>();
+        var now = DateTime.UtcNow;
+        var category = new KnowledgeBaseCategory
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            IsActive = isActive,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+        };
+        db.Categories.Add(category);
+        db.SaveChanges();
+        return category.Id;
     }
 
     private async Task<HttpClient> AuthenticatedClientAsync(
@@ -30,9 +51,14 @@ public class KnowledgeBaseEndpointsTests : IClassFixture<CustomWebApplicationFac
         return client;
     }
 
-    private static object ArticlePayload(
-        string title, string slug, string body = "Article body.", string[]? tags = null, string? status = null)
-        => new { title, slug, body, tags = tags ?? Array.Empty<string>(), status };
+    private object ArticlePayload(
+        string title, string slug, string body = "Article body.", string[]? tags = null, string? status = null,
+        Guid? categoryId = null)
+        => new
+        {
+            title, slug, body, tags = tags ?? Array.Empty<string>(), status,
+            categoryId = categoryId ?? _defaultCategoryId,
+        };
 
     private async Task<KnowledgeBaseArticleResponse> CreateArticleAsync(HttpClient adminClient, object payload)
     {
@@ -429,5 +455,128 @@ public class KnowledgeBaseEndpointsTests : IClassFixture<CustomWebApplicationFac
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             (await _client.PostAsync($"/api/knowledge-base/articles/{articleId}/unpublish", null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_ReturnsBadRequest_WhenCategoryIdMissing()
+    {
+        var admin = await AuthenticatedClientAsync();
+
+        var response = await admin.PostAsJsonAsync(
+            "/api/knowledge-base/articles",
+            new { title = "No Category", slug = "no-category-article", body = "x", tags = Array.Empty<string>() });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_ReturnsBadRequest_WhenCategoryIdEmpty()
+    {
+        var admin = await AuthenticatedClientAsync();
+
+        var response = await admin.PostAsJsonAsync(
+            "/api/knowledge-base/articles",
+            ArticlePayload("Empty Category", "empty-category-article", categoryId: Guid.Empty));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_Returns404_WhenCategoryDoesNotExist()
+    {
+        var admin = await AuthenticatedClientAsync();
+
+        var response = await admin.PostAsJsonAsync(
+            "/api/knowledge-base/articles",
+            ArticlePayload("Missing Category", "missing-category-article", categoryId: Guid.NewGuid()));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_Returns422_WhenCategoryIsInactive()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var inactiveCategoryId = SeedCategory("Inactive Category", isActive: false);
+
+        var response = await admin.PostAsJsonAsync(
+            "/api/knowledge-base/articles",
+            ArticlePayload("Inactive Category Article", "inactive-category-article", categoryId: inactiveCategoryId));
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_EmbedsCategory_InResponse()
+    {
+        var admin = await AuthenticatedClientAsync();
+
+        var response = await admin.PostAsJsonAsync(
+            "/api/knowledge-base/articles",
+            ArticlePayload("Embeds Category", "embeds-category-article"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseArticleResponse>();
+        Assert.Equal(_defaultCategoryId, body!.CategoryId);
+        Assert.NotNull(body.Category);
+        Assert.Equal(_defaultCategoryId, body.Category!.Id);
+        Assert.True(body.Category.IsActive);
+    }
+
+    [Fact]
+    public async Task Update_Returns422_WhenChangingToInactiveCategory()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var created = await CreateArticleAsync(admin, ArticlePayload("Change Category", "change-category-article"));
+        var inactiveCategoryId = SeedCategory("Inactive For Update", isActive: false);
+
+        var response = await admin.PutAsJsonAsync(
+            $"/api/knowledge-base/articles/{created.Id}",
+            ArticlePayload("Change Category", "change-category-article", categoryId: inactiveCategoryId));
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Update_Succeeds_WhenCategoryUnchangedEvenIfNowInactive()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var categoryId = SeedCategory("Becomes Inactive");
+        var created = await CreateArticleAsync(
+            admin, ArticlePayload("Keeps Category", "keeps-category-article", categoryId: categoryId));
+
+        // Deactivate the category after the article was created, then edit
+        // the article without changing CategoryId — this must still succeed.
+        var deactivate = await admin.PatchAsync(
+            $"/api/knowledge-base/categories/{categoryId}/status",
+            JsonContent.Create(new { isActive = false }));
+        Assert.Equal(HttpStatusCode.OK, deactivate.StatusCode);
+
+        var response = await admin.PutAsJsonAsync(
+            $"/api/knowledge-base/articles/{created.Id}",
+            ArticlePayload("Keeps Category Renamed", "keeps-category-article", categoryId: categoryId));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseArticleResponse>();
+        Assert.Equal(categoryId, body!.CategoryId);
+        Assert.Equal("Keeps Category Renamed", body.Title);
+    }
+
+    [Fact]
+    public async Task List_FiltersByCategoryId()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var otherCategoryId = SeedCategory("Other Category For List Filter");
+        await CreateArticleAsync(
+            admin, ArticlePayload("In Default Category", "in-default-category-list"));
+        await CreateArticleAsync(
+            admin, ArticlePayload("In Other Category", "in-other-category-list", categoryId: otherCategoryId));
+
+        var response = await admin.GetAsync($"/api/knowledge-base/articles?categoryId={otherCategoryId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<KnowledgeBaseSearchResultResponse>();
+        Assert.Contains(result!.Items, a => a.Slug == "in-other-category-list");
+        Assert.DoesNotContain(result.Items, a => a.Slug == "in-default-category-list");
     }
 }

@@ -3,7 +3,9 @@ import type {
   CreateCustomerTicketPayload,
   CustomerDashboard,
   CustomerKnowledgeBaseArticleDetails,
+  CustomerKnowledgeBaseArticleListItem,
   CustomerKnowledgeBaseArticleListResult,
+  CustomerKnowledgeBaseCategorySummary,
   CustomerTicketDetails,
   CustomerTicketListItem,
 } from '@/types/customerPortal'
@@ -37,4 +39,14 @@ export function fetchPortalKnowledgeBaseArticles(
 
 export function fetchPortalKnowledgeBaseArticle(id: string): Promise<CustomerKnowledgeBaseArticleDetails> {
   return apiRequest<CustomerKnowledgeBaseArticleDetails>(`/customer/knowledge-base/articles/${id}`, { method: 'GET' })
+}
+
+export function listPortalCategories(): Promise<CustomerKnowledgeBaseCategorySummary[]> {
+  return apiRequest<CustomerKnowledgeBaseCategorySummary[]>('/customer/knowledge-base/categories', { method: 'GET' })
+}
+
+export function listPortalCategoryArticles(id: string): Promise<CustomerKnowledgeBaseArticleListItem[]> {
+  return apiRequest<CustomerKnowledgeBaseArticleListItem[]>(
+    `/customer/knowledge-base/categories/${id}/articles`, { method: 'GET' },
+  )
 }

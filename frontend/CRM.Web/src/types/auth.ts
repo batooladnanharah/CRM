@@ -20,6 +20,8 @@ export const Permissions = {
   QuickRepliesManage: 'quickReplies.manage',
   KnowledgeBaseView: 'kb.view',
   KnowledgeBaseManage: 'kb.manage',
+  KnowledgeBaseCategoriesView: 'kb.categories.view',
+  KnowledgeBaseCategoriesManage: 'kb.categories.manage',
   CommunicationChannelsView: 'channels.view',
   CommunicationChannelsManage: 'channels.manage',
   SlaManage: 'sla.manage',

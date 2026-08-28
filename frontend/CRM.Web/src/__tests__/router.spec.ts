@@ -501,6 +501,72 @@ describe('router guards — knowledge base', () => {
   })
 })
 
+describe('router guards — knowledge base categories', () => {
+  const CATEGORIES_PERMISSIONS = [...AGENT_PERMISSIONS, 'kb.categories.manage']
+
+  it('redirects an unauthenticated visit to /knowledge-base/categories to /login', async () => {
+    const router = createAppRouter()
+
+    await router.push('/knowledge-base/categories')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/login')
+  })
+
+  it('redirects an agent lacking the manage permission to /forbidden', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Agent', email: 'agent@crm.local', roles: ['agent'], permissions: AGENT_PERMISSIONS }
+
+    const router = createAppRouter()
+
+    await router.push('/knowledge-base/categories')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/forbidden')
+  })
+
+  it('allows a user holding knowledge-base.categories.manage to visit /knowledge-base/categories', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = {
+      id: '1', name: 'Manager', email: 'manager@crm.local', roles: ['agent'], permissions: CATEGORIES_PERMISSIONS,
+    }
+
+    const router = createAppRouter()
+
+    await router.push('/knowledge-base/categories')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/knowledge-base/categories')
+    expect(router.currentRoute.value.name).toBe('knowledge-base-categories')
+  })
+})
+
+describe('router guards — portal knowledge base category', () => {
+  it('resolves /portal/knowledge-base/category/:id to the portal-knowledge-base-category route for a customer', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'a-valid-token'
+    authStore.user = { id: '1', name: 'Portal Customer', email: 'customer@crm.local', roles: ['customer'] }
+
+    const router = createAppRouter()
+
+    await router.push('/portal/knowledge-base/category/cat-123')
+    await router.isReady()
+
+    expect(router.currentRoute.value.name).toBe('portal-knowledge-base-category')
+  })
+
+  it('redirects an unauthenticated visit to /portal/knowledge-base/category/:id to /login', async () => {
+    const router = createAppRouter()
+
+    await router.push('/portal/knowledge-base/category/cat-123')
+    await router.isReady()
+
+    expect(router.currentRoute.value.path).toBe('/login')
+  })
+})
+
 describe('router guards — role gating', () => {
   function addAdminOnlyRoute(router: ReturnType<typeof createAppRouter>) {
     router.addRoute({

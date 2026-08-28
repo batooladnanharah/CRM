@@ -179,6 +179,42 @@ public class RbacEndpointEnforcementTests : IClassFixture<CustomWebApplicationFa
 
     [Theory]
     [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
+    [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, true)]
+    [InlineData(CustomWebApplicationFactory.CustomerRoleEmail, CustomWebApplicationFactory.CustomerRolePassword, false)]
+    public async Task KnowledgeBaseCategoriesView_AllowsAdminAndAgent_DeniesCustomer(
+        string email, string password, bool allowed)
+    {
+        var client = await AuthenticatedClientAsync(email, password);
+
+        var response = await client.GetAsync("/api/knowledge-base/categories");
+
+        Assert.Equal(
+            allowed ? HttpStatusCode.OK : HttpStatusCode.Forbidden,
+            response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
+    [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, false)]
+    public async Task KnowledgeBaseCategoriesManage_OnlyAdmin(string email, string password, bool allowed)
+    {
+        var client = await AuthenticatedClientAsync(email, password);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/knowledge-base/categories", new { name = $"Rbac Test {Guid.NewGuid()}" });
+
+        if (allowed)
+        {
+            Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+    }
+
+    [Theory]
+    [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
     [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, false)]
     public async Task CommunicationChannelsManage_OnlyAdmin(string email, string password, bool allowed)
     {

@@ -5,6 +5,7 @@ namespace CRM.Api.KnowledgeBase;
 public sealed class KnowledgeBaseDbContext(DbContextOptions<KnowledgeBaseDbContext> options) : DbContext(options)
 {
     public DbSet<KnowledgeBaseArticle> Articles => Set<KnowledgeBaseArticle>();
+    public DbSet<KnowledgeBaseCategory> Categories => Set<KnowledgeBaseCategory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,6 +28,30 @@ public sealed class KnowledgeBaseDbContext(DbContextOptions<KnowledgeBaseDbConte
             entity.HasIndex(a => a.Slug).IsUnique();
             entity.HasIndex(a => a.Status);
             entity.HasIndex(a => a.Title);
+
+            // Restrict delete: a category with existing articles can never be
+            // hard-deleted out from under them — callers deactivate instead.
+            entity.HasOne(a => a.Category)
+                .WithMany()
+                .HasForeignKey(a => a.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(a => a.CategoryId);
+        });
+
+        modelBuilder.Entity<KnowledgeBaseCategory>(entity =>
+        {
+            entity.ToTable("KnowledgeBaseCategories");
+            entity.HasKey(c => c.Id);
+
+            entity.Property(c => c.Name).IsRequired().HasMaxLength(120);
+            entity.Property(c => c.Description).HasMaxLength(1000);
+            entity.Property(c => c.IsActive).HasDefaultValue(true);
+
+            // Exact-name uniqueness at the DB level as a safety net; the
+            // authoritative case-insensitive duplicate check happens in
+            // application code (ToLowerInvariant comparison) since DB
+            // collation can't be relied on to be case-insensitive.
+            entity.HasIndex(c => c.Name).IsUnique();
         });
     }
 }

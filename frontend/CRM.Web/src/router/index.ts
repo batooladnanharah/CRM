@@ -96,6 +96,12 @@ export function createAppRouter() {
         meta: { requiresAuth: true, title: 'Knowledge base' },
       },
       {
+        path: '/knowledge-base/categories',
+        name: 'knowledge-base-categories',
+        component: () => import('@/modules/knowledgeBase/views/KnowledgeBaseCategoriesView.vue'),
+        meta: { requiresAuth: true, permission: 'kb.categories.manage', title: 'Knowledge base categories' },
+      },
+      {
         path: '/admin/users',
         name: 'admin-users',
         component: () => import('@/modules/security/views/UsersAdminView.vue'),
@@ -155,6 +161,12 @@ export function createAppRouter() {
         name: 'portal-knowledge-base-article',
         component: () => import('@/modules/customerPortal/views/PortalKnowledgeBaseArticleView.vue'),
         meta: { requiresAuth: true, portalOnly: true, title: 'Help Article' },
+      },
+      {
+        path: '/portal/knowledge-base/category/:id',
+        name: 'portal-knowledge-base-category',
+        component: () => import('@/modules/customerPortal/views/PortalKnowledgeBaseCategoryView.vue'),
+        meta: { requiresAuth: true, portalOnly: true, title: 'Help Category' },
       },
       { path: '/:pathMatch(.*)*', redirect: '/' },
     ],

@@ -1,25 +1,32 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
   createArticle,
+  createCategory as createCategoryApi,
   deleteArticle,
   getArticle,
   getArticleBySlug,
   listArticles,
+  listCategories,
   publishArticle,
   searchArticles,
+  setCategoryStatus,
   unpublishArticle,
   updateArticle,
+  updateCategory as updateCategoryApi,
 } from '@/api/knowledgeBase'
 import { ApiError } from '@/api/http'
 import { i18n } from '@/i18n'
 import { useToast } from '@/composables/useToast'
 import type {
   CreateKnowledgeBaseArticlePayload,
+  CreateKnowledgeBaseCategoryPayload,
   KnowledgeBaseArticle,
+  KnowledgeBaseCategory,
   KnowledgeBaseListQuery,
   KnowledgeBaseSearchQuery,
   UpdateKnowledgeBaseArticlePayload,
+  UpdateKnowledgeBaseCategoryPayload,
 } from '@/types/knowledgeBase'
 
 const t = i18n.global.t
@@ -31,6 +38,13 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
   const total = ref(0)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+
+  const categories = ref<KnowledgeBaseCategory[]>([])
+  const categoriesLoading = ref(false)
+  const categoriesError = ref<string | null>(null)
+  const selectedCategoryId = ref<string | null>(null)
+
+  const activeCategories = computed(() => categories.value.filter((c) => c.isActive === true))
 
   function errorMessage(err: unknown): string {
     return err instanceof ApiError ? err.message : 'errorLoad'
@@ -193,6 +207,83 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
     }
   }
 
+  async function fetchCategories(query: { activeOnly?: boolean } = {}) {
+    categoriesLoading.value = true
+    categoriesError.value = null
+
+    try {
+      categories.value = await listCategories(query)
+    } catch (err) {
+      categoriesError.value = errorMessage(err)
+      throw err
+    } finally {
+      categoriesLoading.value = false
+    }
+  }
+
+  async function createCategory(payload: CreateKnowledgeBaseCategoryPayload) {
+    categoriesLoading.value = true
+    categoriesError.value = null
+
+    try {
+      const created = await createCategoryApi(payload)
+      categories.value = [...categories.value, created].sort((a, b) => a.name.localeCompare(b.name))
+      return created
+    } catch (err) {
+      categoriesError.value = errorMessage(err)
+      throw err
+    } finally {
+      categoriesLoading.value = false
+    }
+  }
+
+  async function updateCategory(id: string, payload: UpdateKnowledgeBaseCategoryPayload) {
+    categoriesLoading.value = true
+    categoriesError.value = null
+
+    try {
+      const updated = await updateCategoryApi(id, payload)
+      categories.value = categories.value.map((c) => (c.id === id ? updated : c))
+      return updated
+    } catch (err) {
+      categoriesError.value = errorMessage(err)
+      throw err
+    } finally {
+      categoriesLoading.value = false
+    }
+  }
+
+  async function setCategoryActive(id: string, isActive: boolean) {
+    categoriesLoading.value = true
+    categoriesError.value = null
+
+    try {
+      const updated = await setCategoryStatus(id, isActive)
+      categories.value = categories.value.map((c) => (c.id === id ? updated : c))
+      return updated
+    } catch (err) {
+      categoriesError.value = errorMessage(err)
+      throw err
+    } finally {
+      categoriesLoading.value = false
+    }
+  }
+
+  function activateCategory(id: string) {
+    return setCategoryActive(id, true)
+  }
+
+  function deactivateCategory(id: string) {
+    return setCategoryActive(id, false)
+  }
+
+  function setArticleCategoryFilter(id: string | null) {
+    selectedCategoryId.value = id
+    return fetchArticles({
+      categoryId: id ?? undefined,
+    }).catch(() => {})
+  }
+
   return {
     articles,
     currentArticle,
@@ -209,5 +300,16 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
     publish,
     unpublish,
     remove,
+    categories,
+    categoriesLoading,
+    categoriesError,
+    selectedCategoryId,
+    activeCategories,
+    fetchCategories,
+    createCategory,
+    updateCategory,
+    activateCategory,
+    deactivateCategory,
+    setArticleCategoryFilter,
   }
 })

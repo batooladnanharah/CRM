@@ -625,7 +625,9 @@
       "status": "Status",
       "tag": "Tag",
       "tagPlaceholder": "Filter by tag…",
-      "allStatuses": "All statuses"
+      "allStatuses": "All statuses",
+      "category": "Category",
+      "allCategories": "All Categories"
     },
     "fields": {
       "title": "Title",
@@ -635,7 +637,9 @@
       "body": "Body",
       "tags": "Tags (comma-separated)",
       "tagsPlaceholder": "billing, onboarding",
-      "status": "Status"
+      "status": "Status",
+      "category": "Category",
+      "categoryPlaceholder": "Select a category…"
     },
     "status": {
       "draft": "Draft",
@@ -677,6 +681,48 @@
       "publishFailed": "Could not publish the article. Please try again.",
       "unpublishFailed": "Could not unpublish the article. Please try again.",
       "loadFailed": "Could not load the article. Please try again."
+    },
+    "categories": {
+      "nav": "Categories",
+      "title": "Knowledge Base Categories",
+      "new": "+ New Category",
+      "editTitle": "Edit Category",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "saving": "Saving…",
+      "loading": "Loading categories…",
+      "empty": "No categories yet.",
+      "deactivateConfirm": "Deactivate this category? Existing articles will keep it, but it will no longer be selectable for new or reassigned articles.",
+      "helpCenterTitle": "Help Centre",
+      "articleCount": "0 articles | 1 article | {count} articles",
+      "emptyPortal": "No help categories are available.",
+      "emptyArticles": "No articles are available yet.",
+      "columns": {
+        "name": "Category",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "e.g. Billing",
+        "description": "Description",
+        "status": "Status"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "validation": {
+        "nameRequired": "Name is required.",
+        "nameTooLong": "Name must be 120 characters or fewer.",
+        "descriptionTooLong": "Description must be 1000 characters or fewer."
+      },
+      "errors": {
+        "loadFailed": "Could not load categories. Please try again.",
+        "saveFailed": "Unable to save category. Please try again.",
+        "duplicate": "Category name already exists."
+      }
     }
   },
   "portal": {

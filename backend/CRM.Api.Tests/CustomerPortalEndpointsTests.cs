@@ -239,6 +239,30 @@ public class CustomerPortalEndpointsTests : IClassFixture<CustomWebApplicationFa
         Assert.Equal("InProgress", body.History[0].NewValue);
     }
 
+    private Guid EnsureDefaultCategory()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KnowledgeBaseDbContext>();
+        var existing = db.Categories.FirstOrDefault(c => c.Name == "Portal Test Category");
+        if (existing is not null)
+        {
+            return existing.Id;
+        }
+
+        var now = DateTime.UtcNow;
+        var category = new KnowledgeBaseCategory
+        {
+            Id = Guid.NewGuid(),
+            Name = "Portal Test Category",
+            IsActive = true,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+        };
+        db.Categories.Add(category);
+        db.SaveChanges();
+        return category.Id;
+    }
+
     private Guid CreateArticle(
         string title, string slug, KnowledgeBaseArticleStatus status, string body = "Some help content.")
     {
@@ -254,6 +278,7 @@ public class CustomerPortalEndpointsTests : IClassFixture<CustomWebApplicationFa
             Tags = [],
             Status = status,
             AuthorId = Guid.NewGuid(),
+            CategoryId = EnsureDefaultCategory(),
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
             PublishedAtUtc = status == KnowledgeBaseArticleStatus.Published ? now : null,
@@ -433,8 +458,27 @@ public class CustomerPortalKnowledgeBaseEndpointsTests : IClassFixture<CustomWeb
         return client;
     }
 
+    private Guid SeedCategory(string name, bool isActive = true)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KnowledgeBaseDbContext>();
+        var now = DateTime.UtcNow;
+        var category = new KnowledgeBaseCategory
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            IsActive = isActive,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+        };
+        db.Categories.Add(category);
+        db.SaveChanges();
+        return category.Id;
+    }
+
     private Guid SeedArticle(
-        string title, string slug, KnowledgeBaseArticleStatus status, string body = "Article body.")
+        string title, string slug, KnowledgeBaseArticleStatus status, string body = "Article body.",
+        Guid? categoryId = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<KnowledgeBaseDbContext>();
@@ -448,6 +492,7 @@ public class CustomerPortalKnowledgeBaseEndpointsTests : IClassFixture<CustomWeb
             Tags = [],
             Status = status,
             AuthorId = Guid.NewGuid(),
+            CategoryId = categoryId ?? SeedCategory($"Category for {slug}"),
             CreatedAtUtc = now,
             UpdatedAtUtc = now,
             PublishedAtUtc = status == KnowledgeBaseArticleStatus.Published ? now : null,
@@ -544,5 +589,78 @@ public class CustomerPortalKnowledgeBaseEndpointsTests : IClassFixture<CustomWeb
         var response = await client.GetAsync("/api/customer/knowledge-base/articles");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListCategories_ReturnsOnlyActiveCategoriesWithPublishedArticles()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var withPublished = SeedCategory("Has Published Article");
+        SeedArticle("Has Published", "cat-has-published", KnowledgeBaseArticleStatus.Published, categoryId: withPublished);
+
+        var withOnlyDraft = SeedCategory("Has Only Draft");
+        SeedArticle("Draft Only Cat", "cat-only-draft", KnowledgeBaseArticleStatus.Draft, categoryId: withOnlyDraft);
+
+        var inactiveWithPublished = SeedCategory("Inactive With Published", isActive: false);
+        SeedArticle(
+            "Inactive Cat Published", "cat-inactive-published", KnowledgeBaseArticleStatus.Published,
+            categoryId: inactiveWithPublished);
+
+        var emptyActive = SeedCategory("Empty Active Category");
+
+        var response = await client.GetAsync("/api/customer/knowledge-base/categories");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<CustomerKnowledgeBaseCategoryResponse>>();
+        Assert.Contains(body!, c => c.Id == withPublished && c.ArticleCount == 1);
+        Assert.DoesNotContain(body, c => c.Id == withOnlyDraft);
+        Assert.DoesNotContain(body, c => c.Id == inactiveWithPublished);
+        Assert.DoesNotContain(body, c => c.Id == emptyActive);
+    }
+
+    [Fact]
+    public async Task ListCategoryArticles_ReturnsOnlyPublishedArticlesInThatCategory()
+    {
+        var client = await AuthenticatedClientAsync();
+        var categoryId = SeedCategory("Category Articles Filter");
+        SeedArticle(
+            "Published In Category", "cat-articles-published", KnowledgeBaseArticleStatus.Published,
+            categoryId: categoryId);
+        SeedArticle(
+            "Draft In Category", "cat-articles-draft", KnowledgeBaseArticleStatus.Draft, categoryId: categoryId);
+        var otherCategoryId = SeedCategory("Other Category For Filter");
+        SeedArticle(
+            "Published Elsewhere", "cat-articles-elsewhere", KnowledgeBaseArticleStatus.Published,
+            categoryId: otherCategoryId);
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/categories/{categoryId}/articles");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<CustomerKnowledgeBaseArticleListResponse>();
+        Assert.Contains(body!.Items, a => a.Slug == "cat-articles-published");
+        Assert.DoesNotContain(body.Items, a => a.Slug == "cat-articles-draft");
+        Assert.DoesNotContain(body.Items, a => a.Slug == "cat-articles-elsewhere");
+    }
+
+    [Fact]
+    public async Task ListCategoryArticles_Returns404_WhenCategoryMissing()
+    {
+        var client = await AuthenticatedClientAsync();
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/categories/{Guid.NewGuid()}/articles");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListCategoryArticles_Returns404_WhenCategoryInactive()
+    {
+        var client = await AuthenticatedClientAsync();
+        var inactiveCategoryId = SeedCategory("Inactive For Articles", isActive: false);
+
+        var response = await client.GetAsync($"/api/customer/knowledge-base/categories/{inactiveCategoryId}/articles");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }
