@@ -23,7 +23,7 @@ public static class KnowledgeBaseCategoryEndpoints
                 .Select(c => ToResponse(c))
                 .ToListAsync();
 
-            return Results.Ok(items);
+            return Results.Ok(new { items });
         })
         .RequireAuthorization(Permissions.KnowledgeBaseCategoriesView)
         .WithName("ListKnowledgeBaseCategories")

@@ -180,9 +180,9 @@ public class KnowledgeBaseCategoryEndpointsTests : IClassFixture<CustomWebApplic
         var response = await admin.GetAsync("/api/knowledge-base/categories");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<List<KnowledgeBaseCategoryResponse>>();
-        Assert.Contains(body!, c => c.Id == active.Id);
-        Assert.Contains(body, c => c.Id == created.Id);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseCategoryListEnvelope>();
+        Assert.Contains(body!.Items, c => c.Id == active.Id);
+        Assert.Contains(body.Items, c => c.Id == created.Id);
     }
 
     [Fact]
@@ -197,8 +197,10 @@ public class KnowledgeBaseCategoryEndpointsTests : IClassFixture<CustomWebApplic
         var response = await admin.GetAsync("/api/knowledge-base/categories?activeOnly=true");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<List<KnowledgeBaseCategoryResponse>>();
-        Assert.Contains(body!, c => c.Id == active.Id);
-        Assert.DoesNotContain(body, c => c.Id == inactive.Id);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseCategoryListEnvelope>();
+        Assert.Contains(body!.Items, c => c.Id == active.Id);
+        Assert.DoesNotContain(body.Items, c => c.Id == inactive.Id);
     }
 }
+
+internal sealed record KnowledgeBaseCategoryListEnvelope(List<KnowledgeBaseCategoryResponse> Items);
