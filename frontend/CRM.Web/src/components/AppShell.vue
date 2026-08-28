@@ -218,8 +218,6 @@ async function onLogout() {
           <div class="action-divider" aria-hidden="true"></div>
           <NotificationBell v-if="!authStore.isCustomer" />
           <div class="action-divider" aria-hidden="true"></div>
-          <NotificationBell v-if="!authStore.isCustomer" />
-          <div class="action-divider" aria-hidden="true"></div>
           <div class="profile-group">
             <div class="user-chip">
               <span class="avatar">{{ authStore.user?.name?.charAt(0).toUpperCase() }}</span>
