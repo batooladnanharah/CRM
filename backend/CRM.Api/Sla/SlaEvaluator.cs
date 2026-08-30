@@ -1,5 +1,6 @@
 using CRM.Api.Tickets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace CRM.Api.Sla;
 
@@ -22,14 +23,23 @@ public interface ISlaEvaluator
 // *BreachedAtUtc timestamp is never rewritten or cleared.
 public sealed class SlaEvaluator(
     TicketDbContext db, TicketEscalationService escalationService, IEscalationDispatcher escalationDispatcher,
-    ILogger<SlaEvaluator> logger) : ISlaEvaluator
+    IOptions<SlaAutomationOptions> options, ILogger<SlaEvaluator> logger) : ISlaEvaluator
 {
     private const string AutoEscalationReason = "Automatically escalated due to an SLA breach.";
 
     public async Task<int> EvaluateAllOpenAsync(CancellationToken ct)
     {
+        // Never ToListAsync the whole open-ticket table — page with a bounded
+        // Take(BatchSize) so a single cycle's cost stays flat regardless of
+        // how many open tickets exist. Oldest-evaluated-first (nulls — never
+        // evaluated — sort first) ensures a saturated instance still rotates
+        // through the full backlog across successive ticks instead of always
+        // re-touching the same head of the table.
+        var batchSize = Math.Max(1, options.Value.BatchSize);
         var openTickets = await db.Tickets
             .Where(t => t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Closed)
+            .OrderBy(t => t.SlaLastEvaluatedAtUtc == null ? DateTime.MinValue : t.SlaLastEvaluatedAtUtc)
+            .Take(batchSize)
             .ToListAsync(ct);
 
         var nowUtc = DateTime.UtcNow;

@@ -172,10 +172,10 @@ public static class TicketMessageEndpoints
             });
 
             // Every ticket message is staff-authored (there is no customer- or
-            // system-authored message path in this codebase yet), so the
-            // first message on a ticket is, by construction, the first agent
-            // response — stamp the SLA first-response clock right here.
-            if (ticket.FirstRespondedAtUtc is null)
+            // system-authored message path in this codebase yet), but only a
+            // customer-visible reply (IsInternal == false) counts as the first
+            // response for SLA purposes — internal notes must not stamp it.
+            if (!request.IsInternal && ticket.FirstRespondedAtUtc is null)
             {
                 ticket.FirstRespondedAtUtc = now;
                 ticket.UpdatedAtUtc = now;

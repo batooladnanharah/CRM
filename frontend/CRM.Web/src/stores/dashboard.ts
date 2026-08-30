@@ -7,15 +7,14 @@ import type { DashboardSummary, RecentCustomerEntry } from '@/types/dashboard'
 
 const MY_TICKETS_PAGE_SIZE = 25
 const RECENT_CUSTOMERS_LIMIT = 8
-const SLA_AT_RISK_HOURS = 24
 const RESOLVED_WINDOW_DAYS = 7
 
 const PRIORITY_ORDER: Record<TicketPriority, number> = { Urgent: 3, High: 2, Normal: 1, Low: 0 }
 
+// SLA status is computed server-side (SlaCalculator.ComputeStatus, embedded on
+// every ticket's `sla` block) — never re-derive it from ticket age here.
 function isSlaAtRisk(ticket: TicketListItem): boolean {
-  const isHighPriority = ticket.priority === 'High' || ticket.priority === 'Urgent'
-  const ageMs = Date.now() - new Date(ticket.createdAtUtc).getTime()
-  return isHighPriority && ageMs > SLA_AT_RISK_HOURS * 60 * 60 * 1000
+  return ticket.sla.firstResponseStatus === 'AtRisk' || ticket.sla.resolutionStatus === 'AtRisk'
 }
 
 function dedupeRecentCustomers(tickets: TicketListItem[]): RecentCustomerEntry[] {

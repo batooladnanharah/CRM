@@ -48,6 +48,33 @@ public class RbacEndpointEnforcementTests : IClassFixture<CustomWebApplicationFa
             response.StatusCode);
     }
 
+    // CRM-61: GET /api/tickets/{id} is where SLA data is embedded on the
+    // ticket payload — there is no separate SLA-read permission, so proving
+    // this route is gated by TicketsManage (denied to Customer) is
+    // sufficient to prove SLA data itself is unreachable without ticket read
+    // access. A non-existent id still exercises the policy first — Admin/
+    // Agent reaching 404 (not 403) proves the policy let them through.
+    [Theory]
+    [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
+    [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, true)]
+    [InlineData(CustomWebApplicationFactory.CustomerRoleEmail, CustomWebApplicationFactory.CustomerRolePassword, false)]
+    public async Task TicketsManage_GetTicket_AllowsAdminAndAgent_DeniesCustomer(
+        string email, string password, bool allowed)
+    {
+        var client = await AuthenticatedClientAsync(email, password);
+
+        var response = await client.GetAsync($"/api/tickets/{Guid.NewGuid()}");
+
+        if (allowed)
+        {
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+    }
+
     [Theory]
     [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
     [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, false)]

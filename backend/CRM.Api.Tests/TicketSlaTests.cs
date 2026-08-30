@@ -221,6 +221,37 @@ public class TicketSlaFirstResponseTests : IClassFixture<CustomWebApplicationFac
     }
 
     [Fact]
+    public async Task Post_InternalNote_DoesNotStampFirstRespondedAtUtc_OrCompleteResponseSla()
+    {
+        var client = await AuthenticatedClientAsync();
+        SeedPolicy("Internal Note Policy", TicketPriority.Normal, 60, 480);
+        var customerId = CreateCustomer("Internal Note Customer", "internal.note.customer@example.com");
+
+        var created = await client.PostAsJsonAsync(
+            "/api/tickets", new { customerId, title = "Title", description = "Description", priority = "Normal" });
+        var ticket = await created.Content.ReadFromJsonAsync<TicketResponse>();
+
+        var messageResponse = await client.PostAsJsonAsync(
+            $"/api/tickets/{ticket!.Id}/messages", new { body = "Internal note only.", isInternal = true });
+        Assert.Equal(HttpStatusCode.Created, messageResponse.StatusCode);
+
+        var entity = GetTicket(ticket.Id);
+        Assert.Null(entity.FirstRespondedAtUtc);
+
+        var refetch = await client.GetAsync($"/api/tickets/{ticket.Id}");
+        var refetchBody = await refetch.Content.ReadFromJsonAsync<TicketResponse>();
+        Assert.NotEqual(SlaStatus.Met, refetchBody!.Sla.FirstResponseStatus);
+
+        // A subsequent customer-visible reply must still be able to complete
+        // the response SLA — the internal note must not have permanently
+        // blocked it.
+        await client.PostAsJsonAsync(
+            $"/api/tickets/{ticket.Id}/messages", new { body = "Actual reply.", isInternal = false });
+        var afterPublicReply = GetTicket(ticket.Id);
+        Assert.NotNull(afterPublicReply.FirstRespondedAtUtc);
+    }
+
+    [Fact]
     public async Task Post_SecondMessage_DoesNotOverwriteFirstRespondedAtUtc()
     {
         var client = await AuthenticatedClientAsync();

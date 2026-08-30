@@ -181,17 +181,47 @@ describe('dashboard store', () => {
     expect(new Set(store.recentCustomers.map((c) => c.id)).size).toBe(6)
   })
 
-  it('slaAtRiskCount counts open High/Urgent tickets older than 24 hours', async () => {
+  it('slaAtRiskCount counts open tickets whose backend-computed sla status is AtRisk', async () => {
     loginAsAgent()
-    const old = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-    const recent = new Date().toISOString()
 
     listTicketsMock
       .mockResolvedValueOnce(
         makePage([
-          makeTicket({ id: '1', status: 'Open', priority: 'Urgent', createdAtUtc: old }),
-          makeTicket({ id: '2', status: 'Open', priority: 'High', createdAtUtc: recent }),
-          makeTicket({ id: '3', status: 'Open', priority: 'Low', createdAtUtc: old }),
+          makeTicket({
+            id: '1',
+            status: 'Open',
+            sla: {
+              policyId: 'policy-1',
+              firstResponseDueAtUtc: '2026-01-01T01:00:00Z',
+              resolutionDueAtUtc: '2026-01-01T08:00:00Z',
+              firstRespondedAtUtc: null,
+              resolvedAtUtc: null,
+              firstResponseStatus: 'AtRisk',
+              resolutionStatus: 'OnTrack',
+              firstResponseBreachedAtUtc: null,
+              resolutionBreachedAtUtc: null,
+              slaLastEvaluatedAtUtc: null,
+              slaAutoEscalatedAtUtc: null,
+            },
+          }),
+          makeTicket({ id: '2', status: 'Open' }),
+          makeTicket({
+            id: '3',
+            status: 'Open',
+            sla: {
+              policyId: 'policy-1',
+              firstResponseDueAtUtc: '2026-01-01T01:00:00Z',
+              resolutionDueAtUtc: '2026-01-01T08:00:00Z',
+              firstRespondedAtUtc: null,
+              resolvedAtUtc: null,
+              firstResponseStatus: 'Breached',
+              resolutionStatus: 'OnTrack',
+              firstResponseBreachedAtUtc: '2026-01-01T02:00:00Z',
+              resolutionBreachedAtUtc: null,
+              slaLastEvaluatedAtUtc: null,
+              slaAutoEscalatedAtUtc: null,
+            },
+          }),
         ]),
       )
       .mockResolvedValueOnce(makePage([]))
@@ -199,6 +229,9 @@ describe('dashboard store', () => {
     const store = useDashboardStore()
     await store.loadAll()
 
+    // Ticket 1 (AtRisk) counts; ticket 2 (NotApplicable) does not; ticket 3
+    // (already Breached, not AtRisk) does not — matches the backend's exact
+    // AtRisk classification rather than a broader "at risk or worse" net.
     expect(store.summary?.slaAtRiskCount).toBe(1)
   })
 
