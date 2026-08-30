@@ -1,6 +1,12 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { createSlaPolicy, deleteSlaPolicy, listSlaPolicies, updateSlaPolicy } from '@/api/sla'
+import {
+  createSlaPolicy,
+  deleteSlaPolicy,
+  listSlaPolicies,
+  updateSlaPolicy,
+  updateSlaPolicyStatus,
+} from '@/api/sla'
 import { i18n } from '@/i18n'
 import { useToast } from '@/composables/useToast'
 import type { CreateSlaPolicyPayload, SlaPolicy, UpdateSlaPolicyPayload } from '@/types/tickets'
@@ -75,5 +81,38 @@ export const useSlaPoliciesStore = defineStore('slaPolicies', () => {
     }
   }
 
-  return { items, loading, saving, error, fetch, create, update, remove }
+  async function applyStatus(id: string, payload: { isActive: boolean; isDefault?: boolean | null }) {
+    saving.value = true
+    error.value = null
+
+    try {
+      const { policy, warnings } = await updateSlaPolicyStatus(id, payload)
+      items.value = items.value.map((p) => (p.id === id ? policy : p))
+      if (warnings.includes('sla.defaultCleared')) {
+        useToast().warning(t('sla.policies.warnings.defaultCleared'))
+      } else {
+        useToast().success(t('notifications.sla.policySaved'))
+      }
+      return policy
+    } catch (err) {
+      error.value = 'errorSave'
+      throw err
+    } finally {
+      saving.value = false
+    }
+  }
+
+  function toggleActive(id: string) {
+    const policy = items.value.find((p) => p.id === id)
+    if (!policy) {
+      return Promise.resolve(undefined)
+    }
+    return applyStatus(id, { isActive: !policy.isActive })
+  }
+
+  function setDefault(id: string) {
+    return applyStatus(id, { isActive: true, isDefault: true })
+  }
+
+  return { items, loading, saving, error, fetch, create, update, remove, toggleActive, setDefault }
 })

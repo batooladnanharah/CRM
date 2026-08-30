@@ -27,6 +27,10 @@ public static class Permissions
     public const string CommunicationChannelsManage = "channels.manage";
 
     public const string SlaManage = "sla.manage";
+
+    // CRM-60: read-only access to SLA policies, distinct from SlaManage so
+    // Agents can view policies without being able to mutate them.
+    public const string SlaPolicyRead = "sla.policy.read";
     public const string ManageSlaEscalationRules = "sla.escalation.manage";
     public const string ReportsView = "reports.view";
     public const string SecurityAdmin = "security.admin";
@@ -40,6 +44,6 @@ public static class Permissions
         KnowledgeBaseView, KnowledgeBaseManage,
         KnowledgeBaseCategoriesView, KnowledgeBaseCategoriesManage,
         CommunicationChannelsView, CommunicationChannelsManage,
-        SlaManage, ManageSlaEscalationRules, ReportsView, SecurityAdmin, PortalAccess,
+        SlaManage, SlaPolicyRead, ManageSlaEscalationRules, ReportsView, SecurityAdmin, PortalAccess,
     ];
 }

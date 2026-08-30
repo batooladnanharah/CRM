@@ -26,3 +26,23 @@ export function updateSlaPolicy(id: string, payload: UpdateSlaPolicyPayload): Pr
 export function deleteSlaPolicy(id: string): Promise<void> {
   return apiRequest<void>(`/sla/policies/${id}`, { method: 'DELETE' })
 }
+
+export interface UpdateSlaPolicyStatusPayload {
+  isActive: boolean
+  isDefault?: boolean | null
+}
+
+export interface UpdateSlaPolicyStatusResult {
+  policy: SlaPolicy
+  warnings: string[]
+}
+
+export function updateSlaPolicyStatus(
+  id: string,
+  payload: UpdateSlaPolicyStatusPayload,
+): Promise<UpdateSlaPolicyStatusResult> {
+  return apiRequest<UpdateSlaPolicyStatusResult>(`/sla/policies/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}

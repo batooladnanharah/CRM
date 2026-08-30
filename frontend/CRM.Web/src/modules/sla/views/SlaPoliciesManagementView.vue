@@ -105,6 +105,22 @@ async function submitEdit() {
   }
 }
 
+async function onToggleActive(policy: SlaPolicy) {
+  try {
+    await store.toggleActive(policy.id)
+  } catch {
+    // error surfaced via store.error
+  }
+}
+
+async function onSetDefault(policy: SlaPolicy) {
+  try {
+    await store.setDefault(policy.id)
+  } catch {
+    // error surfaced via store.error
+  }
+}
+
 async function onDelete(policy: SlaPolicy) {
   if (!(await confirm({ message: t('sla.policies.deleteConfirm'), tone: 'danger', confirmLabel: t('common.delete') }))) {
     return
@@ -251,6 +267,18 @@ async function onDelete(policy: SlaPolicy) {
               <td>{{ policy.isActive ? '✓' : '' }}</td>
               <td>
                 <AppButton variant="ghost" size="sm" type="button" @click="startEdit(policy)">{{ t('sla.policies.edit') }}</AppButton>
+                <AppButton variant="ghost" size="sm" type="button" @click="onToggleActive(policy)">
+                  {{ policy.isActive ? t('sla.policies.deactivate') : t('sla.policies.activate') }}
+                </AppButton>
+                <AppButton
+                  v-if="!policy.isDefault"
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  @click="onSetDefault(policy)"
+                >
+                  {{ t('sla.policies.setDefault') }}
+                </AppButton>
                 <AppButton variant="ghost" size="sm" type="button" @click="onDelete(policy)">{{ t('sla.policies.delete') }}</AppButton>
               </td>
             </tr>

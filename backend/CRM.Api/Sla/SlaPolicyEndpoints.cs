@@ -9,10 +9,10 @@ public static class SlaPolicyEndpoints
 {
     public static void MapSlaPolicyEndpoints(this IEndpointRouteBuilder app)
     {
-        // SLA policy CRUD is admin-only — agents consume the computed SLA
-        // snapshot on tickets but never manage the policies themselves.
+        // CRM-60: reads require only SlaPolicyRead (Agent + Admin); mutations
+        // require SlaManage (Admin only in this codebase's role model, which
+        // has no separate "Manager" role — see RolePermissions.cs).
         var policies = app.MapGroup("/api/sla/policies")
-            .RequireAuthorization(Permissions.SlaManage)
             .WithTags("SlaPolicies");
 
         // Separate group (not nested under /policies) — this is an
@@ -31,6 +31,7 @@ public static class SlaPolicyEndpoints
 
             return Results.Ok(items);
         })
+        .RequireAuthorization(Permissions.SlaPolicyRead)
         .WithName("ListSlaPolicies");
 
         policies.MapGet("/{id:guid}", async (Guid id, TicketDbContext db) =>
@@ -38,6 +39,7 @@ public static class SlaPolicyEndpoints
             var entity = await db.SlaPolicies.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
             return entity is null ? Results.NotFound() : Results.Ok(ToResponse(entity));
         })
+        .RequireAuthorization(Permissions.SlaPolicyRead)
         .WithName("GetSlaPolicy");
 
         policies.MapPost("/", async (CreateSlaPolicyRequest request, TicketDbContext db) =>
@@ -79,6 +81,7 @@ public static class SlaPolicyEndpoints
 
             return Results.Created($"/api/sla/policies/{entity.Id}", ToResponse(entity));
         })
+        .RequireAuthorization(Permissions.SlaManage)
         .WithName("CreateSlaPolicy");
 
         policies.MapPut("/{id:guid}", async (Guid id, UpdateSlaPolicyRequest request, TicketDbContext db) =>
@@ -114,7 +117,46 @@ public static class SlaPolicyEndpoints
 
             return Results.Ok(ToResponse(entity));
         })
+        .RequireAuthorization(Permissions.SlaManage)
         .WithName("UpdateSlaPolicy");
+
+        // CRM-60: dedicated status toggle for activate/deactivate and
+        // set-default flows without resending the full policy payload.
+        // Deactivating the current default clears IsDefault (rather than
+        // rejecting) and reports a warning so the frontend can toast it.
+        policies.MapPatch("/{id:guid}/status", async (Guid id, UpdateSlaPolicyStatusRequest request, TicketDbContext db) =>
+        {
+            var entity = await db.SlaPolicies.FirstOrDefaultAsync(p => p.Id == id);
+            if (entity is null)
+            {
+                return Results.NotFound();
+            }
+
+            var warnings = new List<string>();
+            var wantsDefault = request.IsDefault ?? entity.IsDefault;
+
+            if (!request.IsActive && (request.IsDefault ?? entity.IsDefault))
+            {
+                // Deactivating a default policy clears the default flag
+                // instead of rejecting the request.
+                wantsDefault = false;
+                warnings.Add("sla.defaultCleared");
+            }
+
+            if (wantsDefault && !entity.IsDefault)
+            {
+                await ClearExistingDefaultsAsync(db, excludeId: id);
+            }
+
+            entity.IsActive = request.IsActive;
+            entity.IsDefault = wantsDefault;
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new UpdateSlaPolicyStatusResponse(ToResponse(entity), warnings));
+        })
+        .RequireAuthorization(Permissions.SlaManage)
+        .WithName("UpdateSlaPolicyStatus");
 
         // Bypasses the SlaAutomationHostedService timer — used by tests/ops to
         // trigger an evaluation cycle deterministically and on demand.
@@ -141,6 +183,7 @@ public static class SlaPolicyEndpoints
 
             return Results.NoContent();
         })
+        .RequireAuthorization(Permissions.SlaManage)
         .WithName("DeleteSlaPolicy");
     }
 
@@ -179,13 +222,29 @@ public static class SlaPolicyEndpoints
                 $"Unknown priority '{rawPriority}'. Allowed values: {string.Join(", ", Enum.GetNames<TicketPriority>())}."));
         }
 
+        // 525600 minutes = 1 year; guards against pathological values that
+        // would otherwise silently push due-dates decades into the future.
+        const int MaxMinutes = 525600;
+
         if (firstResponseMinutes <= 0)
         {
             return Results.BadRequest(new ErrorResponse("FirstResponseMinutes must be greater than zero."));
         }
+        if (firstResponseMinutes > MaxMinutes)
+        {
+            return Results.BadRequest(new ErrorResponse("errors.targetTooLarge"));
+        }
         if (resolutionMinutes <= 0)
         {
             return Results.BadRequest(new ErrorResponse("ResolutionMinutes must be greater than zero."));
+        }
+        if (resolutionMinutes > MaxMinutes)
+        {
+            return Results.BadRequest(new ErrorResponse("errors.targetTooLarge"));
+        }
+        if (resolutionMinutes < firstResponseMinutes)
+        {
+            return Results.BadRequest(new ErrorResponse("errors.resolutionLessThanResponse"));
         }
 
         return null;

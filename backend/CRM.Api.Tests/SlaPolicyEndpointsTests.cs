@@ -43,13 +43,16 @@ public class SlaPolicyEndpointsTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
-    public async Task Get_Policies_Returns403_ForAgent()
+    public async Task Get_Policies_ReturnsOk_ForAgent()
     {
+        // CRM-60: Agents have SlaPolicyRead (read-only) access — they may
+        // list/view policies but never mutate them (see Post/Delete tests
+        // below, which still expect 403 for Agent).
         var client = await AuthenticatedClientAsync();
 
         var response = await client.GetAsync("/api/sla/policies");
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -239,6 +242,96 @@ public class SlaPolicyEndpointsTests : IClassFixture<CustomWebApplicationFactory
             CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
 
         var response = await admin.DeleteAsync($"/api/sla/policies/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_Policy_Returns400_WhenResolutionLessThanFirstResponse()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PostAsJsonAsync(
+            "/api/sla/policies",
+            PolicyPayload("Resolution Too Short Policy", firstResponseMinutes: 100, resolutionMinutes: 50));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_Policy_Returns400_WhenMinutesExceedOneYearCap()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PostAsJsonAsync(
+            "/api/sla/policies",
+            PolicyPayload("Excessive Minutes Policy", firstResponseMinutes: 30, resolutionMinutes: 999_999));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PatchStatus_DeactivatingDefaultPolicy_ClearsIsDefault_AndReturnsWarning()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var policy = await CreatePolicyAsync(
+            admin, PolicyPayload("Default To Deactivate Xyzzy4", isDefault: true));
+        Assert.True(policy.IsDefault);
+
+        var response = await admin.PatchAsJsonAsync(
+            $"/api/sla/policies/{policy.Id}/status", new { isActive = false, isDefault = (bool?)null });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<UpdateSlaPolicyStatusResponse>();
+        Assert.NotNull(body);
+        Assert.False(body!.Policy.IsActive);
+        Assert.False(body.Policy.IsDefault);
+        Assert.Contains("sla.defaultCleared", body.Warnings);
+    }
+
+    [Fact]
+    public async Task PatchStatus_SettingDefault_ClearsPreviousDefaultAtomically()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var existingDefault = await CreatePolicyAsync(
+            admin, PolicyPayload("Existing Default Xyzzy5", isDefault: true));
+        var other = await CreatePolicyAsync(admin, PolicyPayload("Other Policy Xyzzy5"));
+
+        var response = await admin.PatchAsJsonAsync(
+            $"/api/sla/policies/{other.Id}/status", new { isActive = true, isDefault = (bool?)true });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var refetched = await admin.GetAsync($"/api/sla/policies/{existingDefault.Id}");
+        var refetchedBody = await refetched.Content.ReadFromJsonAsync<SlaPolicyResponse>();
+        Assert.False(refetchedBody!.IsDefault);
+    }
+
+    [Fact]
+    public async Task PatchStatus_Returns403_ForAgent()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var created = await CreatePolicyAsync(admin, PolicyPayload("Agent Cannot Patch Status"));
+
+        var agent = await AuthenticatedClientAsync();
+        var response = await agent.PatchAsJsonAsync(
+            $"/api/sla/policies/{created.Id}/status", new { isActive = false, isDefault = (bool?)null });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PatchStatus_Returns404_WhenMissing()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var response = await admin.PatchAsJsonAsync(
+            $"/api/sla/policies/{Guid.NewGuid()}/status", new { isActive = false, isDefault = (bool?)null });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

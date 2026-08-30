@@ -1,14 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSlaPoliciesStore } from '@/stores/sla'
-import type { createSlaPolicy, deleteSlaPolicy, listSlaPolicies, updateSlaPolicy } from '@/api/sla'
+import type {
+  createSlaPolicy,
+  deleteSlaPolicy,
+  listSlaPolicies,
+  updateSlaPolicy,
+  updateSlaPolicyStatus,
+} from '@/api/sla'
 import type { SlaPolicy } from '@/types/tickets'
 
-const { listMock, createMock, updateMock, deleteMock, toastMock } = vi.hoisted(() => ({
+const { listMock, createMock, updateMock, deleteMock, statusMock, toastMock } = vi.hoisted(() => ({
   listMock: vi.fn<typeof listSlaPolicies>(),
   createMock: vi.fn<typeof createSlaPolicy>(),
   updateMock: vi.fn<typeof updateSlaPolicy>(),
   deleteMock: vi.fn<typeof deleteSlaPolicy>(),
+  statusMock: vi.fn<typeof updateSlaPolicyStatus>(),
   toastMock: {
     success: vi.fn<(input: unknown) => string>(),
     error: vi.fn<(input: unknown) => string>(),
@@ -24,6 +31,7 @@ vi.mock('@/api/sla', () => ({
   createSlaPolicy: createMock,
   updateSlaPolicy: updateMock,
   deleteSlaPolicy: deleteMock,
+  updateSlaPolicyStatus: statusMock,
 }))
 
 vi.mock('@/composables/useToast', () => ({ useToast: () => toastMock }))
@@ -50,8 +58,10 @@ beforeEach(() => {
   createMock.mockReset()
   updateMock.mockReset()
   deleteMock.mockReset()
+  statusMock.mockReset()
   toastMock.success.mockReset()
   toastMock.error.mockReset()
+  toastMock.warning.mockReset()
 })
 
 describe('sla policies store', () => {
@@ -183,5 +193,46 @@ describe('sla policies store', () => {
     await expect(store.remove('1')).rejects.toThrow('failed')
 
     expect(store.error).toBe('errorDelete')
+  })
+
+  it('toggleActive() flips isActive via status endpoint and updates state', async () => {
+    listMock.mockResolvedValue([makeSlaPolicy({ id: '1', isActive: true })])
+    const store = useSlaPoliciesStore()
+    await store.fetch()
+
+    const deactivated = makeSlaPolicy({ id: '1', isActive: false })
+    statusMock.mockResolvedValue({ policy: deactivated, warnings: [] })
+    await store.toggleActive('1')
+
+    expect(statusMock).toHaveBeenCalledWith('1', { isActive: false })
+    expect(store.items[0]).toEqual(deactivated)
+    expect(toastMock.success).toHaveBeenCalledTimes(1)
+  })
+
+  it('toggleActive() surfaces a warning toast when deactivating the default clears it', async () => {
+    listMock.mockResolvedValue([makeSlaPolicy({ id: '1', isActive: true, isDefault: true })])
+    const store = useSlaPoliciesStore()
+    await store.fetch()
+
+    const cleared = makeSlaPolicy({ id: '1', isActive: false, isDefault: false })
+    statusMock.mockResolvedValue({ policy: cleared, warnings: ['sla.defaultCleared'] })
+    await store.toggleActive('1')
+
+    expect(store.items[0]).toEqual(cleared)
+    expect(toastMock.warning).toHaveBeenCalledTimes(1)
+    expect(toastMock.success).not.toHaveBeenCalled()
+  })
+
+  it('setDefault() marks the policy active and default', async () => {
+    listMock.mockResolvedValue([makeSlaPolicy({ id: '1', isDefault: false })])
+    const store = useSlaPoliciesStore()
+    await store.fetch()
+
+    const updated = makeSlaPolicy({ id: '1', isDefault: true })
+    statusMock.mockResolvedValue({ policy: updated, warnings: [] })
+    await store.setDefault('1')
+
+    expect(statusMock).toHaveBeenCalledWith('1', { isActive: true, isDefault: true })
+    expect(store.items[0]).toEqual(updated)
   })
 })

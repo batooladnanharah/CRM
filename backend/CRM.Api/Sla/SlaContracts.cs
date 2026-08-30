@@ -32,6 +32,12 @@ public record UpdateSlaPolicyRequest(
     bool IsDefault,
     bool IsActive);
 
+// CRM-60: dedicated status toggle so the frontend can activate/deactivate or
+// (re)assign the default flag without resending the full policy payload.
+public record UpdateSlaPolicyStatusRequest(bool IsActive, bool? IsDefault);
+
+public record UpdateSlaPolicyStatusResponse(SlaPolicyResponse Policy, IReadOnlyList<string> Warnings);
+
 public record TicketSlaSnapshotResponse(
     Guid? PolicyId,
     DateTime? FirstResponseDueAtUtc,

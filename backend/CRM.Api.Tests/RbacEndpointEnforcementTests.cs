@@ -73,15 +73,33 @@ public class RbacEndpointEnforcementTests : IClassFixture<CustomWebApplicationFa
 
     [Theory]
     [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
-    [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, false)]
-    public async Task SlaManage_OnlyAdmin(string email, string password, bool allowed)
+    [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, true)]
+    public async Task SlaPolicyRead_AgentAndAdmin(string email, string password, bool allowed)
     {
+        // CRM-60: GET is gated by SlaPolicyRead, which both Agent and Admin
+        // hold — mutating routes remain SlaManage (Admin-only), see below.
         var client = await AuthenticatedClientAsync(email, password);
 
         var response = await client.GetAsync("/api/sla/policies");
 
         Assert.Equal(
             allowed ? HttpStatusCode.OK : HttpStatusCode.Forbidden,
+            response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword, true)]
+    [InlineData(CustomWebApplicationFactory.ActiveEmail, CustomWebApplicationFactory.ActivePassword, false)]
+    public async Task SlaManage_OnlyAdmin(string email, string password, bool allowed)
+    {
+        var client = await AuthenticatedClientAsync(email, password);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/sla/policies",
+            new { name = "Rbac Probe Policy", channel = (string?)null, priority = "High", firstResponseMinutes = 30, resolutionMinutes = 240, isDefault = false, isActive = true });
+
+        Assert.Equal(
+            allowed ? HttpStatusCode.Created : HttpStatusCode.Forbidden,
             response.StatusCode);
     }
 

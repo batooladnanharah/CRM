@@ -535,6 +535,9 @@
       "new": "+ New Policy",
       "edit": "Edit",
       "delete": "Delete",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "setDefault": "Set Default",
       "saving": "Saving…",
       "empty": "No SLA policies yet.",
       "loading": "Loading SLA policies…",
@@ -555,7 +558,14 @@
         "errorSave": "Could not save the SLA policy. Please try again.",
         "errorDelete": "Could not delete the SLA policy. Please try again.",
         "nameRequired": "Name is required.",
-        "minutesPositive": "Minutes must be greater than zero."
+        "minutesPositive": "Minutes must be greater than zero.",
+        "resolutionLessThanResponse": "Resolution minutes must be greater than or equal to first response minutes.",
+        "targetTooLarge": "Minutes must be 525600 (one year) or fewer.",
+        "duplicateDefault": "Another default SLA policy already exists.",
+        "forbidden": "You do not have permission to perform this action."
+      },
+      "warnings": {
+        "defaultCleared": "This policy was the default; default has been cleared."
       }
     },
     "status": {
