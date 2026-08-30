@@ -11,6 +11,7 @@ import TicketMessagesSection from '@/modules/tickets/components/TicketMessagesSe
 import TicketAttachmentsSection from '@/modules/tickets/components/TicketAttachmentsSection.vue'
 import EscalateTicketDialog from '@/modules/tickets/components/EscalateTicketDialog.vue'
 import SlaBadge from '@/modules/tickets/components/SlaBadge.vue'
+import KnowledgeBaseSearchDialog from '@/modules/knowledgeBase/components/KnowledgeBaseSearchDialog.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
@@ -34,6 +35,7 @@ const canEscalate = computed(
   () => authStore.isAdmin && !!store.current && isEscalatable(store.current.status),
 )
 const historyOpened = ref(false)
+const knowledgeBaseSearchOpen = ref(false)
 
 const dateFormatter = computed(
   () => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }),
@@ -225,6 +227,15 @@ async function onRegenerateSummary() {
           </li>
         </ul>
         <EscalateTicketDialog v-if="canEscalate" :ticket-id="id" />
+        <AppButton
+          v-if="canManage"
+          variant="secondary"
+          size="sm"
+          type="button"
+          @click="knowledgeBaseSearchOpen = true"
+        >
+          {{ t('tickets.details.searchKnowledgeBase') }}
+        </AppButton>
       </header>
 
       <AppAlert v-if="actionErrorText" tone="danger" role="alert">{{ actionErrorText }}</AppAlert>
@@ -355,6 +366,14 @@ async function onRegenerateSummary() {
       </details>
 
       <AppButton variant="ghost" type="button" @click="onBack">{{ t('tickets.details.backToList') }}</AppButton>
+    </div>
+
+    <div
+      v-if="knowledgeBaseSearchOpen"
+      class="kb-search-overlay"
+      @click.self="knowledgeBaseSearchOpen = false"
+    >
+      <KnowledgeBaseSearchDialog @close="knowledgeBaseSearchOpen = false" />
     </div>
   </div>
 </template>

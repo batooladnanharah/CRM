@@ -263,6 +263,41 @@ public static class CustomerPortalEndpoints
                 items, total, resolvedPage, resolvedPageSize));
         })
         .WithName("ListPortalKnowledgeBaseCategoryArticles");
+
+        // Full-text search scoped to the same visibility rules as every other
+        // portal KB route: Published articles in an active category only.
+        // IncludeDrafts is intentionally never read from the query string
+        // here — portal callers can never see drafts regardless of what they
+        // pass — see KnowledgeBaseSearchService for the shared matching and
+        // ordering logic used by the CRM-side search endpoint.
+        customer.MapGet("/knowledge-base/search", async (
+            string? q, Guid? categoryId, int? page, int? pageSize, ClaimsPrincipal principal,
+            ICurrentCustomerAccessor accessor, KnowledgeBaseDbContext kbDb, CancellationToken ct) =>
+        {
+            var customerId = await accessor.GetCurrentCustomerIdAsync(principal, ct);
+            if (customerId is null)
+            {
+                return Results.Forbid();
+            }
+
+            var errorCode = KnowledgeBaseSearchService.ValidateQuery(q, out var trimmedQuery);
+            if (errorCode is not null)
+            {
+                return Results.BadRequest(new ErrorResponse(errorCode));
+            }
+
+            var (resolvedPage, resolvedPageSize) = KnowledgeBaseSearchService.ClampPaging(page, pageSize);
+
+            var (items, totalCount) = await KnowledgeBaseSearchService.SearchAsync(
+                kbDb,
+                new KnowledgeBaseSearchService.Options(
+                    trimmedQuery, categoryId, CanSeeDrafts: false, IncludeDrafts: false,
+                    resolvedPage, resolvedPageSize),
+                ct);
+
+            return Results.Ok(new KnowledgeBaseSearchResponse(items, resolvedPage, resolvedPageSize, totalCount));
+        })
+        .WithName("SearchPortalKnowledgeBase");
     }
 
     private static CustomerTicketListItemResponse ToListItemResponse(Ticket t) => new(

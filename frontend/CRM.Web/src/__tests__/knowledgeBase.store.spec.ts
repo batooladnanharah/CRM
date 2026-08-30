@@ -17,7 +17,7 @@ import type {
   updateArticle,
   updateCategory,
 } from '@/api/knowledgeBase'
-import type { KnowledgeBaseArticle, KnowledgeBaseCategory } from '@/types/knowledgeBase'
+import type { KnowledgeBaseArticle, KnowledgeBaseCategory, KnowledgeBaseSearchItem } from '@/types/knowledgeBase'
 
 const {
   listArticlesMock,
@@ -94,6 +94,17 @@ function makeArticle(overrides: Partial<KnowledgeBaseArticle> = {}): KnowledgeBa
   }
 }
 
+function makeSearchItem(overrides: Partial<KnowledgeBaseSearchItem> = {}): KnowledgeBaseSearchItem {
+  return {
+    id: '1',
+    title: 'Resetting Your Password',
+    category: { id: 'cat-1', name: 'Account' },
+    excerpt: 'Steps to reset your password.',
+    status: null,
+    ...overrides,
+  }
+}
+
 function makeCategory(overrides: Partial<KnowledgeBaseCategory> = {}): KnowledgeBaseCategory {
   return {
     id: 'cat-1',
@@ -131,7 +142,8 @@ describe('knowledgeBase store', () => {
 
     expect(store.articles).toEqual([])
     expect(store.currentArticle).toBeNull()
-    expect(store.searchResults).toEqual([])
+    expect(store.search.items).toEqual([])
+    expect(store.search.lastQuery).toBe('')
     expect(store.total).toBe(0)
     expect(store.isLoading).toBe(false)
     expect(store.error).toBeNull()
@@ -160,25 +172,75 @@ describe('knowledgeBase store', () => {
     expect(store.isLoading).toBe(false)
   })
 
-  it('search() populates searchResults without requiring debounce (that lives in the view)', async () => {
-    const article = makeArticle({ title: 'Zzyzx Match' })
-    searchArticlesMock.mockResolvedValue({ items: [article], total: 1 })
+  it('runSearch() trims the query, calls the API, and populates state', async () => {
+    const item = makeSearchItem({ title: 'Zzyzx Match' })
+    searchArticlesMock.mockResolvedValue({ items: [item], page: 1, pageSize: 10, totalCount: 1 })
 
     const store = useKnowledgeBaseStore()
-    const result = await store.search('zzyzx')
+    await store.runSearch({ query: '  zzyzx  ' })
 
-    expect(searchArticlesMock).toHaveBeenCalledWith({ q: 'zzyzx' })
-    expect(store.searchResults).toEqual([article])
-    expect(result.total).toBe(1)
+    expect(searchArticlesMock).toHaveBeenCalledWith({ q: 'zzyzx', categoryId: undefined, page: 1, pageSize: 10 })
+    expect(store.search.items).toEqual([item])
+    expect(store.search.totalCount).toBe(1)
+    expect(store.search.lastQuery).toBe('zzyzx')
   })
 
-  it('search() sets error and rethrows on failure', async () => {
+  it('runSearch() rejects a query shorter than 2 characters without calling the API', async () => {
+    const store = useKnowledgeBaseStore()
+    await store.runSearch({ query: 'a' })
+
+    expect(searchArticlesMock).not.toHaveBeenCalled()
+    expect(store.search.items).toEqual([])
+    expect(store.search.error).toBe('tooShort')
+  })
+
+  it('runSearch() sets loading true while in flight and false on success', async () => {
+    let resolveFn!: (value: { items: KnowledgeBaseSearchItem[]; page: number; pageSize: number; totalCount: number }) => void
+    searchArticlesMock.mockReturnValue(new Promise((resolve) => { resolveFn = resolve }))
+
+    const store = useKnowledgeBaseStore()
+    const pending = store.runSearch({ query: 'password' })
+
+    expect(store.search.loading).toBe(true)
+    resolveFn({ items: [], page: 1, pageSize: 10, totalCount: 0 })
+    await pending
+
+    expect(store.search.loading).toBe(false)
+  })
+
+  it('runSearch() surfaces an error message on API failure', async () => {
     searchArticlesMock.mockRejectedValue(new Error('failed'))
 
     const store = useKnowledgeBaseStore()
-    await expect(store.search('term')).rejects.toThrow('failed')
+    await store.runSearch({ query: 'term' })
 
-    expect(store.error).toBe('errorLoad')
+    expect(store.search.error).toBe('errorLoad')
+    expect(store.search.items).toEqual([])
+  })
+
+  it('ignores a stale response when a newer runSearch has already been issued', async () => {
+    let resolveFirst!: (value: { items: KnowledgeBaseSearchItem[]; page: number; pageSize: number; totalCount: number }) => void
+    searchArticlesMock.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveFirst = resolve }),
+    )
+
+    const store = useKnowledgeBaseStore()
+    const firstCall = store.runSearch({ query: 'first' })
+
+    searchArticlesMock.mockResolvedValueOnce({
+      items: [makeSearchItem({ id: 'second', title: 'Second Result' })], page: 1, pageSize: 10, totalCount: 1,
+    })
+    const secondCall = store.runSearch({ query: 'second' })
+    await secondCall
+
+    expect(store.search.items[0]?.id).toBe('second')
+
+    // The stale first response resolves after the second one already landed
+    // — it must not overwrite the fresher state.
+    resolveFirst({ items: [makeSearchItem({ id: 'first', title: 'First Result' })], page: 1, pageSize: 10, totalCount: 1 })
+    await firstCall
+
+    expect(store.search.items[0]?.id).toBe('second')
   })
 
   it('fetchById() sets currentArticle on success', async () => {

@@ -7,6 +7,7 @@ import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
 import { confirm } from '@/composables/useConfirm'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import type {
@@ -17,7 +18,6 @@ import type {
 
 const STATUSES: KnowledgeBaseArticleStatus[] = ['Draft', 'Published', 'Archived']
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const SEARCH_DEBOUNCE_MS = 300
 
 const { t } = useI18n()
 const route = useRoute()
@@ -25,8 +25,36 @@ const store = useKnowledgeBaseStore()
 
 const statusFilter = ref<KnowledgeBaseArticleStatus | ''>('')
 const tagFilter = ref('')
-const searchQuery = ref('')
-let searchDebounceHandle: ReturnType<typeof setTimeout> | null = null
+
+// Full-text search (CRM-66) — a separate results panel from the plain
+// status/tag/category-filtered table below. Submitted explicitly on Enter
+// or the Search button only; never wired to keystroke input.
+// Shares the single Category dropdown in the filter row below (store.selectedCategoryId)
+// rather than duplicating it, so there's only one category control on the page.
+const searchInput = ref('')
+
+function submitSearch() {
+  const trimmed = searchInput.value.trim()
+  if (!trimmed) {
+    store.resetSearch()
+    return
+  }
+  void store.runSearch({ query: trimmed, categoryId: store.selectedCategoryId || null, page: 1 })
+}
+
+function retrySearch() {
+  void store.runSearch({
+    query: store.search.query, categoryId: store.search.categoryId, page: store.search.page,
+  })
+}
+
+function goToSearchPage(page: number) {
+  void store.setSearchPage(page)
+}
+
+const searchTotalPages = computed(() =>
+  store.search.pageSize > 0 ? Math.max(1, Math.ceil(store.search.totalCount / store.search.pageSize)) : 1,
+)
 
 const isAdding = ref(false)
 const editingId = ref<string | null>(null)
@@ -88,28 +116,7 @@ function onFilterChange() {
   refetch()
 }
 
-function onSearchInput() {
-  if (searchDebounceHandle) {
-    clearTimeout(searchDebounceHandle)
-  }
-  const term = searchQuery.value.trim()
-  if (term.length < 2) {
-    searchDebounceHandle = null
-    refetch()
-    return
-  }
-  searchDebounceHandle = setTimeout(() => {
-    searchDebounceHandle = null
-    void store.search(term, {
-      status: statusFilter.value || undefined,
-      tag: tagFilter.value.trim() || undefined,
-    })
-  }, SEARCH_DEBOUNCE_MS)
-}
-
-const displayedArticles = computed<KnowledgeBaseArticle[]>(() =>
-  searchQuery.value.trim().length >= 2 ? store.searchResults : store.articles,
-)
+const displayedArticles = computed<KnowledgeBaseArticle[]>(() => store.articles)
 
 // A deep link from KnowledgeBaseSearchDialog (/knowledge-base/:id) can open
 // an article for editing that isn't part of the current filtered/paged list
@@ -296,17 +303,25 @@ async function onUnpublish(article: KnowledgeBaseArticle) {
       </AppButton>
     </div>
 
-    <div class="surface toolbar">
+    <h2 class="section-heading">{{ t('knowledgeBase.search.sectionTitle') }}</h2>
+    <form class="surface toolbar" @submit.prevent="submitSearch">
       <div class="toolbar-field">
         <label for="kb-search">{{ t('common.search') }}</label>
         <input
           id="kb-search"
-          v-model="searchQuery"
+          v-model="searchInput"
           type="search"
-          :placeholder="t('knowledgeBase.searchPlaceholder')"
-          @input="onSearchInput"
+          maxlength="200"
+          dir="auto"
+          :placeholder="t('knowledgeBase.search.placeholder')"
         />
       </div>
+      <AppButton type="submit" size="sm">{{ t('knowledgeBase.search.submit') }}</AppButton>
+    </form>
+
+    <h2 class="section-heading">{{ t('knowledgeBase.filters.sectionTitle') }}</h2>
+    <p class="section-hint">{{ t('knowledgeBase.filters.sharedCategoryHint') }}</p>
+    <div class="surface toolbar">
       <div class="toolbar-field">
         <label for="kb-status-filter">{{ t('knowledgeBase.filters.status') }}</label>
         <select id="kb-status-filter" v-model="statusFilter" @change="onFilterChange">
@@ -334,6 +349,46 @@ async function onUnpublish(article: KnowledgeBaseArticle) {
             {{ category.name }}
           </option>
         </select>
+      </div>
+    </div>
+
+    <div v-if="store.search.lastQuery" class="surface kb-search-panel">
+      <h2>{{ t('knowledgeBase.search.results', { q: store.search.lastQuery }) }}</h2>
+      <p>{{ t('knowledgeBase.search.count', { count: store.search.totalCount }) }}</p>
+
+      <LoadingState v-if="store.search.loading" />
+      <AppAlert v-else-if="store.search.error" tone="danger" role="alert" class="kb-error-alert">
+        {{ t('knowledgeBase.search.error') }}
+        <AppButton variant="secondary" size="sm" type="button" @click="retrySearch">
+          {{ t('knowledgeBase.search.retry') }}
+        </AppButton>
+      </AppAlert>
+      <EmptyState v-else-if="store.search.items.length === 0" :description="t('knowledgeBase.search.noResults')" />
+      <ul v-else class="kb-search-results-list">
+        <li v-for="item in store.search.items" :key="item.id" class="kb-search-result-item">
+          <p class="kb-search-result-title">{{ item.title }}</p>
+          <p class="kb-search-result-category">{{ item.category.name }}</p>
+          <p class="kb-search-result-excerpt">{{ item.excerpt }}</p>
+          <AppBadge v-if="item.status">{{ t(`knowledgeBase.status.${item.status.toLowerCase()}`) }}</AppBadge>
+        </li>
+      </ul>
+
+      <div v-if="!store.search.loading && !store.search.error && searchTotalPages > 1" class="kb-search-pagination">
+        <AppButton
+          variant="ghost"
+          size="sm"
+          type="button"
+          :disabled="store.search.page <= 1"
+          @click="goToSearchPage(store.search.page - 1)"
+        >‹</AppButton>
+        <span>{{ store.search.page }} / {{ searchTotalPages }}</span>
+        <AppButton
+          variant="ghost"
+          size="sm"
+          type="button"
+          :disabled="store.search.page >= searchTotalPages"
+          @click="goToSearchPage(store.search.page + 1)"
+        >›</AppButton>
       </div>
     </div>
 
@@ -605,5 +660,56 @@ async function onUnpublish(article: KnowledgeBaseArticle) {
 .form-actions {
   display: flex;
   gap: var(--space-2);
+}
+
+.kb-search-panel {
+  margin-bottom: var(--space-5);
+  padding: var(--space-5);
+}
+
+.section-heading {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted, inherit);
+}
+
+.section-hint {
+  margin: 0 0 var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted, inherit);
+}
+
+.kb-search-results-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.kb-search-result-item {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.kb-search-result-title {
+  font-weight: 700;
+}
+
+.kb-search-result-category,
+.kb-search-result-excerpt {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.kb-search-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 </style>

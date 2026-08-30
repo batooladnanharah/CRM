@@ -57,12 +57,34 @@ export interface KnowledgeBaseListQuery {
   pageSize?: number
 }
 
-export interface KnowledgeBaseSearchQuery {
+// --- Full-text search (title + content + category name) — CRM-66 ---
+
+export interface KnowledgeBaseSearchCategory {
+  id: string
+  name: string
+}
+
+export interface KnowledgeBaseSearchItem {
+  id: string
+  title: string
+  category: KnowledgeBaseSearchCategory
+  excerpt: string
+  status?: KnowledgeBaseArticleStatus | null
+}
+
+export interface KnowledgeBaseSearchResponse {
+  items: KnowledgeBaseSearchItem[]
+  page: number
+  pageSize: number
+  totalCount: number
+}
+
+export interface KnowledgeBaseSearchRequest {
   q: string
-  tag?: string
-  status?: KnowledgeBaseArticleStatus
+  categoryId?: string | null
   page?: number
   pageSize?: number
+  includeDrafts?: boolean
 }
 
 export interface CreateKnowledgeBaseArticlePayload {

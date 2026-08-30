@@ -5,7 +5,8 @@ import type {
   KnowledgeBaseArticle,
   KnowledgeBaseCategory,
   KnowledgeBaseListQuery,
-  KnowledgeBaseSearchQuery,
+  KnowledgeBaseSearchRequest,
+  KnowledgeBaseSearchResponse,
   KnowledgeBaseSearchResult,
   UpdateKnowledgeBaseArticlePayload,
   UpdateKnowledgeBaseCategoryPayload,
@@ -33,15 +34,15 @@ export function listArticles(query: KnowledgeBaseListQuery = {}): Promise<Knowle
   return apiRequest<KnowledgeBaseSearchResult>(path, { method: 'GET' })
 }
 
-export function searchArticles(query: KnowledgeBaseSearchQuery): Promise<KnowledgeBaseSearchResult> {
+export function searchArticles(query: KnowledgeBaseSearchRequest): Promise<KnowledgeBaseSearchResponse> {
   const path = `/knowledge-base/articles/search${buildQueryString({
     q: query.q,
-    tag: query.tag,
-    status: query.status,
+    categoryId: query.categoryId ?? undefined,
+    includeDrafts: query.includeDrafts ? 'true' : undefined,
     page: query.page,
     pageSize: query.pageSize,
   })}`
-  return apiRequest<KnowledgeBaseSearchResult>(path, { method: 'GET' })
+  return apiRequest<KnowledgeBaseSearchResponse>(path, { method: 'GET' })
 }
 
 export function getArticle(id: string): Promise<KnowledgeBaseArticle> {

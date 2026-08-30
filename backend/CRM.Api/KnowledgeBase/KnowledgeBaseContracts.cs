@@ -42,13 +42,33 @@ public record KnowledgeBaseListQuery(
     int Page = 1,
     int PageSize = 20);
 
-public record KnowledgeBaseSearchQuery(
-    string? Q,
-    string? Tag,
-    KnowledgeBaseArticleStatus? Status,
-    int Page = 1,
-    int PageSize = 20);
-
 public record KnowledgeBaseSearchResultResponse(
     IReadOnlyList<KnowledgeBaseArticleResponse> Items,
     int Total);
+
+// --- Full-text search (title + content + category name) contracts (CRM-66) ---
+// Distinct from KnowledgeBaseSearchResultResponse above, which remains the
+// response shape for the plain article LIST endpoint (status/tag/category
+// filters only, no relevance ranking or excerpt).
+
+public record KnowledgeBaseSearchRequestQuery(
+    string? Q,
+    Guid? CategoryId,
+    bool? IncludeDrafts,
+    int? Page,
+    int? PageSize);
+
+public record KnowledgeBaseSearchCategoryDto(Guid Id, string Name);
+
+public record KnowledgeBaseSearchItemDto(
+    Guid Id,
+    string Title,
+    KnowledgeBaseSearchCategoryDto Category,
+    string Excerpt,
+    string? Status);
+
+public record KnowledgeBaseSearchResponse(
+    IReadOnlyList<KnowledgeBaseSearchItemDto> Items,
+    int Page,
+    int PageSize,
+    int TotalCount);

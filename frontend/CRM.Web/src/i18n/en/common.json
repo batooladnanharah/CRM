@@ -375,7 +375,8 @@
       "backToList": "Back to tickets",
       "notFoundTitle": "Ticket not found.",
       "errorLoadTitle": "Unable to load ticket information.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "searchKnowledgeBase": "Search Knowledge Base"
     },
     "statuses": {
       "Open": "Open",
@@ -622,6 +623,8 @@
     "searchPlaceholder": "Search articles…",
     "deleteConfirm": "Delete this article? This cannot be undone.",
     "filters": {
+      "sectionTitle": "Filter Articles",
+      "sharedCategoryHint": "The Category filter below also applies to Search above.",
       "status": "Status",
       "tag": "Tag",
       "tagPlaceholder": "Filter by tag…",
@@ -663,6 +666,24 @@
       "saved": "Article saved.",
       "deleted": "Article deleted.",
       "searchEmpty": "No articles found."
+    },
+    "search": {
+      "sectionTitle": "Search Knowledge Base",
+      "placeholder": "Search articles...",
+      "portalPlaceholder": "Search for help...",
+      "submit": "Search",
+      "results": "Search results for \"{q}\"",
+      "count": "0 articles found | 1 article found | {count} articles found",
+      "empty": "Enter a search term to find help articles.",
+      "noResults": "No articles found. Try a different search term.",
+      "error": "Unable to search the knowledge base.",
+      "retry": "Try again",
+      "contactSupport": "Contact Support",
+      "validation": {
+        "tooShort": "Enter at least 2 characters.",
+        "tooLong": "Search term is too long."
+      },
+      "categoryFilter": "All Categories"
     },
     "list": {
       "loading": "Loading articles…",
@@ -723,6 +744,23 @@
         "saveFailed": "Unable to save category. Please try again.",
         "duplicate": "Category name already exists."
       }
+    },
+    "search": {
+      "placeholder": "Search articles...",
+      "portalPlaceholder": "Search for help...",
+      "submit": "Search",
+      "results": "Search results for \"{q}\"",
+      "count": "{count} articles found",
+      "empty": "Enter a search term to find help articles.",
+      "noResults": "No articles found. Try a different search term.",
+      "error": "Unable to search the knowledge base.",
+      "retry": "Try again",
+      "contactSupport": "Contact Support",
+      "validation": {
+        "tooShort": "Enter at least 2 characters.",
+        "tooLong": "Search term is too long."
+      },
+      "categoryFilter": "All Categories"
     }
   },
   "portal": {

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
   createPortalTicket,
@@ -9,6 +9,7 @@ import {
   fetchPortalTickets,
   listPortalCategories,
   listPortalCategoryArticles,
+  searchPortalKnowledgeBase,
 } from '@/api/customerPortal'
 import type {
   CreateCustomerTicketPayload,
@@ -19,6 +20,10 @@ import type {
   CustomerTicketDetails,
   CustomerTicketListItem,
 } from '@/types/customerPortal'
+import type { KnowledgeBaseSearchItem } from '@/types/knowledgeBase'
+
+const SEARCH_MIN_LENGTH = 2
+const SEARCH_DEFAULT_PAGE_SIZE = 10
 
 export const useCustomerPortalStore = defineStore('customerPortal', () => {
   const dashboard = ref<CustomerDashboard | null>(null)
@@ -45,6 +50,90 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
   const portalCategoryArticles = ref<CustomerKnowledgeBaseArticleListItem[]>([])
   const portalCategoryArticlesLoading = ref(false)
   const portalCategoryArticlesError = ref<string | null>(null)
+
+  // Full-text search (CRM-66) — never sends includeDrafts; only ever run
+  // from an explicit user submit. Guarded against stale/out-of-order
+  // responses the same way as the agent-side store.
+  const knowledgeBaseSearch = reactive({
+    query: '',
+    categoryId: null as string | null,
+    page: 1,
+    pageSize: SEARCH_DEFAULT_PAGE_SIZE,
+    items: [] as KnowledgeBaseSearchItem[],
+    totalCount: 0,
+    loading: false,
+    error: null as string | null,
+    lastQuery: '',
+  })
+  let knowledgeBaseSearchRequestId = 0
+
+  async function runKnowledgeBaseSearch(
+    options: { query: string; categoryId?: string | null; page?: number } = { query: '' },
+  ) {
+    const trimmed = options.query.trim()
+    const categoryId = options.categoryId ?? null
+    const page = options.page ?? 1
+
+    knowledgeBaseSearch.query = options.query
+    knowledgeBaseSearch.categoryId = categoryId
+    knowledgeBaseSearch.lastQuery = trimmed
+
+    if (trimmed.length < SEARCH_MIN_LENGTH) {
+      knowledgeBaseSearch.items = []
+      knowledgeBaseSearch.totalCount = 0
+      knowledgeBaseSearch.error = 'tooShort'
+      knowledgeBaseSearch.loading = false
+      return
+    }
+
+    const requestId = ++knowledgeBaseSearchRequestId
+    knowledgeBaseSearch.loading = true
+    knowledgeBaseSearch.error = null
+
+    try {
+      const result = await searchPortalKnowledgeBase({
+        q: trimmed, categoryId: categoryId ?? undefined, page, pageSize: knowledgeBaseSearch.pageSize,
+      })
+
+      if (requestId !== knowledgeBaseSearchRequestId) {
+        return
+      }
+
+      knowledgeBaseSearch.items = result.items
+      knowledgeBaseSearch.totalCount = result.totalCount
+      knowledgeBaseSearch.page = result.page
+      knowledgeBaseSearch.pageSize = result.pageSize
+    } catch {
+      if (requestId !== knowledgeBaseSearchRequestId) {
+        return
+      }
+      knowledgeBaseSearch.error = 'errorLoad'
+      knowledgeBaseSearch.items = []
+      knowledgeBaseSearch.totalCount = 0
+    } finally {
+      if (requestId === knowledgeBaseSearchRequestId) {
+        knowledgeBaseSearch.loading = false
+      }
+    }
+  }
+
+  function setKnowledgeBaseSearchPage(page: number) {
+    return runKnowledgeBaseSearch({
+      query: knowledgeBaseSearch.query, categoryId: knowledgeBaseSearch.categoryId, page,
+    })
+  }
+
+  function resetKnowledgeBaseSearch() {
+    knowledgeBaseSearchRequestId += 1
+    knowledgeBaseSearch.query = ''
+    knowledgeBaseSearch.categoryId = null
+    knowledgeBaseSearch.page = 1
+    knowledgeBaseSearch.items = []
+    knowledgeBaseSearch.totalCount = 0
+    knowledgeBaseSearch.loading = false
+    knowledgeBaseSearch.error = null
+    knowledgeBaseSearch.lastQuery = ''
+  }
 
   async function fetchDashboard() {
     loading.value = true
@@ -188,5 +277,9 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
     portalCategoryArticlesError,
     fetchPortalCategories,
     fetchPortalCategoryArticles,
+    knowledgeBaseSearch,
+    runKnowledgeBaseSearch,
+    setKnowledgeBaseSearchPage,
+    resetKnowledgeBaseSearch,
   }
 })

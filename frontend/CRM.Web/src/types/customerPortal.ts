@@ -79,3 +79,9 @@ export interface CustomerKnowledgeBaseCategorySummary {
   description: string | null
   articleCount: number
 }
+
+// Portal search reuses the CRM-side search response shape (see
+// KnowledgeBaseSearchItem/Response in types/knowledgeBase.ts); status is
+// always null for portal callers since every result is Published by
+// definition.
+export type { KnowledgeBaseSearchItem, KnowledgeBaseSearchResponse } from '@/types/knowledgeBase'

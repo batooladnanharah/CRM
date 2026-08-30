@@ -1,62 +1,85 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
+import { searchArticles } from '@/api/knowledgeBase'
+import { ApiError } from '@/api/http'
 import AppButton from '@/components/ui/AppButton.vue'
-import type { KnowledgeBaseArticle } from '@/types/knowledgeBase'
+import type { KnowledgeBaseSearchItem } from '@/types/knowledgeBase'
 
-const SEARCH_DEBOUNCE_MS = 300
-const RESULT_LIMIT = 10
-const SNIPPET_LENGTH = 160
+// Dialog-scoped search state — intentionally NOT the shared
+// useKnowledgeBaseStore().search state, so this dialog can be open at the
+// same time as the management view (e.g. from a ticket) without either one
+// clobbering the other's in-progress search.
+const MIN_QUERY_LENGTH = 2
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; 'select-article': [id: string] }>()
 
 const { t } = useI18n()
 const router = useRouter()
-const store = useKnowledgeBaseStore()
 
 const query = ref('')
-let debounceHandle: ReturnType<typeof setTimeout> | null = null
+const submittedQuery = ref('')
 
-function snippet(body: string): string {
-  return body.length > SNIPPET_LENGTH ? `${body.slice(0, SNIPPET_LENGTH)}…` : body
-}
+const state = reactive({
+  items: [] as KnowledgeBaseSearchItem[],
+  loading: false,
+  error: null as string | null,
+})
 
-function onInput() {
-  if (debounceHandle) {
-    clearTimeout(debounceHandle)
-    debounceHandle = null
-  }
+let requestId = 0
 
-  const term = query.value.trim()
-  if (term.length < 2) {
-    store.searchResults = []
+async function onSubmit() {
+  const trimmed = query.value.trim()
+  submittedQuery.value = trimmed
+
+  if (trimmed.length < MIN_QUERY_LENGTH) {
+    state.items = []
+    state.error = null
     return
   }
 
-  debounceHandle = setTimeout(() => {
-    debounceHandle = null
-    void store.search(term)
-  }, SEARCH_DEBOUNCE_MS)
+  const current = ++requestId
+  state.loading = true
+  state.error = null
+
+  try {
+    const result = await searchArticles({ q: trimmed })
+    if (current !== requestId) {
+      return
+    }
+    state.items = result.items
+  } catch (err) {
+    if (current !== requestId) {
+      return
+    }
+    state.error = err instanceof ApiError ? err.message : 'errorLoad'
+    state.items = []
+  } finally {
+    if (current === requestId) {
+      state.loading = false
+    }
+  }
 }
 
-function onSelect(article: KnowledgeBaseArticle) {
-  router.push({ name: 'knowledge-base-edit', params: { id: article.id } })
+function onSelect(item: KnowledgeBaseSearchItem) {
+  emit('select-article', item.id)
+  router.push({ name: 'knowledge-base-edit', params: { id: item.id } })
 }
 </script>
 
 <template>
   <div class="kb-search-dialog surface" role="dialog" :aria-label="t('knowledgeBase.title')">
-    <div class="kb-search-header">
+    <form class="kb-search-header" @submit.prevent="onSubmit">
       <input
         v-model="query"
         type="search"
         class="kb-search-input"
-        :placeholder="t('knowledgeBase.searchPlaceholder')"
-        @input="onInput"
+        maxlength="200"
+        :placeholder="t('knowledgeBase.search.placeholder')"
         autofocus
       />
+      <AppButton type="submit" size="sm">{{ t('knowledgeBase.search.submit') }}</AppButton>
       <AppButton
         type="button"
         variant="ghost"
@@ -66,28 +89,35 @@ function onSelect(article: KnowledgeBaseArticle) {
       >
         {{ t('common.close') }}
       </AppButton>
-    </div>
+    </form>
 
-    <p v-if="query.trim().length > 0 && query.trim().length < 2" class="kb-search-hint">
-      {{ t('knowledgeBase.messages.searchEmpty') }}
+    <p v-if="state.loading">{{ t('common.loading') }}</p>
+
+    <p v-else-if="state.error" role="alert" class="kb-search-hint">
+      {{ t('knowledgeBase.search.error') }}
     </p>
 
-    <p v-else-if="store.isLoading">{{ t('common.loading') }}</p>
-
-    <p v-else-if="query.trim().length >= 2 && store.searchResults.length === 0" class="kb-search-hint">
-      {{ t('knowledgeBase.messages.searchEmpty') }}
+    <p
+      v-else-if="submittedQuery.length > 0 && submittedQuery.length < MIN_QUERY_LENGTH"
+      class="kb-search-hint"
+    >
+      {{ t('knowledgeBase.search.validation.tooShort') }}
     </p>
 
-    <ul v-else class="kb-search-results">
+    <p v-else-if="submittedQuery.length >= MIN_QUERY_LENGTH && state.items.length === 0" class="kb-search-hint">
+      {{ t('knowledgeBase.search.noResults') }}
+    </p>
+
+    <ul v-else-if="state.items.length > 0" class="kb-search-results">
       <li
-        v-for="article in store.searchResults.slice(0, RESULT_LIMIT)"
-        :key="article.id"
+        v-for="item in state.items"
+        :key="item.id"
         class="kb-search-result"
-        @click="onSelect(article)"
+        @click="onSelect(item)"
       >
-        <p class="kb-search-result-title">{{ article.title }}</p>
-        <p class="kb-search-result-snippet">{{ snippet(article.body) }}</p>
-        <p v-if="article.tags.length > 0" class="kb-search-result-tags">{{ article.tags.join(', ') }}</p>
+        <p class="kb-search-result-title">{{ item.title }}</p>
+        <p class="kb-search-result-snippet">{{ item.excerpt }}</p>
+        <p class="kb-search-result-category">{{ item.category.name }}</p>
       </li>
     </ul>
   </div>
@@ -141,7 +171,7 @@ function onSelect(article: KnowledgeBaseArticle) {
   font-size: var(--font-size-sm);
 }
 
-.kb-search-result-tags {
+.kb-search-result-category {
   color: var(--muted);
   font-size: var(--font-size-xs);
 }

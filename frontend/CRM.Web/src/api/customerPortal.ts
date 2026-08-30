@@ -9,6 +9,7 @@ import type {
   CustomerTicketDetails,
   CustomerTicketListItem,
 } from '@/types/customerPortal'
+import type { KnowledgeBaseSearchResponse } from '@/types/knowledgeBase'
 
 export function fetchPortalDashboard(): Promise<CustomerDashboard> {
   return apiRequest<CustomerDashboard>('/customer/dashboard', { method: 'GET' })
@@ -48,5 +49,26 @@ export function listPortalCategories(): Promise<CustomerKnowledgeBaseCategorySum
 export function listPortalCategoryArticles(id: string): Promise<CustomerKnowledgeBaseArticleListItem[]> {
   return apiRequest<CustomerKnowledgeBaseArticleListItem[]>(
     `/customer/knowledge-base/categories/${id}/articles`, { method: 'GET' },
+  )
+}
+
+// Portal search — never sends includeDrafts; the backend forces
+// published-only, active-category-only results regardless.
+export function searchPortalKnowledgeBase(
+  query: { q: string; categoryId?: string | null; page?: number; pageSize?: number },
+): Promise<KnowledgeBaseSearchResponse> {
+  const params = new URLSearchParams()
+  params.set('q', query.q)
+  if (query.categoryId) {
+    params.set('categoryId', query.categoryId)
+  }
+  if (query.page) {
+    params.set('page', String(query.page))
+  }
+  if (query.pageSize) {
+    params.set('pageSize', String(query.pageSize))
+  }
+  return apiRequest<KnowledgeBaseSearchResponse>(
+    `/customer/knowledge-base/search?${params.toString()}`, { method: 'GET' },
   )
 }

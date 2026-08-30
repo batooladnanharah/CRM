@@ -12,6 +12,7 @@ import type {
   listArticles,
   listCategories,
   publishArticle,
+  searchArticles,
   unpublishArticle,
   updateArticle,
 } from '@/api/knowledgeBase'
@@ -26,6 +27,7 @@ const {
   publishArticleMock,
   unpublishArticleMock,
   listCategoriesMock,
+  searchArticlesMock,
   confirmMock,
 } = vi.hoisted(() => ({
   listArticlesMock: vi.fn<typeof listArticles>(),
@@ -36,12 +38,13 @@ const {
   publishArticleMock: vi.fn<typeof publishArticle>(),
   unpublishArticleMock: vi.fn<typeof unpublishArticle>(),
   listCategoriesMock: vi.fn<typeof listCategories>(),
+  searchArticlesMock: vi.fn<typeof searchArticles>(),
   confirmMock: vi.fn<() => Promise<boolean>>(),
 }))
 
 vi.mock('@/api/knowledgeBase', () => ({
   listArticles: listArticlesMock,
-  searchArticles: vi.fn<() => void>(),
+  searchArticles: searchArticlesMock,
   getArticle: getArticleMock,
   getArticleBySlug: vi.fn<() => void>(),
   createArticle: createArticleMock,
@@ -113,6 +116,7 @@ beforeEach(() => {
   publishArticleMock.mockReset()
   unpublishArticleMock.mockReset()
   listCategoriesMock.mockReset()
+  searchArticlesMock.mockReset()
   confirmMock.mockReset()
   listArticlesMock.mockResolvedValue({ items: [], total: 0 })
   listCategoriesMock.mockResolvedValue([ACTIVE_CATEGORY])
@@ -144,7 +148,7 @@ describe('KnowledgeBaseManagementView', () => {
     await wrapper.find('button').trigger('click')
     await wrapper.find('#kb-title').setValue('New Article')
     await wrapper.find('#kb-category').setValue('cat-1')
-    await wrapper.find('form').trigger('submit')
+    await wrapper.find('.kb-article-form').trigger('submit')
     await flushPromises()
 
     expect(createArticleMock).toHaveBeenCalledWith({
@@ -182,7 +186,7 @@ describe('KnowledgeBaseManagementView', () => {
     await wrapper.find('#kb-title').setValue('Duplicate Title')
     await wrapper.find('#kb-slug').setValue('duplicate-slug')
     await wrapper.find('#kb-category').setValue('cat-1')
-    await wrapper.find('form').trigger('submit')
+    await wrapper.find('.kb-article-form').trigger('submit')
     await flushPromises()
 
     expect(wrapper.text()).toContain('This slug is already used by another article.')
@@ -317,7 +321,7 @@ describe('KnowledgeBaseManagementView', () => {
     const submitButton = wrapper.findAll('button').find((b) => b.text() === 'Save')!
     expect(submitButton.attributes('disabled')).toBeDefined()
 
-    await wrapper.find('form').trigger('submit')
+    await wrapper.find('.kb-article-form').trigger('submit')
     await flushPromises()
 
     expect(createArticleMock).not.toHaveBeenCalled()
@@ -398,5 +402,54 @@ describe('KnowledgeBaseManagementView', () => {
 
     const inactiveOption = wrapper.findAll('option').find((o) => o.text().includes('Archived Topic'))!
     expect(inactiveOption.attributes('disabled')).toBeDefined()
+  })
+
+  it('renders the search bar and submits on Enter (button), showing results and forwarding the category filter', async () => {
+    listCategoriesMock.mockResolvedValue([ACTIVE_CATEGORY, {
+      id: 'cat-2', name: 'Shipping', description: null, isActive: true,
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    }])
+    searchArticlesMock.mockResolvedValue({
+      items: [{
+        id: 'kb-1', title: 'Billing FAQ', category: { id: 'cat-2', name: 'Shipping' },
+        excerpt: 'How to update your billing details.', status: 'Published',
+      }],
+      page: 1, pageSize: 10, totalCount: 1,
+    })
+
+    const wrapper = await mountView()
+    await flushPromises()
+
+    await wrapper.find('#kb-search').setValue('billing')
+    await wrapper.find('#kb-category-filter').setValue('cat-2')
+    await wrapper.find('#kb-category-filter').element.dispatchEvent(new Event('change'))
+    await flushPromises()
+    await wrapper.find('form.toolbar').trigger('submit')
+    await flushPromises()
+
+    expect(searchArticlesMock).toHaveBeenCalledWith({ q: 'billing', categoryId: 'cat-2', page: 1, pageSize: 10 })
+    expect(wrapper.text()).toContain('Billing FAQ')
+    expect(wrapper.text()).toContain('How to update your billing details.')
+  })
+
+  it('shows a no-results message when the search returns zero items', async () => {
+    searchArticlesMock.mockResolvedValue({ items: [], page: 1, pageSize: 10, totalCount: 0 })
+
+    const wrapper = await mountView()
+    await flushPromises()
+
+    await wrapper.find('#kb-search').setValue('zzzznomatch')
+    await wrapper.find('form.toolbar').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('No articles found. Try a different search term.')
+  })
+
+  it('does not render a search-results panel before a search has been submitted', async () => {
+    const wrapper = await mountView()
+    await flushPromises()
+
+    expect(searchArticlesMock).not.toHaveBeenCalled()
+    expect(wrapper.find('.kb-search-panel').exists()).toBe(false)
   })
 })

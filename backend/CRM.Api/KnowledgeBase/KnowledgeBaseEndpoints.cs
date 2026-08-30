@@ -57,51 +57,34 @@ public static class KnowledgeBaseEndpoints
         .WithName("ListKnowledgeBaseArticles")
         .WithTags("KnowledgeBase");
 
-        // Ranking (title match first, then most-recently-updated) requires a
-        // conditional ordering that isn't reliably translatable by every EF
-        // Core provider, so the matched set is materialized first and then
-        // ordered/paged in memory — the expected row count for an internal
-        // help-article table makes this a non-issue.
-        articles.MapGet("/search", async ([AsParameters] KnowledgeBaseSearchQuery query, KnowledgeBaseDbContext db) =>
+        // CRM-66: full-text search across title, content, and category name,
+        // with deterministic relevance ordering and pagination. See
+        // KnowledgeBaseSearchService for the shared query/ranking logic used
+        // by both this endpoint and the customer-portal search endpoint.
+        // Drafts are only included when the caller both requests them
+        // (IncludeDrafts=true) and holds the KB manage permission — anyone
+        // else transparently gets published-only results even if they asked
+        // for drafts.
+        articles.MapGet("/search", async (
+            [AsParameters] KnowledgeBaseSearchRequestQuery query, KnowledgeBaseDbContext db, ClaimsPrincipal principal,
+            CancellationToken ct) =>
         {
-            var term = query.Q?.Trim();
-            if (string.IsNullOrEmpty(term) || term.Length < 2)
+            var errorCode = KnowledgeBaseSearchService.ValidateQuery(query.Q, out var trimmedQuery);
+            if (errorCode is not null)
             {
-                return Results.BadRequest(new ErrorResponse("q_too_short"));
+                return Results.BadRequest(new ErrorResponse(errorCode));
             }
 
-            var page = Math.Max(query.Page, 1);
-            var pageSize = Math.Clamp(query.PageSize, 1, 100);
-            var termLower = term.ToLowerInvariant();
+            var (page, pageSize) = KnowledgeBaseSearchService.ClampPaging(query.Page, query.PageSize);
+            var canManageDrafts = principal.HasClaim("permission", Permissions.KnowledgeBaseManage);
 
-            IQueryable<KnowledgeBaseArticle> filtered = db.Articles.AsNoTracking().Include(a => a.Category).Where(a =>
-                a.Title.ToLower().Contains(termLower) || a.Body.ToLower().Contains(termLower));
+            var (items, totalCount) = await KnowledgeBaseSearchService.SearchAsync(
+                db,
+                new KnowledgeBaseSearchService.Options(
+                    trimmedQuery, query.CategoryId, canManageDrafts, query.IncludeDrafts ?? false, page, pageSize),
+                ct);
 
-            if (query.Status is not null)
-            {
-                filtered = filtered.Where(a => a.Status == query.Status);
-            }
-
-            if (!string.IsNullOrWhiteSpace(query.Tag))
-            {
-                var tag = query.Tag.Trim();
-                filtered = filtered.Where(a => a.Tags.Contains(tag));
-            }
-
-            var matches = await filtered.ToListAsync();
-            var ranked = matches
-                .OrderBy(a => a.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenByDescending(a => a.UpdatedAtUtc)
-                .ToList();
-
-            var total = ranked.Count;
-            var items = ranked
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(ToResponse)
-                .ToList();
-
-            return Results.Ok(new KnowledgeBaseSearchResultResponse(items, total));
+            return Results.Ok(new KnowledgeBaseSearchResponse(items, page, pageSize, totalCount));
         })
         .RequireAuthorization(Permissions.KnowledgeBaseView)
         .WithName("SearchKnowledgeBaseArticles")

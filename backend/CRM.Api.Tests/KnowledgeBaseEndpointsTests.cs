@@ -242,33 +242,9 @@ public class KnowledgeBaseEndpointsTests : IClassFixture<CustomWebApplicationFac
         Assert.True(result.Total >= 3);
     }
 
-    [Fact]
-    public async Task Search_ReturnsMatches_RankedByTitleFirst()
-    {
-        var admin = await AuthenticatedClientAsync();
-        await CreateArticleAsync(
-            admin, ArticlePayload("Unrelated Title", "body-match-unique-term", "This mentions zzyzx somewhere in the body."));
-        await CreateArticleAsync(
-            admin, ArticlePayload("Zzyzx Title Match", "title-match-unique-term", "Body has nothing special."));
-
-        var response = await admin.GetAsync("/api/knowledge-base/articles/search?q=zzyzx");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<KnowledgeBaseSearchResultResponse>();
-        Assert.Equal(2, result!.Items.Count);
-        Assert.Equal("title-match-unique-term", result.Items[0].Slug);
-        Assert.Equal("body-match-unique-term", result.Items[1].Slug);
-    }
-
-    [Fact]
-    public async Task Search_ReturnsBadRequest_WhenQueryTooShort()
-    {
-        var admin = await AuthenticatedClientAsync();
-
-        var response = await admin.GetAsync("/api/knowledge-base/articles/search?q=a");
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
+    // Search-specific behaviour (relevance ordering, pagination, drafts,
+    // category matching, validation) is covered in
+    // KnowledgeBaseSearchEndpointsTests.cs, which replaced these two tests.
 
     [Fact]
     public async Task Delete_ReturnsNoContent_ThenGetReturnsNotFound()

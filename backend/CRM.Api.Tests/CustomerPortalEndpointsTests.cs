@@ -663,4 +663,72 @@ public class CustomerPortalKnowledgeBaseEndpointsTests : IClassFixture<CustomWeb
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    // --- CRM-66 portal search ---
+
+    [Fact]
+    public async Task Search_ReturnsOnlyPublishedArticlesInActiveCategories()
+    {
+        var client = await AuthenticatedClientAsync();
+        var activeCategoryId = SeedCategory("Active Portal Search Category");
+        var inactiveCategoryId = SeedCategory("Inactive Portal Search Category", isActive: false);
+
+        SeedArticle(
+            "Portal Search Published Zzynth", "portal-search-published", KnowledgeBaseArticleStatus.Published,
+            "zzynth body", categoryId: activeCategoryId);
+        SeedArticle(
+            "Portal Search Draft Zzynth", "portal-search-draft", KnowledgeBaseArticleStatus.Draft,
+            "zzynth body", categoryId: activeCategoryId);
+        SeedArticle(
+            "Portal Search Inactive Category Zzynth", "portal-search-inactive-cat",
+            KnowledgeBaseArticleStatus.Published, "zzynth body", categoryId: inactiveCategoryId);
+
+        var response = await client.GetAsync("/api/customer/knowledge-base/search?q=zzynth");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseSearchResponse>();
+        Assert.Contains(body!.Items, i => i.Title == "Portal Search Published Zzynth");
+        Assert.DoesNotContain(body.Items, i => i.Title == "Portal Search Draft Zzynth");
+        Assert.DoesNotContain(body.Items, i => i.Title == "Portal Search Inactive Category Zzynth");
+    }
+
+    [Fact]
+    public async Task Search_IgnoresIncludeDraftsFlag()
+    {
+        var client = await AuthenticatedClientAsync();
+        SeedArticle(
+            "Portal Ignores Include Drafts", "portal-search-ignores-include-drafts",
+            KnowledgeBaseArticleStatus.Draft, "unique-portal-includedrafts-term body");
+
+        var response = await client.GetAsync(
+            "/api/customer/knowledge-base/search?q=unique-portal-includedrafts-term&includeDrafts=true");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseSearchResponse>();
+        Assert.DoesNotContain(body!.Items, i => i.Title == "Portal Ignores Include Drafts");
+    }
+
+    [Fact]
+    public async Task Search_StatusFieldIsNull()
+    {
+        var client = await AuthenticatedClientAsync();
+        SeedArticle(
+            "Portal Search Status Null", "portal-search-status-null", KnowledgeBaseArticleStatus.Published,
+            "unique-portal-status-null-term body");
+
+        var response = await client.GetAsync("/api/customer/knowledge-base/search?q=unique-portal-status-null-term");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseSearchResponse>();
+        var item = Assert.Single(body!.Items, i => i.Title == "Portal Search Status Null");
+        Assert.Null(item.Status);
+    }
+
+    [Fact]
+    public async Task Search_UnauthenticatedCallerIsRejected()
+    {
+        var response = await _client.GetAsync("/api/customer/knowledge-base/search?q=anything");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }

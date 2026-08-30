@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
   createArticle,
@@ -24,20 +24,44 @@ import type {
   KnowledgeBaseArticle,
   KnowledgeBaseCategory,
   KnowledgeBaseListQuery,
-  KnowledgeBaseSearchQuery,
+  KnowledgeBaseSearchItem,
   UpdateKnowledgeBaseArticlePayload,
   UpdateKnowledgeBaseCategoryPayload,
 } from '@/types/knowledgeBase'
+
+const SEARCH_MIN_LENGTH = 2
+const SEARCH_DEFAULT_PAGE_SIZE = 10
 
 const t = i18n.global.t
 
 export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
   const articles = ref<KnowledgeBaseArticle[]>([])
   const currentArticle = ref<KnowledgeBaseArticle | null>(null)
-  const searchResults = ref<KnowledgeBaseArticle[]>([])
   const total = ref(0)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+
+  // Full-text search state (CRM-66), kept separate from the plain
+  // status/tag/category-filtered `articles` list above. `search.lastQuery`
+  // is only set once a search has actually been submitted, so the UI can
+  // distinguish "no search run yet" from "search ran, zero results".
+  const search = reactive({
+    query: '',
+    categoryId: null as string | null,
+    page: 1,
+    pageSize: SEARCH_DEFAULT_PAGE_SIZE,
+    items: [] as KnowledgeBaseSearchItem[],
+    totalCount: 0,
+    loading: false,
+    error: null as string | null,
+    lastQuery: '',
+  })
+
+  // Monotonically increasing token: a slow/stale runSearch response is
+  // discarded if a newer search has been kicked off in the meantime (fast
+  // Enter presses / rapid re-submits should never let an out-of-order
+  // response clobber a fresher one).
+  let searchRequestId = 0
 
   const categories = ref<KnowledgeBaseCategory[]>([])
   const categoriesLoading = ref(false)
@@ -66,21 +90,77 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
     }
   }
 
-  async function search(q: string, filters: Omit<KnowledgeBaseSearchQuery, 'q'> = {}) {
-    isLoading.value = true
-    error.value = null
+  // Full-text search (CRM-66). Only ever invoked from an explicit user
+  // submit (Enter / Search button) — never wired to keystroke input — and
+  // guarded against out-of-order responses via searchRequestId: if a newer
+  // runSearch call has started by the time this one resolves, its result is
+  // discarded rather than overwriting the fresher state.
+  async function runSearch(options: { query: string; categoryId?: string | null; page?: number } = { query: '' }) {
+    const trimmed = options.query.trim()
+    const categoryId = options.categoryId ?? null
+    const page = options.page ?? 1
+
+    search.query = options.query
+    search.categoryId = categoryId
+    search.lastQuery = trimmed
+
+    if (trimmed.length < SEARCH_MIN_LENGTH) {
+      search.items = []
+      search.totalCount = 0
+      search.error = 'tooShort'
+      search.loading = false
+      return
+    }
+
+    const requestId = ++searchRequestId
+    search.loading = true
+    search.error = null
 
     try {
-      const result = await searchArticles({ ...filters, q })
-      searchResults.value = result.items
-      total.value = result.total
-      return result
+      const result = await searchArticles({
+        q: trimmed,
+        categoryId: categoryId ?? undefined,
+        page,
+        pageSize: search.pageSize,
+      })
+
+      if (requestId !== searchRequestId) {
+        // A newer search was started while this one was in flight.
+        return
+      }
+
+      search.items = result.items
+      search.totalCount = result.totalCount
+      search.page = result.page
+      search.pageSize = result.pageSize
     } catch (err) {
-      error.value = errorMessage(err)
-      throw err
+      if (requestId !== searchRequestId) {
+        return
+      }
+      search.error = errorMessage(err)
+      search.items = []
+      search.totalCount = 0
     } finally {
-      isLoading.value = false
+      if (requestId === searchRequestId) {
+        search.loading = false
+      }
     }
+  }
+
+  function setSearchPage(page: number) {
+    return runSearch({ query: search.query, categoryId: search.categoryId, page })
+  }
+
+  function resetSearch() {
+    searchRequestId += 1 // invalidate any in-flight request
+    search.query = ''
+    search.categoryId = null
+    search.page = 1
+    search.items = []
+    search.totalCount = 0
+    search.loading = false
+    search.error = null
+    search.lastQuery = ''
   }
 
   async function fetchById(id: string) {
@@ -287,12 +367,14 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
   return {
     articles,
     currentArticle,
-    searchResults,
     total,
     isLoading,
     error,
-    fetchArticles,
     search,
+    runSearch,
+    setSearchPage,
+    resetSearch,
+    fetchArticles,
     fetchById,
     fetchBySlug,
     create,

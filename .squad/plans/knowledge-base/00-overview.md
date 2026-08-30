@@ -10,6 +10,7 @@ Entry point for the **knowledge-base** feature. Stories execute in order by thei
 | 24 | `24-story-crm-102.md` | Knowledge Base Articles & Search | CRM-102 | — |
 | 37 | `37-story-crm-64.md` | KB-001 — Knowledge Base Articles | CRM-64 | — |
 | 38 | `38-story-crm-65.md` | KB-002 — Categories & Article Management | CRM-65 | — |
+| 39 | `39-story-crm-66.md` | KB-003 — Knowledge Base Search | CRM-66 | — |
 
 ## Dependency notes
 
