@@ -42,7 +42,7 @@ const inputId = computed(() => props.id ?? generatedId)
       :aria-describedby="error ? `${inputId}-error` : help ? `${inputId}-help` : undefined"
       @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
     />
-    <p v-if="error" :id="`${inputId}-error`" class="ui-input__error">{{ error }}</p>
+    <p v-if="error" :id="`${inputId}-error`" class="ui-input__error" role="alert">{{ error }}</p>
     <p v-else-if="help" :id="`${inputId}-help`" class="ui-input__help">{{ help }}</p>
   </div>
 </template>

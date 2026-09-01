@@ -4,8 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCustomerPortalStore } from '@/stores/customerPortal'
 import { useLocale } from '@/composables/useLocale'
+import { useTicketBadgeTone } from '@/composables/useTicketBadgeTone'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 
@@ -13,6 +15,7 @@ const { t } = useI18n()
 const { locale } = useLocale()
 const router = useRouter()
 const store = useCustomerPortalStore()
+const { statusTone, priorityTone } = useTicketBadgeTone()
 
 const dateFormatter = computed(
   () => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }),
@@ -74,8 +77,8 @@ onMounted(loadTickets)
             @click="onRowClick(ticket.id)"
           >
             <td>{{ ticket.title }}</td>
-            <td>{{ t(`tickets.statuses.${ticket.status}`) }}</td>
-            <td>{{ t(`tickets.priorities.${ticket.priority}`) }}</td>
+            <td><AppBadge :tone="statusTone(ticket.status)">{{ t(`tickets.statuses.${ticket.status}`) }}</AppBadge></td>
+            <td><AppBadge :tone="priorityTone(ticket.priority)">{{ t(`tickets.priorities.${ticket.priority}`) }}</AppBadge></td>
             <td>{{ formatDate(ticket.createdAtUtc) }}</td>
           </tr>
         </tbody>

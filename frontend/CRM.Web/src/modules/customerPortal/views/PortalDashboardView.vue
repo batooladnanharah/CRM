@@ -4,13 +4,16 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomerPortalStore } from '@/stores/customerPortal'
 import { useLocale } from '@/composables/useLocale'
+import { useTicketBadgeTone } from '@/composables/useTicketBadgeTone'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppAlert from '@/components/ui/AppAlert.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
 
 const { t } = useI18n()
 const { locale } = useLocale()
 const authStore = useAuthStore()
 const store = useCustomerPortalStore()
+const { statusTone } = useTicketBadgeTone()
 
 const dateFormatter = computed(
   () => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }),
@@ -77,13 +80,14 @@ onMounted(loadDashboard)
         {{ t('portal.tickets.empty') }}
       </p>
       <ul v-else class="recent-tickets-list">
-        <li v-for="ticket in store.dashboard?.recentTickets ?? []" :key="ticket.id">
-          <router-link :to="{ name: 'portal-ticket-details', params: { id: ticket.id } }">
-            {{ ticket.title }}
-          </router-link>
-          <span class="recent-ticket-meta">
-            {{ t(`tickets.statuses.${ticket.status}`) }} · {{ formatDate(ticket.updatedAtUtc) }}
-          </span>
+        <li v-for="ticket in store.dashboard?.recentTickets ?? []" :key="ticket.id" class="recent-ticket-row">
+          <div class="recent-ticket-main">
+            <router-link :to="{ name: 'portal-ticket-details', params: { id: ticket.id } }">
+              {{ ticket.title }}
+            </router-link>
+            <span class="recent-ticket-meta">{{ formatDate(ticket.updatedAtUtc) }}</span>
+          </div>
+          <AppBadge :tone="statusTone(ticket.status)">{{ t(`tickets.statuses.${ticket.status}`) }}</AppBadge>
         </li>
       </ul>
     </section>
@@ -155,6 +159,19 @@ onMounted(loadDashboard)
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.recent-ticket-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.recent-ticket-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .recent-ticket-meta {

@@ -804,7 +804,14 @@
           "subject": "Subject",
           "subjectPlaceholder": "Brief summary of the issue",
           "description": "Description",
-          "priority": "Priority"
+          "priority": "Priority",
+          "charactersRemaining": "{count} characters remaining"
+        },
+        "priorityHints": {
+          "Low": "No urgency — a general question or minor request.",
+          "Normal": "Standard request — we'll respond within our normal SLA.",
+          "High": "Significant impact — please respond sooner than usual.",
+          "Urgent": "Critical issue — service is down or blocked."
         },
         "submit": "Submit",
         "cancel": "Cancel",
