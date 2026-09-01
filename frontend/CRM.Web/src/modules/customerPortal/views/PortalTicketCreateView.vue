@@ -95,12 +95,29 @@ function onCancel() {
         />
 
         <div class="field">
+          <label for="portal-ticket-priority">{{ t('portal.ticket.submit.fields.priority') }}</label>
+          <select
+            id="portal-ticket-priority"
+            v-model="priority"
+            class="priority-select"
+            :class="`priority-select--${priority.toLowerCase()}`"
+          >
+            <option v-for="option in PRIORITIES" :key="option" :value="option">
+              {{ t(`tickets.priorities.${option}`) }}
+            </option>
+          </select>
+          <p class="ui-input__help">{{ priorityHint }}</p>
+        </div>
+
+        <div class="field field-wide">
           <label :for="descriptionId">
             {{ t('portal.ticket.submit.fields.description') }}
           </label>
           <textarea
             :id="descriptionId"
             v-model="description"
+            class="ui-textarea"
+            :class="{ 'ui-input--error': !!descriptionError }"
             maxlength="4000"
             rows="6"
             required
@@ -111,16 +128,6 @@ function onCancel() {
           <p v-else :id="`${descriptionId}-help`" class="ui-input__help">
             {{ t('portal.ticket.submit.fields.charactersRemaining', { count: descriptionCharsRemaining }) }}
           </p>
-        </div>
-
-        <div class="field">
-          <label for="portal-ticket-priority">{{ t('portal.ticket.submit.fields.priority') }}</label>
-          <select id="portal-ticket-priority" v-model="priority">
-            <option v-for="option in PRIORITIES" :key="option" :value="option">
-              {{ t(`tickets.priorities.${option}`) }}
-            </option>
-          </select>
-          <p class="ui-input__help">{{ priorityHint }}</p>
         </div>
       </div>
 
@@ -142,8 +149,56 @@ function onCancel() {
 
 <style scoped>
 .portal-ticket-create-view {
-  max-width: 30rem;
+  max-width: 40rem;
   margin: var(--space-8) auto;
+}
+
+.ui-textarea {
+  min-height: 160px;
+  padding: var(--space-3);
+  resize: vertical;
+  color: var(--text-primary, var(--color-text-primary));
+  background: white;
+  border: 1px solid var(--line, var(--color-border));
+  border-radius: var(--radius-md);
+  font: 400 14px var(--font-sans, Arial, sans-serif);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ui-textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent, var(--teal));
+  box-shadow: 0 0 0 3px rgba(24, 122, 108, 0.12);
+}
+
+.ui-textarea.ui-input--error {
+  border-color: var(--color-status-danger);
+}
+
+.priority-select {
+  border-inline-start: 3px solid var(--line);
+  font-weight: 500;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.priority-select--low {
+  border-inline-start-color: var(--color-status-info);
+  color: var(--color-status-info);
+}
+
+.priority-select--normal {
+  border-inline-start-color: var(--color-status-success);
+  color: var(--color-status-success);
+}
+
+.priority-select--high {
+  border-inline-start-color: var(--color-status-warning);
+  color: var(--color-status-warning);
+}
+
+.priority-select--urgent {
+  border-inline-start-color: var(--color-status-danger);
+  color: var(--color-status-danger);
 }
 
 .ui-input__error {

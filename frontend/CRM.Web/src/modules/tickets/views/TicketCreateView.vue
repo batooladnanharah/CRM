@@ -166,7 +166,12 @@ function onCancel() {
 
         <div class="field">
           <label for="ticket-priority">{{ t('tickets.create.fields.priority') }}</label>
-          <select id="ticket-priority" v-model="priority">
+          <select
+            id="ticket-priority"
+            v-model="priority"
+            class="priority-select"
+            :class="`priority-select--${priority.toLowerCase()}`"
+          >
             <option v-for="option in PRIORITIES" :key="option" :value="option">
               {{ t(`tickets.priorities.${option}`) }}
             </option>
@@ -240,5 +245,32 @@ function onCancel() {
 
 textarea#ticket-description {
   resize: vertical;
+  min-height: 160px;
+}
+
+.priority-select {
+  border-inline-start: 3px solid var(--line);
+  font-weight: 500;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.priority-select--low {
+  border-inline-start-color: var(--color-status-info);
+  color: var(--color-status-info);
+}
+
+.priority-select--normal {
+  border-inline-start-color: var(--color-status-success);
+  color: var(--color-status-success);
+}
+
+.priority-select--high {
+  border-inline-start-color: var(--color-status-warning);
+  color: var(--color-status-warning);
+}
+
+.priority-select--urgent {
+  border-inline-start-color: var(--color-status-danger);
+  color: var(--color-status-danger);
 }
 </style>
