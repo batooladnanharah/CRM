@@ -53,7 +53,7 @@ public class TicketsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     public async Task List_Returns403_ForCustomerRole()
     {
         var client = await AuthenticatedClientAsync(
-            CustomWebApplicationFactory.PortalCustomerEmail, CustomWebApplicationFactory.PortalCustomerPassword);
+            CustomWebApplicationFactory.CustomerRoleEmail, CustomWebApplicationFactory.CustomerRolePassword);
 
         var response = await client.GetAsync("/api/tickets");
 
@@ -353,7 +353,10 @@ public class TicketsListFilterEndpointTests : IClassFixture<CustomWebApplication
 }
 
 // Own factory instance: needs an exact, pristine ticket table to assert exact
-// pagination counts across 25 seeded rows.
+// pagination counts across 25 seeded rows. See
+// TicketsListPaginationBeyondResultsEndpointTests below for the
+// beyond-the-last-page case, split into its own class/fixture so the two
+// don't share a ticket table.
 public class TicketsListPaginationEndpointTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;
@@ -434,6 +437,70 @@ public class TicketsListPaginationEndpointTests : IClassFixture<CustomWebApplica
         Assert.Equal(HttpStatusCode.OK, secondPage.StatusCode);
         Assert.Equal(5, secondResult!.Items.Count);
         Assert.Equal(25, secondResult.TotalCount);
+    }
+}
+
+// Own factory instance (separate from TicketsListPaginationEndpointTests, even
+// though the setup looks identical): the two classes' [Fact]s previously
+// shared one IClassFixture instance and thus one ticket table, so this
+// exact-count assertion (5, not 25 + 5 = 30) depended on undefined xUnit test
+// ordering. Splitting the class gives each its own fresh in-memory database.
+public class TicketsListPaginationBeyondResultsEndpointTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly CustomWebApplicationFactory _factory;
+    private readonly HttpClient _client;
+
+    public TicketsListPaginationBeyondResultsEndpointTests(CustomWebApplicationFactory factory)
+    {
+        _factory = factory;
+        factory.SeedUsers();
+        _client = factory.CreateClient();
+    }
+
+    private async Task<HttpClient> AuthenticatedClientAsync(
+        string email = CustomWebApplicationFactory.ActiveEmail,
+        string password = CustomWebApplicationFactory.ActivePassword)
+    {
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password });
+        var body = await login.Content.ReadFromJsonAsync<LoginResponse>();
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body!.Token);
+        return client;
+    }
+
+    private Guid CreateCustomer(string fullName, string email)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
+        var customer = new Customer
+        {
+            Id = Guid.NewGuid(),
+            FullName = fullName,
+            Email = email,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+        db.Customers.Add(customer);
+        db.SaveChanges();
+        return customer.Id;
+    }
+
+    private void SeedTicket(Guid customerId, string title, DateTime createdAtUtc)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TicketDbContext>();
+        db.Tickets.Add(new Ticket
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            Title = title,
+            Description = "Seeded for pagination.",
+            Status = TicketStatus.Open,
+            Priority = TicketPriority.Normal,
+            CreatedAtUtc = createdAtUtc,
+            UpdatedAtUtc = createdAtUtc,
+        });
+        db.SaveChanges();
     }
 
     [Fact]
