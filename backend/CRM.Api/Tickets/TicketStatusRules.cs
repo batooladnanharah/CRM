@@ -13,4 +13,10 @@ public static class TicketStatusRules
 
     public static bool IsAllowedTransition(TicketStatus from, TicketStatus to)
         => from == to || AllowedTransitions[from].Contains(to);
+
+    // Terminal statuses excluded from active-workload counts (CRM-62 auto-assignment)
+    // and from anything else that means "still open work" — a single source of
+    // truth so no caller re-enumerates TicketStatus itself.
+    public static bool IsActiveWorkloadStatus(TicketStatus status)
+        => status is TicketStatus.Open or TicketStatus.InProgress;
 }

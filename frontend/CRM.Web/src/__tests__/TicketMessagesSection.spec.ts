@@ -92,6 +92,7 @@ function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
       slaAutoEscalatedAtUtc: null,
     },
     escalations: [],
+    autoAssigned: false,
     ...overrides,
   }
 }

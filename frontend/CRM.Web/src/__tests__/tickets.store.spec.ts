@@ -117,6 +117,7 @@ function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
       slaAutoEscalatedAtUtc: null,
     },
     escalations: [],
+    autoAssigned: false,
     ...overrides,
   }
 }
@@ -270,6 +271,28 @@ describe('tickets store', () => {
       expect(store.creating).toBe(false)
       expect(store.createError).toBeNull()
       expect(result).toEqual(created)
+    })
+
+    it('round-trips autoAssigned and assignedAgent fields from a create response', async () => {
+      const created = makeTicket({
+        id: '2',
+        title: 'New Ticket',
+        assigneeUserId: 'agent-1',
+        assigneeDisplayName: 'Sara Ahmed',
+        autoAssigned: true,
+      })
+      createTicketMock.mockResolvedValue(created)
+
+      const store = useTicketsStore()
+      const result = await store.create({
+        customerId: 'customer-1',
+        title: 'New Ticket',
+        description: 'Details',
+      })
+
+      expect(result.autoAssigned).toBe(true)
+      expect(result.assigneeUserId).toBe('agent-1')
+      expect(result.assigneeDisplayName).toBe('Sara Ahmed')
     })
 
     it('maps a 400 customer_not_found response to createError = "customerNotFound"', async () => {

@@ -127,6 +127,7 @@ function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
       slaAutoEscalatedAtUtc: null,
     },
     escalations: [],
+    autoAssigned: false,
     ...overrides,
   }
 }
@@ -268,6 +269,40 @@ describe('TicketDetailsView', () => {
 
     expect(wrapper.findAll('select')).toHaveLength(0)
     expect(fetchEligibleAgentsMock).not.toHaveBeenCalled()
+  })
+
+  it('renders "Automatically assigned" indicator when ticket.autoAssigned && assignedAgent', async () => {
+    getTicketMock.mockResolvedValue(
+      makeTicket({ assigneeUserId: 'agent-1', assigneeDisplayName: 'Sara Ahmed', autoAssigned: true }),
+    )
+
+    const wrapper = await mountDetailsView(makeRouter())
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Sara Ahmed')
+    expect(wrapper.text()).toContain('Automatically assigned')
+  })
+
+  it('renders Unassigned state when assignedAgent is null', async () => {
+    getTicketMock.mockResolvedValue(makeTicket({ assigneeUserId: null, assigneeDisplayName: null }))
+
+    const wrapper = await mountDetailsView(makeRouter())
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Unassigned')
+    expect(wrapper.text()).not.toContain('Automatically assigned')
+  })
+
+  it('hides indicator when autoAssigned is false', async () => {
+    getTicketMock.mockResolvedValue(
+      makeTicket({ assigneeUserId: 'agent-1', assigneeDisplayName: 'Ahmed Hassan', autoAssigned: false }),
+    )
+
+    const wrapper = await mountDetailsView(makeRouter())
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Ahmed Hassan')
+    expect(wrapper.text()).not.toContain('Automatically assigned')
   })
 
   it('renders the assignee/status/priority controls for an agent user', async () => {

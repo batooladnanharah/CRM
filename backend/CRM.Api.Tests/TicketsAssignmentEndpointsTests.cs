@@ -180,4 +180,33 @@ public class TicketsAssignmentEndpointsTests : IClassFixture<CustomWebApplicatio
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    // CRM-62 regression: automatic assignment (TicketCreationService) must not
+    // break the pre-existing TKT-005 manual reassignment endpoint — a ticket
+    // that was auto-assigned at creation can still be manually reassigned to
+    // a different eligible agent afterwards.
+    [Fact]
+    public async Task Put_Assignment_StillWorks_AfterAutoAssignmentAtCreation()
+    {
+        var client = await AuthenticatedClientAsync();
+        var customerId = CreateCustomer("Auto Then Manual Co", "auto.then.manual@example.com");
+
+        var createResponse = await client.PostAsJsonAsync("/api/tickets", new
+        {
+            customerId,
+            title = "Auto then manual",
+            description = "Auto-assigned first, then manually reassigned.",
+            priority = "Normal",
+        });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var created = await createResponse.Content.ReadFromJsonAsync<TicketResponse>();
+
+        var newAgentId = UserIdByEmail(CustomWebApplicationFactory.SecondAgentEmail);
+        var response = await client.PutAsJsonAsync(
+            $"/api/tickets/{created!.Id}/assignment", new { agentUserId = newAgentId });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var ticket = await response.Content.ReadFromJsonAsync<TicketResponse>();
+        Assert.Equal(newAgentId, ticket!.AssigneeUserId);
+    }
 }

@@ -22,6 +22,7 @@
     "regionLabel": "Notifications",
     "tickets": {
       "created": "Ticket created successfully.",
+      "createdAutoAssigned": "Ticket created successfully and automatically assigned to {agent}.",
       "updated": "Ticket updated successfully.",
       "assigned": "Ticket assigned successfully.",
       "loadFailed": "Failed to load tickets."
@@ -319,6 +320,7 @@
     "title": "Tickets",
     "assignee": "Assignee",
     "unassigned": "Unassigned",
+    "autoAssigned": "Automatically assigned",
     "list": {
       "newButton": "New ticket",
       "search": "Search tickets…",

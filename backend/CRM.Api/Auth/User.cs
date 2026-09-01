@@ -15,4 +15,11 @@ public sealed class User
     // accounts) are unaffected; no cross-context FK, since Customer lives in
     // CustomerDbContext (same physical database, separate bounded context).
     public Guid? CustomerId { get; set; }
+
+    // CRM-62 — simple available/unavailable toggle used by automatic ticket
+    // assignment eligibility (TicketAssignmentService). Deliberately not a
+    // calendar/shift/presence model — see the story's "Agent Availability"
+    // section. Defaults to true so existing agents remain eligible without
+    // an explicit opt-in after this column is added.
+    public bool IsAvailable { get; set; } = true;
 }

@@ -143,7 +143,14 @@ export const useTicketsStore = defineStore('tickets', () => {
 
     try {
       const created = await createTicket(payload)
-      useToast().success(t('notifications.tickets.created'))
+      // CRM-62 — surface the automatically-assigned agent in the success
+      // toast; there's no separate "assign" UI step for auto-assignment,
+      // so this is the only place the user learns who picked it up.
+      if (created.autoAssigned && created.assigneeDisplayName) {
+        useToast().success(t('notifications.tickets.createdAutoAssigned', { agent: created.assigneeDisplayName }))
+      } else {
+        useToast().success(t('notifications.tickets.created'))
+      }
       return created
     } catch (err) {
       if (err instanceof ApiError && err.status === 400 && err.message === 'customer_not_found') {

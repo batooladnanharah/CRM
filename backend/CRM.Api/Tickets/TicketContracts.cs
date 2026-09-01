@@ -6,7 +6,12 @@ public record CreateTicketRequest(
     Guid CustomerId,
     string Title,
     string Description,
-    TicketPriority? Priority);
+    TicketPriority? Priority,
+    // CRM-62 — honoured only when the caller holds the manual-assignment
+    // permission (currently: the Admin role — see TicketEndpoints.MapPost("/")).
+    // Otherwise this is silently ignored and automatic assignment runs instead;
+    // ticket creation never fails or errors because of this field.
+    Guid? AssignedAgentId = null);
 
 public record TicketResponse(
     Guid Id,
@@ -22,7 +27,8 @@ public record TicketResponse(
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
     TicketSlaSnapshotResponse Sla,
-    IReadOnlyList<TicketEscalationResponse> Escalations);
+    IReadOnlyList<TicketEscalationResponse> Escalations,
+    bool AutoAssigned);
 
 public record TicketEscalationResponse(
     bool AgentNotified, bool ManagerNotified, string Trigger, string Objective);

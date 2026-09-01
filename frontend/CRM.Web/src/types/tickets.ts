@@ -39,6 +39,7 @@ export interface Ticket {
   updatedAtUtc: string
   sla: TicketSla
   escalations: TicketEscalation[]
+  autoAssigned: boolean
 }
 
 export interface TicketListItem {

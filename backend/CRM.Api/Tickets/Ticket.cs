@@ -38,6 +38,12 @@ public class Ticket
     public DateTime? ResolutionBreachedAtUtc { get; set; }
     public DateTime? SlaLastEvaluatedAtUtc { get; set; }
     public DateTime? SlaAutoEscalatedAtUtc { get; set; }
+
+    // CRM-62 — true only when TicketAssignmentService picked the assignee at
+    // creation time (lowest-active-workload rule). False for unassigned
+    // tickets and for tickets assigned manually (at creation, via the
+    // AssignedAgentId override, or later via PUT /assignment).
+    public bool AutoAssigned { get; set; }
 }
 
 // String-serialized in JSON (both request and response bodies) — the frontend

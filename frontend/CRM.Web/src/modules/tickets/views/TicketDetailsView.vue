@@ -290,7 +290,11 @@ async function onRegenerateSummary() {
             </select>
             <span v-if="store.isAssigning">{{ t('common.loading') }}</span>
           </template>
-          <template v-else>{{ store.current.assigneeDisplayName ?? t('tickets.unassigned') }}</template>
+          <template v-else-if="store.current.assigneeDisplayName">{{ store.current.assigneeDisplayName }}</template>
+          <template v-else>{{ t('tickets.unassigned') }}</template>
+          <span v-if="store.current.assigneeUserId && store.current.autoAssigned" class="auto-assigned-badge">
+            ✓ {{ t('tickets.autoAssigned') }}
+          </span>
         </p>
 
         <p>
@@ -415,6 +419,12 @@ async function onRegenerateSummary() {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.auto-assigned-badge {
+  margin-inline-start: var(--space-2);
+  color: var(--text-muted, var(--text-secondary));
+  font-size: 0.85em;
 }
 
 .history-panel {

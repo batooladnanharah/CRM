@@ -61,6 +61,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IManagerResolver, ManagerResolver>();
 builder.Services.AddScoped<IEscalationDispatcher, EscalationDispatcher>();
 builder.Services.AddScoped<TicketCreationService>();
+builder.Services.AddScoped<ITicketAssignmentService, TicketAssignmentService>();
 builder.Services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
 builder.Services.AddScoped<ReportsService>();
 builder.Services.AddHttpContextAccessor();
@@ -68,6 +69,8 @@ builder.Services.AddScoped<IAuditLogger, AuditLogger>();
 
 builder.Services.Configure<SlaAutomationOptions>(
     builder.Configuration.GetSection(SlaAutomationOptions.SectionName));
+builder.Services.Configure<AutoAssignmentOptions>(
+    builder.Configuration.GetSection(AutoAssignmentOptions.SectionName));
 if (builder.Configuration.GetValue("Sla:Enabled", true))
 {
     builder.Services.AddHostedService<SlaAutomationHostedService>();

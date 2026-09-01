@@ -7,6 +7,7 @@ import TicketDetailsView from '@/modules/tickets/views/TicketDetailsView.vue'
 import TicketsListView from '@/modules/tickets/views/TicketsListView.vue'
 import { i18n } from '@/i18n'
 import { ApiError } from '@/api/http'
+import { useNotificationStore } from '@/stores/notification'
 import type { createTicket } from '@/api/tickets'
 import type { listCustomers } from '@/api/customers'
 import type { Customer } from '@/types/customers'
@@ -65,6 +66,7 @@ function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
       slaAutoEscalatedAtUtc: null,
     },
     escalations: [],
+    autoAssigned: false,
     ...overrides,
   }
 }
@@ -206,6 +208,28 @@ describe('TicketCreateView', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/tickets/ticket-99')
+  })
+
+  it('includes the auto-assigned agent name in the success toast', async () => {
+    createTicketMock.mockResolvedValue(
+      makeTicket({
+        id: 'ticket-42',
+        assigneeUserId: 'agent-1',
+        assigneeDisplayName: 'Sara Ahmed',
+        autoAssigned: true,
+      }),
+    )
+
+    const router = makeRouter()
+    const wrapper = await mountCreateView(router)
+    await selectCustomer(wrapper, makeCustomer())
+    await wrapper.find('#ticket-title').setValue('Cannot log in')
+    await wrapper.find('#ticket-description').setValue('Details')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    const notificationStore = useNotificationStore()
+    expect(notificationStore.notifications.some((n) => n.message.includes('Sara Ahmed'))).toBe(true)
   })
 
   it('shows the customer_not_found message on a 400 and stays on the form', async () => {

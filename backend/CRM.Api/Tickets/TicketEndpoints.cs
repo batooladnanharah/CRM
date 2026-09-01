@@ -70,7 +70,7 @@ public static class TicketEndpoints
 
         tickets.MapPost("/", async (
             CreateTicketRequest request, TicketDbContext db, CustomerDbContext customerDb, AuthDbContext authDb,
-            TicketCreationService creationService, IAuditLogger auditLogger) =>
+            TicketCreationService creationService, IAuditLogger auditLogger, ClaimsPrincipal principal) =>
         {
             var title = request.Title?.Trim() ?? string.Empty;
             if (string.IsNullOrEmpty(title))
@@ -99,9 +99,30 @@ public static class TicketEndpoints
                 return Results.BadRequest(new ErrorResponse("customer_not_found"));
             }
 
+            // CRM-62 — a client-supplied AssignedAgentId is honoured only for
+            // callers holding the manual-assignment permission. This codebase
+            // has only three roles (Admin/Agent/Customer) and no separate
+            // "manual assignment" permission distinct from TicketsManage (which
+            // gates this whole endpoint, including for plain Agents) — so the
+            // Admin role is treated as the "manager" tier the story describes.
+            // Anyone else's AssignedAgentId is silently dropped (never an error)
+            // and automatic assignment runs instead.
+            Guid? requestedAssigneeUserId = null;
+            var actorId = Guid.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            if (request.AssignedAgentId is not null && principal.IsInRole(Roles.Admin))
+            {
+                var agent = await authDb.Users.AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == request.AssignedAgentId);
+                if (agent is null || !agent.Roles.Contains(Roles.Agent))
+                {
+                    return Results.BadRequest(new ErrorResponse("invalid_agent"));
+                }
+                requestedAssigneeUserId = request.AssignedAgentId;
+            }
+
             var entity = await creationService.CreateAsync(
                 request.CustomerId, title, description, request.Priority ?? TicketPriority.Normal,
-                CancellationToken.None);
+                CancellationToken.None, requestedAssigneeUserId, actorId);
 
             await auditLogger.WriteAsync(
                 AuditActions.TicketCreated, targetType: "ticket", targetId: entity.Id.ToString());
@@ -510,7 +531,8 @@ public static class TicketEndpoints
             entity.CreatedAtUtc,
             entity.UpdatedAtUtc,
             BuildSlaSnapshot(entity),
-            escalations);
+            escalations,
+            entity.AutoAssigned);
     }
 
     private static async Task<List<TicketListItem>> ToListItemsAsync(
