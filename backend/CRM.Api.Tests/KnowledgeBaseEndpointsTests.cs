@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CRM.Api.Auth;
 using CRM.Api.KnowledgeBase;
+using CRM.Api.Security;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CRM.Api.Tests;
@@ -245,6 +246,36 @@ public class KnowledgeBaseEndpointsTests : IClassFixture<CustomWebApplicationFac
     // Search-specific behaviour (relevance ordering, pagination, drafts,
     // category matching, validation) is covered in
     // KnowledgeBaseSearchEndpointsTests.cs, which replaced these two tests.
+
+    [Fact]
+    public async Task Create_WritesAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync();
+
+        var created = await CreateArticleAsync(admin, ArticlePayload("Audited Article", "audited-article"));
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.KnowledgeBaseArticleCreated);
+        Assert.Equal("knowledgeBaseArticle", entry.TargetType);
+    }
+
+    [Fact]
+    public async Task Delete_WritesAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var created = await CreateArticleAsync(admin, ArticlePayload("Audited Delete Article", "audited-delete-article"));
+
+        var response = await admin.DeleteAsync($"/api/knowledge-base/articles/{created.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.KnowledgeBaseArticleRemoved);
+        Assert.Equal("knowledgeBaseArticle", entry.TargetType);
+    }
 
     [Fact]
     public async Task Delete_ReturnsNoContent_ThenGetReturnsNotFound()

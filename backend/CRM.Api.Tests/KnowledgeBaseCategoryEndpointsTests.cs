@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CRM.Api.Auth;
 using CRM.Api.KnowledgeBase;
+using CRM.Api.Security;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CRM.Api.Tests;
 
@@ -52,6 +54,37 @@ public class KnowledgeBaseCategoryEndpointsTests : IClassFixture<CustomWebApplic
         var body = await response.Content.ReadFromJsonAsync<KnowledgeBaseCategoryResponse>();
         Assert.Equal("Billing", body!.Name);
         Assert.True(body.IsActive);
+    }
+
+    [Fact]
+    public async Task Create_WritesAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync();
+
+        var created = await CreateCategoryAsync(admin, CategoryPayload("Audited Category"));
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.KnowledgeBaseCategoryCreated);
+        Assert.Equal("knowledgeBaseCategory", entry.TargetType);
+    }
+
+    [Fact]
+    public async Task SetStatus_Deactivate_WritesRemovedAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var created = await CreateCategoryAsync(admin, CategoryPayload("Audited Deactivate Category"));
+
+        var response = await admin.PatchAsync(
+            $"/api/knowledge-base/categories/{created.Id}/status", JsonContent.Create(new { isActive = false }));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.KnowledgeBaseCategoryRemoved);
+        Assert.Equal("knowledgeBaseCategory", entry.TargetType);
     }
 
     [Fact]

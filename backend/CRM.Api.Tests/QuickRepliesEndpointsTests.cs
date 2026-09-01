@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CRM.Api.Auth;
 using CRM.Api.QuickReplies;
+using CRM.Api.Security;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CRM.Api.Tests;
@@ -211,6 +212,38 @@ public class QuickRepliesEndpointsTests : IClassFixture<CustomWebApplicationFact
         var response = await admin.DeleteAsync($"/api/quick-replies/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_QuickReply_WritesAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var created = await CreateQuickReplyAsync(admin, "Audited Quick Reply", "Content");
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.QuickReplyCreated);
+        Assert.Equal("quickReply", entry.TargetType);
+    }
+
+    [Fact]
+    public async Task Delete_QuickReply_WritesAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var created = await CreateQuickReplyAsync(admin, "Audited Delete Quick Reply", "Content");
+
+        var response = await admin.DeleteAsync($"/api/quick-replies/{created.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.QuickReplyRemoved);
+        Assert.Equal("quickReply", entry.TargetType);
     }
 
     [Fact]

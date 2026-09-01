@@ -1,4 +1,5 @@
 using CRM.Api.Auth;
+using CRM.Api.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,7 @@ public static class CommunicationChannelEndpoints
         .WithName("ListCommunicationChannels")
         .WithTags("CommunicationChannels");
 
-        channels.MapPost("/", async (CreateChannelRequest request, CommunicationChannelsDbContext db) =>
+        channels.MapPost("/", async (CreateChannelRequest request, CommunicationChannelsDbContext db, IAuditLogger auditLogger) =>
         {
             var name = request.Name?.Trim() ?? string.Empty;
             if (string.IsNullOrEmpty(name))
@@ -72,6 +73,9 @@ public static class CommunicationChannelEndpoints
                     statusCode: StatusCodes.Status409Conflict);
             }
 
+            await auditLogger.WriteAsync(
+                AuditActions.CommunicationChannelCreated, targetType: "communicationChannel", targetId: entity.Id.ToString());
+
             var response = new ChannelResponse(
                 entity.Id, entity.Name, entity.Type, entity.IsEnabled, entity.CreatedAtUtc, entity.UpdatedAtUtc);
             return Results.Created($"/api/channels/{entity.Id}", response);
@@ -97,7 +101,7 @@ public static class CommunicationChannelEndpoints
         .WithTags("CommunicationChannels");
 
         channels.MapPut("/{id:guid}", async (
-            Guid id, UpdateChannelRequest request, CommunicationChannelsDbContext db) =>
+            Guid id, UpdateChannelRequest request, CommunicationChannelsDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.Channels.FirstOrDefaultAsync(c => c.Id == id);
             if (entity is null)
@@ -126,6 +130,9 @@ public static class CommunicationChannelEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
+            await auditLogger.WriteAsync(
+                AuditActions.CommunicationChannelUpdated, targetType: "communicationChannel", targetId: entity.Id.ToString());
+
             var response = new ChannelResponse(
                 entity.Id, entity.Name, entity.Type, entity.IsEnabled, entity.CreatedAtUtc, entity.UpdatedAtUtc);
             return Results.Ok(response);
@@ -134,7 +141,7 @@ public static class CommunicationChannelEndpoints
         .WithName("UpdateCommunicationChannel")
         .WithTags("CommunicationChannels");
 
-        channels.MapDelete("/{id:guid}", async (Guid id, CommunicationChannelsDbContext db) =>
+        channels.MapDelete("/{id:guid}", async (Guid id, CommunicationChannelsDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.Channels.FirstOrDefaultAsync(c => c.Id == id);
             if (entity is null)
@@ -151,6 +158,9 @@ public static class CommunicationChannelEndpoints
 
             db.Channels.Remove(entity);
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.CommunicationChannelRemoved, targetType: "communicationChannel", targetId: entity.Id.ToString());
 
             return Results.NoContent();
         })

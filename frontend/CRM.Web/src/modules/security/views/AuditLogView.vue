@@ -1,16 +1,59 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSecurityStore } from '@/stores/security'
+import { useLocale } from '@/composables/useLocale'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
 import AppPagination from '@/components/ui/AppPagination.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import type { AuditLogEntry } from '@/types/security'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
+const { locale } = useLocale()
 const store = useSecurityStore()
+
+function actionLabel(action: string): string | null {
+  const key = `security.audit.action.${action}`
+  return te(key) ? t(key) : null
+}
+
+// Action codes are dot-namespaced ("ticket.created", "security.access.denied");
+// the leading segment is a stable category we use only for badge coloring —
+// the raw code itself always stays the visible label so filters/searches
+// stay copy-pasteable.
+const ACTION_CATEGORY_TONE: Record<string, 'neutral' | 'success' | 'warning' | 'danger' | 'info'> = {
+  user: 'info',
+  security: 'danger',
+  ticket: 'success',
+  customer: 'success',
+}
+
+function actionTone(action: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
+  const category = action.split('.')[0] ?? ''
+  if (category === 'security' && action.includes('denied')) {
+    return 'danger'
+  }
+  if (action.includes('failed') || action.includes('removed') || action.includes('disabled')) {
+    return 'warning'
+  }
+  return ACTION_CATEGORY_TONE[category] ?? 'neutral'
+}
+
+const dateFormatter = computed(
+  () => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'medium' }),
+)
+
+function formatDate(value: string): string {
+  return dateFormatter.value.format(new Date(value))
+}
+
+function actorInitial(entry: AuditLogEntry): string {
+  const label = entry.actorEmail ?? t('security.audit.systemActor')
+  return label.trim().slice(0, 1).toUpperCase() || '?'
+}
 
 const actionFilter = ref('')
 const actorIdFilter = ref('')
@@ -125,13 +168,25 @@ onMounted(() => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="entry in store.auditEntries" :key="entry.id">
-            <td>{{ entry.occurredAtUtc }}</td>
-            <td>{{ entry.actorEmail ?? t('security.audit.systemActor') }}</td>
-            <td>{{ entry.action }}</td>
-            <td>{{ entry.targetType }}: {{ entry.targetId }}</td>
+          <tr v-for="entry in store.auditEntries" :key="entry.id" class="audit-row" @click="openDetails(entry)">
+            <td class="cell-time" :title="entry.occurredAtUtc">{{ formatDate(entry.occurredAtUtc) }}</td>
             <td>
-              <AppButton variant="ghost" size="sm" type="button" @click="openDetails(entry)">
+              <span class="actor-cell">
+                <span class="actor-avatar" aria-hidden="true">{{ actorInitial(entry) }}</span>
+                {{ entry.actorEmail ?? t('security.audit.systemActor') }}
+              </span>
+            </td>
+            <td>
+              <AppBadge :tone="actionTone(entry.action)" class="action-badge">{{ entry.action }}</AppBadge>
+              <span v-if="actionLabel(entry.action)" class="action-label">{{ actionLabel(entry.action) }}</span>
+            </td>
+            <td class="cell-target">
+              <span v-if="entry.targetType" class="target-type">{{ entry.targetType }}</span>
+              <span v-if="entry.targetId" class="target-id">{{ entry.targetId }}</span>
+              <span v-if="!entry.targetType && !entry.targetId" class="target-none">—</span>
+            </td>
+            <td>
+              <AppButton variant="ghost" size="sm" type="button" @click.stop="openDetails(entry)">
                 {{ t('security.audit.viewPayload') }}
               </AppButton>
             </td>
@@ -154,6 +209,34 @@ onMounted(() => {
           <h2>{{ t('security.audit.payloadDrawer.title') }}</h2>
           <AppButton variant="ghost" size="sm" type="button" @click="closeDetails">{{ t('common.close') }}</AppButton>
         </div>
+
+        <div class="drawer-action-row">
+          <AppBadge :tone="actionTone(selectedEntry.action)" class="drawer-action-badge">
+            {{ selectedEntry.action }}
+          </AppBadge>
+          <span v-if="actionLabel(selectedEntry.action)" class="action-label">{{ actionLabel(selectedEntry.action) }}</span>
+        </div>
+
+        <dl class="drawer-meta">
+          <div class="drawer-meta-row">
+            <dt>{{ t('security.audit.columns.occurredAt') }}</dt>
+            <dd>{{ formatDate(selectedEntry.occurredAtUtc) }}</dd>
+          </div>
+          <div class="drawer-meta-row">
+            <dt>{{ t('security.audit.columns.actor') }}</dt>
+            <dd>{{ selectedEntry.actorEmail ?? t('security.audit.systemActor') }}</dd>
+          </div>
+          <div v-if="selectedEntry.targetType || selectedEntry.targetId" class="drawer-meta-row">
+            <dt>{{ t('security.audit.columns.target') }}</dt>
+            <dd>{{ selectedEntry.targetType }}: {{ selectedEntry.targetId }}</dd>
+          </div>
+          <div v-if="selectedEntry.ipAddress" class="drawer-meta-row">
+            <dt>{{ t('security.audit.columns.ipAddress') }}</dt>
+            <dd>{{ selectedEntry.ipAddress }}</dd>
+          </div>
+        </dl>
+
+        <h3 class="payload-heading">{{ t('security.audit.payloadDrawer.payloadHeading') }}</h3>
         <pre class="payload-json">{{ selectedEntry.payloadJson ?? t('security.audit.payloadDrawer.empty') }}</pre>
       </aside>
     </div>
@@ -189,7 +272,121 @@ onMounted(() => {
   margin-bottom: var(--space-4);
 }
 
+.audit-row {
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+
+.audit-row:hover {
+  background: var(--canvas);
+}
+
+.cell-time {
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.actor-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.actor-avatar {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-status-info-bg);
+  color: var(--color-status-info);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.action-badge {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+
+.action-label {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.cell-target {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: var(--font-size-sm);
+}
+
+.target-type {
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.target-id {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.target-none {
+  color: var(--text-muted);
+}
+
+.drawer-action-row {
+  margin-bottom: var(--space-4);
+}
+
+.drawer-action-badge {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+
+.drawer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  background: var(--canvas);
+  border-radius: var(--radius-md);
+}
+
+.drawer-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.drawer-meta-row dt {
+  color: var(--text-muted);
+}
+
+.drawer-meta-row dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: end;
+  word-break: break-word;
+}
+
+.payload-heading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-md);
+}
+
 .payload-json {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--canvas);
+  border-radius: var(--radius-md);
   white-space: pre-wrap;
   word-break: break-word;
   font-size: var(--font-size-sm);

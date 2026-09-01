@@ -1,4 +1,5 @@
 using CRM.Api.Auth;
+using CRM.Api.Security;
 using CRM.Api.Tickets;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +43,7 @@ public static class SlaPolicyEndpoints
         .RequireAuthorization(Permissions.SlaPolicyRead)
         .WithName("GetSlaPolicy");
 
-        policies.MapPost("/", async (CreateSlaPolicyRequest request, TicketDbContext db) =>
+        policies.MapPost("/", async (CreateSlaPolicyRequest request, TicketDbContext db, IAuditLogger auditLogger) =>
         {
             var validationError = Validate(
                 request.Name, request.Priority, request.FirstResponseMinutes, request.ResolutionMinutes,
@@ -79,12 +80,15 @@ public static class SlaPolicyEndpoints
             db.SlaPolicies.Add(entity);
             await db.SaveChangesAsync();
 
+            await auditLogger.WriteAsync(
+                AuditActions.SlaPolicyCreated, targetType: "slaPolicy", targetId: entity.Id.ToString());
+
             return Results.Created($"/api/sla/policies/{entity.Id}", ToResponse(entity));
         })
         .RequireAuthorization(Permissions.SlaManage)
         .WithName("CreateSlaPolicy");
 
-        policies.MapPut("/{id:guid}", async (Guid id, UpdateSlaPolicyRequest request, TicketDbContext db) =>
+        policies.MapPut("/{id:guid}", async (Guid id, UpdateSlaPolicyRequest request, TicketDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.SlaPolicies.FirstOrDefaultAsync(p => p.Id == id);
             if (entity is null)
@@ -115,6 +119,9 @@ public static class SlaPolicyEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
+            await auditLogger.WriteAsync(
+                AuditActions.SlaPolicyUpdated, targetType: "slaPolicy", targetId: entity.Id.ToString());
+
             return Results.Ok(ToResponse(entity));
         })
         .RequireAuthorization(Permissions.SlaManage)
@@ -124,13 +131,17 @@ public static class SlaPolicyEndpoints
         // set-default flows without resending the full policy payload.
         // Deactivating the current default clears IsDefault (rather than
         // rejecting) and reports a warning so the frontend can toast it.
-        policies.MapPatch("/{id:guid}/status", async (Guid id, UpdateSlaPolicyStatusRequest request, TicketDbContext db) =>
+        policies.MapPatch("/{id:guid}/status", async (
+            Guid id, UpdateSlaPolicyStatusRequest request, TicketDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.SlaPolicies.FirstOrDefaultAsync(p => p.Id == id);
             if (entity is null)
             {
                 return Results.NotFound();
             }
+
+            var wasActive = entity.IsActive;
+            var wasDefault = entity.IsDefault;
 
             var warnings = new List<string>();
             var wantsDefault = request.IsDefault ?? entity.IsDefault;
@@ -153,6 +164,21 @@ public static class SlaPolicyEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
+            // Mirrors SecurityAdminEndpoints' enable/disable pair: report the
+            // post-toggle active state as its own action, then a separate
+            // entry when the default flag newly changed.
+            if (entity.IsActive != wasActive)
+            {
+                await auditLogger.WriteAsync(
+                    entity.IsActive ? AuditActions.SlaPolicyActivated : AuditActions.SlaPolicyDeactivated,
+                    targetType: "slaPolicy", targetId: entity.Id.ToString());
+            }
+            if (entity.IsDefault && !wasDefault)
+            {
+                await auditLogger.WriteAsync(
+                    AuditActions.SlaPolicyDefaultSet, targetType: "slaPolicy", targetId: entity.Id.ToString());
+            }
+
             return Results.Ok(new UpdateSlaPolicyStatusResponse(ToResponse(entity), warnings));
         })
         .RequireAuthorization(Permissions.SlaManage)
@@ -167,7 +193,7 @@ public static class SlaPolicyEndpoints
         })
         .WithName("EvaluateSlaNow");
 
-        policies.MapDelete("/{id:guid}", async (Guid id, TicketDbContext db) =>
+        policies.MapDelete("/{id:guid}", async (Guid id, TicketDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.SlaPolicies.FirstOrDefaultAsync(p => p.Id == id);
             if (entity is null)
@@ -180,6 +206,9 @@ public static class SlaPolicyEndpoints
             entity.IsActive = false;
             entity.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.SlaPolicyRemoved, targetType: "slaPolicy", targetId: entity.Id.ToString());
 
             return Results.NoContent();
         })

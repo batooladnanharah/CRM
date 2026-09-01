@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CRM.Api.Auth;
+using CRM.Api.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,7 +36,7 @@ public static class QuickReplyEndpoints
         .WithTags("QuickReplies");
 
         quickReplies.MapPost("/", async (
-            CreateQuickReplyRequest request, QuickReplyDbContext db, ClaimsPrincipal principal) =>
+            CreateQuickReplyRequest request, QuickReplyDbContext db, ClaimsPrincipal principal, IAuditLogger auditLogger) =>
         {
             var title = request.Title?.Trim() ?? string.Empty;
             if (string.IsNullOrEmpty(title))
@@ -74,6 +75,9 @@ public static class QuickReplyEndpoints
             db.QuickReplies.Add(entity);
             await db.SaveChangesAsync();
 
+            await auditLogger.WriteAsync(
+                AuditActions.QuickReplyCreated, targetType: "quickReply", targetId: entity.Id.ToString());
+
             var response = new QuickReplyResponse(
                 entity.Id, entity.Title, entity.Content, entity.IsActive, entity.CreatedAtUtc, entity.UpdatedAtUtc);
             return Results.Created($"/api/quick-replies/{entity.Id}", response);
@@ -83,7 +87,7 @@ public static class QuickReplyEndpoints
         .WithTags("QuickReplies");
 
         quickReplies.MapPut("/{id:guid}", async (
-            Guid id, UpdateQuickReplyRequest request, QuickReplyDbContext db) =>
+            Guid id, UpdateQuickReplyRequest request, QuickReplyDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.QuickReplies.FirstOrDefaultAsync(q => q.Id == id);
             if (entity is null)
@@ -117,6 +121,9 @@ public static class QuickReplyEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
+            await auditLogger.WriteAsync(
+                AuditActions.QuickReplyUpdated, targetType: "quickReply", targetId: entity.Id.ToString());
+
             var response = new QuickReplyResponse(
                 entity.Id, entity.Title, entity.Content, entity.IsActive, entity.CreatedAtUtc, entity.UpdatedAtUtc);
             return Results.Ok(response);
@@ -125,7 +132,7 @@ public static class QuickReplyEndpoints
         .WithName("UpdateQuickReply")
         .WithTags("QuickReplies");
 
-        quickReplies.MapDelete("/{id:guid}", async (Guid id, QuickReplyDbContext db) =>
+        quickReplies.MapDelete("/{id:guid}", async (Guid id, QuickReplyDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.QuickReplies.FirstOrDefaultAsync(q => q.Id == id);
             if (entity is null)
@@ -137,6 +144,9 @@ public static class QuickReplyEndpoints
             // deletes secondary rows (e.g. ticket attachments).
             db.QuickReplies.Remove(entity);
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.QuickReplyRemoved, targetType: "quickReply", targetId: entity.Id.ToString());
 
             return Results.NoContent();
         })

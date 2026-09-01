@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CRM.Api.Auth;
+using CRM.Api.Security;
 using CRM.Api.Sla;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CRM.Api.Tests;
 
@@ -118,6 +120,41 @@ public class EscalationRuleEndpointsTests : IClassFixture<CustomWebApplicationFa
         Assert.Equal(HttpStatusCode.OK, deactivate.StatusCode);
         var deactivated = await deactivate.Content.ReadFromJsonAsync<EscalationRuleDto>();
         Assert.False(deactivated!.IsActive);
+    }
+
+    [Fact]
+    public async Task Post_Rule_WritesAuditLogEntry()
+    {
+        var admin = await AdminClientAsync();
+
+        var response = await admin.PostAsJsonAsync(
+            "/api/sla/escalation-rules", RulePayload("Audited Rule"));
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = (await response.Content.ReadFromJsonAsync<EscalationRuleDto>())!;
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.EscalationRuleCreated);
+        Assert.Equal("escalationRule", entry.TargetType);
+    }
+
+    [Fact]
+    public async Task Delete_Rule_WritesAuditLogEntry()
+    {
+        var admin = await AdminClientAsync();
+        var createResponse = await admin.PostAsJsonAsync(
+            "/api/sla/escalation-rules", RulePayload("Audited Delete Rule"));
+        var created = (await createResponse.Content.ReadFromJsonAsync<EscalationRuleDto>())!;
+
+        var response = await admin.DeleteAsync($"/api/sla/escalation-rules/{created.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.EscalationRuleRemoved);
+        Assert.Equal("escalationRule", entry.TargetType);
     }
 
     [Fact]

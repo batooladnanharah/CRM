@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CRM.Api.Auth;
 using CRM.Api.CommunicationChannels;
+using CRM.Api.Security;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CRM.Api.Tests;
@@ -302,6 +303,36 @@ public class CommunicationChannelsEndpointsTests : IClassFixture<CustomWebApplic
         var response = await admin.GetAsync($"/api/channels/{Guid.NewGuid()}/emails");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_Channel_WritesAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync();
+
+        var created = await CreateChannelAsync(admin, "Audited Inbox");
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.CommunicationChannelCreated);
+        Assert.Equal("communicationChannel", entry.TargetType);
+    }
+
+    [Fact]
+    public async Task Delete_Channel_WritesAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync();
+        var created = await CreateChannelAsync(admin, "Audited Delete Inbox");
+
+        var response = await admin.DeleteAsync($"/api/channels/{created.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.CommunicationChannelRemoved);
+        Assert.Equal("communicationChannel", entry.TargetType);
     }
 
     [Fact]

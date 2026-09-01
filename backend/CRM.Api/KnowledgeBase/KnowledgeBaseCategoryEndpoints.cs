@@ -1,4 +1,5 @@
 using CRM.Api.Auth;
+using CRM.Api.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,7 +39,8 @@ public static class KnowledgeBaseCategoryEndpoints
         .WithName("GetKnowledgeBaseCategory")
         .WithTags("KnowledgeBaseCategories");
 
-        categories.MapPost("/", async (CreateKnowledgeBaseCategoryRequest request, KnowledgeBaseDbContext db) =>
+        categories.MapPost("/", async (
+            CreateKnowledgeBaseCategoryRequest request, KnowledgeBaseDbContext db, IAuditLogger auditLogger) =>
         {
             var validationError = Validate(request.Name, request.Description, out var name, out var description);
             if (validationError is not null)
@@ -78,6 +80,9 @@ public static class KnowledgeBaseCategoryEndpoints
                 return Results.Conflict(new ErrorResponse("A category with this name already exists."));
             }
 
+            await auditLogger.WriteAsync(
+                AuditActions.KnowledgeBaseCategoryCreated, targetType: "knowledgeBaseCategory", targetId: entity.Id.ToString());
+
             return Results.Created($"/api/knowledge-base/categories/{entity.Id}", ToResponse(entity));
         })
         .RequireAuthorization(Permissions.KnowledgeBaseCategoriesManage)
@@ -85,7 +90,7 @@ public static class KnowledgeBaseCategoryEndpoints
         .WithTags("KnowledgeBaseCategories");
 
         categories.MapPut("/{id:guid}", async (
-            Guid id, UpdateKnowledgeBaseCategoryRequest request, KnowledgeBaseDbContext db) =>
+            Guid id, UpdateKnowledgeBaseCategoryRequest request, KnowledgeBaseDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.Categories.FirstOrDefaultAsync(c => c.Id == id);
             if (entity is null)
@@ -120,6 +125,9 @@ public static class KnowledgeBaseCategoryEndpoints
                 return Results.Conflict(new ErrorResponse("A category with this name already exists."));
             }
 
+            await auditLogger.WriteAsync(
+                AuditActions.KnowledgeBaseCategoryUpdated, targetType: "knowledgeBaseCategory", targetId: entity.Id.ToString());
+
             return Results.Ok(ToResponse(entity));
         })
         .RequireAuthorization(Permissions.KnowledgeBaseCategoriesManage)
@@ -127,7 +135,7 @@ public static class KnowledgeBaseCategoryEndpoints
         .WithTags("KnowledgeBaseCategories");
 
         categories.MapPatch("/{id:guid}/status", async (
-            Guid id, SetKnowledgeBaseCategoryStatusRequest request, KnowledgeBaseDbContext db) =>
+            Guid id, SetKnowledgeBaseCategoryStatusRequest request, KnowledgeBaseDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.Categories.FirstOrDefaultAsync(c => c.Id == id);
             if (entity is null)
@@ -139,6 +147,15 @@ public static class KnowledgeBaseCategoryEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
 
             await db.SaveChangesAsync();
+
+            // No hard-delete endpoint exists for categories — deactivating via
+            // this status toggle is the closest equivalent to "remove", so it
+            // is audited as such when the category is being deactivated, and
+            // as an update when it's being reactivated.
+            await auditLogger.WriteAsync(
+                request.IsActive ? AuditActions.KnowledgeBaseCategoryUpdated : AuditActions.KnowledgeBaseCategoryRemoved,
+                targetType: "knowledgeBaseCategory", targetId: entity.Id.ToString());
+
             return Results.Ok(ToResponse(entity));
         })
         .RequireAuthorization(Permissions.KnowledgeBaseCategoriesManage)

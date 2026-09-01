@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CRM.Api.Auth;
+using CRM.Api.Security;
 using CRM.Api.Sla;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -204,6 +205,38 @@ public class SlaPolicyEndpointsTests : IClassFixture<CustomWebApplicationFactory
         var refetched = await admin.GetAsync($"/api/sla/policies/{existingDefault.Id}");
         var refetchedBody = await refetched.Content.ReadFromJsonAsync<SlaPolicyResponse>();
         Assert.False(refetchedBody!.IsDefault);
+    }
+
+    [Fact]
+    public async Task Post_Policy_WritesAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+
+        var created = await CreatePolicyAsync(admin, PolicyPayload("Audited Policy"));
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.SlaPolicyCreated);
+        Assert.Equal("slaPolicy", entry.TargetType);
+    }
+
+    [Fact]
+    public async Task Delete_Policy_WritesAuditLogEntry()
+    {
+        var admin = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.AdminEmail, CustomWebApplicationFactory.AdminPassword);
+        var created = await CreatePolicyAsync(admin, PolicyPayload("Audited Delete Policy"));
+
+        var response = await admin.DeleteAsync($"/api/sla/policies/{created.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var entry = authDb.AuditLogs.Single(a => a.TargetId == created.Id.ToString()
+            && a.Action == AuditActions.SlaPolicyRemoved);
+        Assert.Equal("slaPolicy", entry.TargetType);
     }
 
     [Fact]

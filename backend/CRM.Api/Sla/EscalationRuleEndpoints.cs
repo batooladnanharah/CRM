@@ -1,4 +1,5 @@
 using CRM.Api.Auth;
+using CRM.Api.Security;
 using CRM.Api.Tickets;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,7 +39,7 @@ public static class EscalationRuleEndpoints
         })
         .WithName("GetEscalationRule");
 
-        writes.MapPost("/", async (CreateEscalationRuleRequest request, TicketDbContext db) =>
+        writes.MapPost("/", async (CreateEscalationRuleRequest request, TicketDbContext db, IAuditLogger auditLogger) =>
         {
             var (validationError, name, trigger) = await Validate(request.Name, request.Trigger, db, null);
             if (validationError is not null)
@@ -62,11 +63,15 @@ public static class EscalationRuleEndpoints
             db.EscalationRules.Add(entity);
             await db.SaveChangesAsync();
 
+            await auditLogger.WriteAsync(
+                AuditActions.EscalationRuleCreated, targetType: "escalationRule", targetId: entity.Id.ToString());
+
             return Results.Created($"/api/sla/escalation-rules/{entity.Id}", ToDto(entity));
         })
         .WithName("CreateEscalationRule");
 
-        writes.MapPut("/{id:guid}", async (Guid id, UpdateEscalationRuleRequest request, TicketDbContext db) =>
+        writes.MapPut("/{id:guid}", async (
+            Guid id, UpdateEscalationRuleRequest request, TicketDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.EscalationRules.FirstOrDefaultAsync(r => r.Id == id);
             if (entity is null)
@@ -88,11 +93,14 @@ public static class EscalationRuleEndpoints
             entity.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
 
+            await auditLogger.WriteAsync(
+                AuditActions.EscalationRuleUpdated, targetType: "escalationRule", targetId: entity.Id.ToString());
+
             return Results.Ok(ToDto(entity));
         })
         .WithName("UpdateEscalationRule");
 
-        writes.MapPatch("/{id:guid}/activate", async (Guid id, TicketDbContext db) =>
+        writes.MapPatch("/{id:guid}/activate", async (Guid id, TicketDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.EscalationRules.FirstOrDefaultAsync(r => r.Id == id);
             if (entity is null)
@@ -103,11 +111,15 @@ public static class EscalationRuleEndpoints
             entity.IsActive = true;
             entity.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.EscalationRuleActivated, targetType: "escalationRule", targetId: entity.Id.ToString());
+
             return Results.Ok(ToDto(entity));
         })
         .WithName("ActivateEscalationRule");
 
-        writes.MapPatch("/{id:guid}/deactivate", async (Guid id, TicketDbContext db) =>
+        writes.MapPatch("/{id:guid}/deactivate", async (Guid id, TicketDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.EscalationRules.FirstOrDefaultAsync(r => r.Id == id);
             if (entity is null)
@@ -118,11 +130,15 @@ public static class EscalationRuleEndpoints
             entity.IsActive = false;
             entity.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.EscalationRuleDeactivated, targetType: "escalationRule", targetId: entity.Id.ToString());
+
             return Results.Ok(ToDto(entity));
         })
         .WithName("DeactivateEscalationRule");
 
-        writes.MapDelete("/{id:guid}", async (Guid id, TicketDbContext db) =>
+        writes.MapDelete("/{id:guid}", async (Guid id, TicketDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.EscalationRules.FirstOrDefaultAsync(r => r.Id == id);
             if (entity is null)
@@ -132,6 +148,10 @@ public static class EscalationRuleEndpoints
 
             db.EscalationRules.Remove(entity);
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.EscalationRuleRemoved, targetType: "escalationRule", targetId: entity.Id.ToString());
+
             return Results.NoContent();
         })
         .WithName("DeleteEscalationRule");

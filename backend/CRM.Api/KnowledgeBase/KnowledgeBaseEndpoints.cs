@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using CRM.Api.Auth;
+using CRM.Api.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -111,7 +112,8 @@ public static class KnowledgeBaseEndpoints
         .WithTags("KnowledgeBase");
 
         articles.MapPost("/", async (
-            CreateKnowledgeBaseArticleRequest request, KnowledgeBaseDbContext db, ClaimsPrincipal principal) =>
+            CreateKnowledgeBaseArticleRequest request, KnowledgeBaseDbContext db, ClaimsPrincipal principal,
+            IAuditLogger auditLogger) =>
         {
             var validationError = Validate(
                 request.Title, request.Slug, request.Body, request.Tags, request.Status,
@@ -154,6 +156,9 @@ public static class KnowledgeBaseEndpoints
             db.Articles.Add(entity);
             await db.SaveChangesAsync();
 
+            await auditLogger.WriteAsync(
+                AuditActions.KnowledgeBaseArticleCreated, targetType: "knowledgeBaseArticle", targetId: entity.Id.ToString());
+
             var category = await db.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == entity.CategoryId);
             return Results.Created($"/api/knowledge-base/articles/{entity.Id}", ToResponse(entity, category));
         })
@@ -162,7 +167,7 @@ public static class KnowledgeBaseEndpoints
         .WithTags("KnowledgeBase");
 
         articles.MapPut("/{id:guid}", async (
-            Guid id, UpdateKnowledgeBaseArticleRequest request, KnowledgeBaseDbContext db) =>
+            Guid id, UpdateKnowledgeBaseArticleRequest request, KnowledgeBaseDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.Articles.Include(a => a.Category).FirstOrDefaultAsync(a => a.Id == id);
             if (entity is null)
@@ -217,13 +222,17 @@ public static class KnowledgeBaseEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
 
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.KnowledgeBaseArticleUpdated, targetType: "knowledgeBaseArticle", targetId: entity.Id.ToString());
+
             return Results.Ok(ToResponse(entity));
         })
         .RequireAuthorization(Permissions.KnowledgeBaseManage)
         .WithName("UpdateKnowledgeBaseArticle")
         .WithTags("KnowledgeBase");
 
-        articles.MapDelete("/{id:guid}", async (Guid id, KnowledgeBaseDbContext db) =>
+        articles.MapDelete("/{id:guid}", async (Guid id, KnowledgeBaseDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.Articles.FirstOrDefaultAsync(a => a.Id == id);
             if (entity is null)
@@ -233,6 +242,9 @@ public static class KnowledgeBaseEndpoints
 
             db.Articles.Remove(entity);
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.KnowledgeBaseArticleRemoved, targetType: "knowledgeBaseArticle", targetId: entity.Id.ToString());
 
             return Results.NoContent();
         })
@@ -248,7 +260,7 @@ public static class KnowledgeBaseEndpoints
         // action from a state that's already the target status still
         // succeeds and returns the current article, matching the pattern
         // used by TicketEndpoints for repeated status transitions.
-        articles.MapPost("/{id:guid}/publish", async (Guid id, KnowledgeBaseDbContext db) =>
+        articles.MapPost("/{id:guid}/publish", async (Guid id, KnowledgeBaseDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.Articles.Include(a => a.Category).FirstOrDefaultAsync(a => a.Id == id);
             if (entity is null)
@@ -261,13 +273,17 @@ public static class KnowledgeBaseEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
 
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.KnowledgeBaseArticlePublished, targetType: "knowledgeBaseArticle", targetId: entity.Id.ToString());
+
             return Results.Ok(ToResponse(entity));
         })
         .RequireAuthorization(Permissions.KnowledgeBaseManage)
         .WithName("PublishKnowledgeBaseArticle")
         .WithTags("KnowledgeBase");
 
-        articles.MapPost("/{id:guid}/unpublish", async (Guid id, KnowledgeBaseDbContext db) =>
+        articles.MapPost("/{id:guid}/unpublish", async (Guid id, KnowledgeBaseDbContext db, IAuditLogger auditLogger) =>
         {
             var entity = await db.Articles.Include(a => a.Category).FirstOrDefaultAsync(a => a.Id == id);
             if (entity is null)
@@ -281,6 +297,10 @@ public static class KnowledgeBaseEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
 
             await db.SaveChangesAsync();
+
+            await auditLogger.WriteAsync(
+                AuditActions.KnowledgeBaseArticleArchived, targetType: "knowledgeBaseArticle", targetId: entity.Id.ToString());
+
             return Results.Ok(ToResponse(entity));
         })
         .RequireAuthorization(Permissions.KnowledgeBaseManage)
