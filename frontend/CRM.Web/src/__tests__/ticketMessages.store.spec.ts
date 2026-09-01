@@ -145,6 +145,28 @@ describe('ticketMessages store', () => {
     expect(store.sendError).toBeNull()
   })
 
+  it('addMessage() early-returns without calling the API while a send is already in flight', async () => {
+    let resolveCreate!: (value: TicketMessage) => void
+    createMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCreate = resolve
+      }),
+    )
+
+    const store = useTicketMessagesStore()
+    const first = store.addMessage('ticket-1', 'First send', false)
+    expect(store.saving).toBe(true)
+
+    const second = await store.addMessage('ticket-1', 'Second send', false)
+
+    expect(second).toBeUndefined()
+    expect(createMock).toHaveBeenCalledTimes(1)
+
+    resolveCreate!(makeMessage({ id: 'new-1', body: 'First send' }))
+    await first
+    expect(store.saving).toBe(false)
+  })
+
   it('addMessage() email failure sets sendError but does not clear content and does not set error', async () => {
     createMock.mockRejectedValue(new Error('email delivery failed'))
 

@@ -11,6 +11,7 @@ Entry point for the **ticket-management** feature. Stories execute in order by t
 | 17 | `17-story-crm-95.md` | Ticket Management — Assignment, Status & Priority | CRM-95 | — |
 | 18 | `18-story-crm-96.md` | Ticket Communication & Activity | CRM-96 | — |
 | 44 | `44-story-crm-38.md` | TKT-001 — Ticket List | CRM-38 | — |
+| 45 | `45-story-crm-45.md` | TKT-008 Ticket Conversation | CRM-45 | — |
 
 ## Dependency notes
 

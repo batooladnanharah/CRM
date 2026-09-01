@@ -173,6 +173,31 @@ public class TicketMessagesEndpointsTests : IClassFixture<CustomWebApplicationFa
     }
 
     [Fact]
+    public async Task Post_Message_Returns400_WhenChannelUnrecognized()
+    {
+        var client = await AuthenticatedClientAsync();
+        var customerId = CreateCustomer("Bad Channel Customer", "bad.channel.customer@example.com");
+        var ticketId = CreateTicket(customerId);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/tickets/{ticketId}/messages",
+            new { body = "Hello", isInternal = false, channel = "WhatsApp" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_Messages_Returns403_ForCustomerRole()
+    {
+        var client = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.CustomerRoleEmail, CustomWebApplicationFactory.CustomerRolePassword);
+
+        var response = await client.GetAsync($"/api/tickets/{Guid.NewGuid()}/messages");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Post_Message_Returns401_WhenUnauthenticated()
     {
         var response = await _client.PostAsJsonAsync(

@@ -33,6 +33,13 @@ export const useTicketMessagesStore = defineStore('ticketMessages', () => {
     channel: MessageChannel = 'Web',
     subjectOverride?: string,
   ) {
+    // Duplicate-submission guard: a second call (e.g. a fast double-click that
+    // slips past the disabled button) while a send is already in flight is a
+    // no-op rather than firing a second request.
+    if (saving.value) {
+      return
+    }
+
     saving.value = true
     error.value = null
     sendError.value = null
