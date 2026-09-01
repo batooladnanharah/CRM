@@ -3,7 +3,6 @@ import type {
   CreateCustomerTicketPayload,
   CustomerDashboard,
   CustomerKnowledgeBaseArticleDetails,
-  CustomerKnowledgeBaseArticleListItem,
   CustomerKnowledgeBaseArticleListResult,
   CustomerKnowledgeBaseCategorySummary,
   CustomerTicketDetails,
@@ -46,9 +45,11 @@ export function listPortalCategories(): Promise<CustomerKnowledgeBaseCategorySum
   return apiRequest<CustomerKnowledgeBaseCategorySummary[]>('/customer/knowledge-base/categories', { method: 'GET' })
 }
 
-export function listPortalCategoryArticles(id: string): Promise<CustomerKnowledgeBaseArticleListItem[]> {
-  return apiRequest<CustomerKnowledgeBaseArticleListItem[]>(
-    `/customer/knowledge-base/categories/${id}/articles`, { method: 'GET' },
+export function listPortalCategoryArticles(
+  id: string, page = 1, pageSize = 20,
+): Promise<CustomerKnowledgeBaseArticleListResult> {
+  return apiRequest<CustomerKnowledgeBaseArticleListResult>(
+    `/customer/knowledge-base/categories/${id}/articles?page=${page}&pageSize=${pageSize}`, { method: 'GET' },
   )
 }
 

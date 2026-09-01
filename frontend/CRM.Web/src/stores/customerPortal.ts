@@ -234,12 +234,13 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
     }
   }
 
-  async function fetchPortalCategoryArticles(id: string) {
+  async function fetchPortalCategoryArticles(id: string, page = 1, pageSize = 20) {
     portalCategoryArticlesLoading.value = true
     portalCategoryArticlesError.value = null
 
     try {
-      portalCategoryArticles.value = await listPortalCategoryArticles(id)
+      const result = await listPortalCategoryArticles(id, page, pageSize)
+      portalCategoryArticles.value = result.items
     } catch {
       portalCategoryArticlesError.value = 'errorLoad'
     } finally {

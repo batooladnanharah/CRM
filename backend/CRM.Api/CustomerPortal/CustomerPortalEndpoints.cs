@@ -213,10 +213,10 @@ public static class CustomerPortalEndpoints
 
             var items = await kbDb.Categories.AsNoTracking()
                 .Where(c => c.IsActive)
-                .Join(publishedCounts, c => c.Id, g => g.CategoryId, (c, g) => new CustomerKnowledgeBaseCategoryResponse(
-                    c.Id, c.Name, c.Description, g.Count))
-                .Where(r => r.ArticleCount > 0)
+                .Join(publishedCounts, c => c.Id, g => g.CategoryId, (c, g) => new { c.Id, c.Name, c.Description, g.Count })
+                .Where(r => r.Count > 0)
                 .OrderBy(r => r.Name)
+                .Select(r => new CustomerKnowledgeBaseCategoryResponse(r.Id, r.Name, r.Description, r.Count))
                 .ToListAsync(ct);
 
             return Results.Ok(items);

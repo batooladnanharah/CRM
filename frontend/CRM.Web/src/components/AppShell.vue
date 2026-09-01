@@ -50,6 +50,9 @@ const routeTitleKeys: Record<string, string> = {
   'portal-tickets-list': 'portal.tickets.title',
   'portal-ticket-create': 'portal.ticket.submit.title',
   'portal-ticket-details': 'portal.ticket.details.title',
+  'portal-knowledge-base-list': 'portal.helpCentre.title',
+  'portal-knowledge-base-article': 'portal.helpCentre.title',
+  'portal-knowledge-base-category': 'portal.helpCentre.title',
 }
 
 const navigation = computed(() => {
@@ -58,6 +61,7 @@ const navigation = computed(() => {
       { label: t('portal.dashboard.title'), to: { name: 'portal-dashboard' }, icon: '⌂' },
       { label: t('portal.tickets.title'), to: { name: 'portal-tickets-list' }, icon: '☰' },
       { label: t('portal.dashboard.submitCta'), to: { name: 'portal-ticket-create' }, icon: '✎' },
+      { label: t('portal.helpCentre.title'), to: { name: 'portal-knowledge-base-list' }, icon: '📖' },
     ]
   }
 

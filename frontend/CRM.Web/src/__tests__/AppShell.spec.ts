@@ -43,6 +43,7 @@ function makeRouter(): Router {
       { path: '/portal/dashboard', name: 'portal-dashboard', component: { template: '<div />' } },
       { path: '/portal/tickets', name: 'portal-tickets-list', component: { template: '<div />' } },
       { path: '/portal/tickets/new', name: 'portal-ticket-create', component: { template: '<div />' } },
+      { path: '/portal/knowledge-base', name: 'portal-knowledge-base-list', component: { template: '<div />' } },
     ],
   })
 }
