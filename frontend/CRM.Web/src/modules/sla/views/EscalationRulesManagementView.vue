@@ -164,18 +164,20 @@ function actionsLabel(rule: EscalationRule) {
           </option>
         </select>
       </div>
-      <label class="active-toggle">
-        <input type="checkbox" v-model="draftNotifyAgent" />
-        {{ t('sla.escalation.actions.notifyAgent') }}
-      </label>
-      <label class="active-toggle">
-        <input type="checkbox" v-model="draftNotifyManager" />
-        {{ t('sla.escalation.actions.notifyManager') }}
-      </label>
-      <label class="active-toggle">
-        <input type="checkbox" v-model="draftIsActive" />
-        {{ t('sla.escalation.status.active') }}
-      </label>
+      <div class="toggle-group">
+        <label class="active-toggle" :class="{ 'active-toggle--checked': draftNotifyAgent }">
+          <input type="checkbox" v-model="draftNotifyAgent" />
+          <span>{{ t('sla.escalation.actions.notifyAgent') }}</span>
+        </label>
+        <label class="active-toggle" :class="{ 'active-toggle--checked': draftNotifyManager }">
+          <input type="checkbox" v-model="draftNotifyManager" />
+          <span>{{ t('sla.escalation.actions.notifyManager') }}</span>
+        </label>
+        <label class="active-toggle" :class="{ 'active-toggle--checked': draftIsActive }">
+          <input type="checkbox" v-model="draftIsActive" />
+          <span>{{ t('sla.escalation.status.active') }}</span>
+        </label>
+      </div>
       <AppAlert v-if="showActionsError && !hasAtLeastOneAction" tone="danger" role="alert">
         {{ t('sla.escalation.validation.atLeastOneAction') }}
       </AppAlert>
@@ -212,18 +214,20 @@ function actionsLabel(rule: EscalationRule) {
                       {{ t(`sla.escalation.trigger.${trigger === 'AtRisk' ? 'atRisk' : 'breached'}`) }}
                     </option>
                   </select>
-                  <label class="active-toggle">
-                    <input type="checkbox" v-model="draftNotifyAgent" />
-                    {{ t('sla.escalation.actions.notifyAgent') }}
-                  </label>
-                  <label class="active-toggle">
-                    <input type="checkbox" v-model="draftNotifyManager" />
-                    {{ t('sla.escalation.actions.notifyManager') }}
-                  </label>
-                  <label class="active-toggle">
-                    <input type="checkbox" v-model="draftIsActive" />
-                    {{ t('sla.escalation.status.active') }}
-                  </label>
+                  <div class="toggle-group">
+                    <label class="active-toggle" :class="{ 'active-toggle--checked': draftNotifyAgent }">
+                      <input type="checkbox" v-model="draftNotifyAgent" />
+                      <span>{{ t('sla.escalation.actions.notifyAgent') }}</span>
+                    </label>
+                    <label class="active-toggle" :class="{ 'active-toggle--checked': draftNotifyManager }">
+                      <input type="checkbox" v-model="draftNotifyManager" />
+                      <span>{{ t('sla.escalation.actions.notifyManager') }}</span>
+                    </label>
+                    <label class="active-toggle" :class="{ 'active-toggle--checked': draftIsActive }">
+                      <input type="checkbox" v-model="draftIsActive" />
+                      <span>{{ t('sla.escalation.status.active') }}</span>
+                    </label>
+                  </div>
                   <AppAlert v-if="showActionsError && !hasAtLeastOneAction" tone="danger" role="alert">
                     {{ t('sla.escalation.validation.atLeastOneAction') }}
                   </AppAlert>
@@ -271,10 +275,45 @@ function actionsLabel(rule: EscalationRule) {
   margin-bottom: var(--space-5);
 }
 
-.active-toggle {
+.toggle-group {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.active-toggle {
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.active-toggle:hover {
+  border-color: var(--accent);
+}
+
+.active-toggle input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.active-toggle--checked {
+  background: var(--color-status-info-bg);
+  border-color: var(--accent);
+  color: var(--accent-dark);
+  font-weight: 700;
 }
 
 .form-actions {

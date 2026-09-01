@@ -187,10 +187,12 @@ async function onDelete(policy: SlaPolicy) {
         <label for="sla-policy-resolution">{{ t('sla.policies.fields.resolutionMinutes') }}</label>
         <input id="sla-policy-resolution" v-model.number="draftResolutionMinutes" type="number" min="1" />
       </div>
-      <label class="active-toggle">
-        <input type="checkbox" v-model="draftIsDefault" />
-        {{ t('sla.policies.fields.isDefault') }}
-      </label>
+      <div class="toggle-group">
+        <label class="active-toggle" :class="{ 'active-toggle--checked': draftIsDefault }">
+          <input type="checkbox" v-model="draftIsDefault" />
+          <span>{{ t('sla.policies.fields.isDefault') }}</span>
+        </label>
+      </div>
       <div class="form-actions">
         <AppButton type="submit" :loading="store.saving" :disabled="!isDraftValid()">
           {{ store.saving ? t('sla.policies.saving') : t('common.save') }}
@@ -240,14 +242,16 @@ async function onDelete(policy: SlaPolicy) {
                   </select>
                   <input v-model.number="draftFirstResponseMinutes" type="number" min="1" />
                   <input v-model.number="draftResolutionMinutes" type="number" min="1" />
-                  <label class="active-toggle">
-                    <input type="checkbox" v-model="draftIsDefault" />
-                    {{ t('sla.policies.fields.isDefault') }}
-                  </label>
-                  <label class="active-toggle">
-                    <input type="checkbox" v-model="draftIsActive" />
-                    {{ t('sla.policies.fields.isActive') }}
-                  </label>
+                  <div class="toggle-group">
+                    <label class="active-toggle" :class="{ 'active-toggle--checked': draftIsDefault }">
+                      <input type="checkbox" v-model="draftIsDefault" />
+                      <span>{{ t('sla.policies.fields.isDefault') }}</span>
+                    </label>
+                    <label class="active-toggle" :class="{ 'active-toggle--checked': draftIsActive }">
+                      <input type="checkbox" v-model="draftIsActive" />
+                      <span>{{ t('sla.policies.fields.isActive') }}</span>
+                    </label>
+                  </div>
                   <div class="form-actions">
                     <AppButton type="submit" :loading="store.saving">
                       {{ store.saving ? t('sla.policies.saving') : t('common.save') }}
@@ -304,10 +308,45 @@ async function onDelete(policy: SlaPolicy) {
   margin-bottom: var(--space-5);
 }
 
-.active-toggle {
+.toggle-group {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.active-toggle {
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.active-toggle:hover {
+  border-color: var(--accent);
+}
+
+.active-toggle input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.active-toggle--checked {
+  background: var(--color-status-info-bg);
+  border-color: var(--accent);
+  color: var(--accent-dark);
+  font-weight: 700;
 }
 
 .form-actions {

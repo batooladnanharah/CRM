@@ -283,9 +283,10 @@ function initials(label: string): string {
         </li>
       </ul>
 
-      <label v-if="draftChannel === 'Web'" class="internal-toggle">
+      <label v-if="draftChannel === 'Web'" class="internal-toggle" :class="{ 'internal-toggle--checked': draftIsInternal }">
         <input type="checkbox" v-model="draftIsInternal" />
-        {{ t('tickets.messages.internalToggle') }}
+        <span class="internal-toggle__icon" aria-hidden="true">🔒</span>
+        <span>{{ t('tickets.messages.internalToggle') }}</span>
       </label>
 
       <div class="message-form-actions">
@@ -548,9 +549,44 @@ function initials(label: string): string {
 }
 
 .internal-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  align-self: flex-start;
+  margin: 0;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.internal-toggle:hover {
+  border-color: var(--color-status-warning);
+}
+
+.internal-toggle input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--color-status-warning);
+  cursor: pointer;
+}
+
+.internal-toggle__icon {
+  line-height: 1;
+  font-size: var(--font-size-sm);
+}
+
+.internal-toggle--checked {
+  background: var(--color-status-warning-bg);
+  border-color: var(--color-status-warning);
+  color: var(--color-status-warning);
+  font-weight: 700;
 }
 
 .reply-via {
