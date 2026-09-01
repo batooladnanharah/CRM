@@ -171,8 +171,8 @@ public static class TicketMessageEndpoints
                 ChangedAtUtc = now,
             });
 
-            // Every ticket message is staff-authored (there is no customer- or
-            // system-authored message path in this codebase yet), but only a
+            // This endpoint only creates staff-authored messages (customer-authored
+            // replies go through CustomerPortalEndpoints, see AuthorCustomerId). Only a
             // customer-visible reply (IsInternal == false) counts as the first
             // response for SLA purposes — internal notes must not stamp it.
             if (!request.IsInternal && ticket.FirstRespondedAtUtc is null)

@@ -47,7 +47,7 @@ export type UpdateEscalationRulePayload = CreateEscalationRulePayload
 
 export interface AppNotification {
   id: string
-  type: 'SlaAtRisk' | 'SlaBreached'
+  type: 'SlaAtRisk' | 'SlaBreached' | 'CustomerReplied'
   title: string
   message: string
   ticketId?: string | null
