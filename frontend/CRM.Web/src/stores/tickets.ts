@@ -95,6 +95,10 @@ export const useTicketsStore = defineStore('tickets', () => {
     }
   }
 
+  function retry() {
+    return fetchList()
+  }
+
   function setSearch(term: string) {
     search.value = term
 
@@ -304,6 +308,7 @@ export const useTicketsStore = defineStore('tickets', () => {
     escalating,
     escalateError,
     fetchList,
+    retry,
     fetchOne,
     create,
     setSearch,

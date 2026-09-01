@@ -50,6 +50,17 @@ public class TicketsEndpointsTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
+    public async Task List_Returns403_ForCustomerRole()
+    {
+        var client = await AuthenticatedClientAsync(
+            CustomWebApplicationFactory.PortalCustomerEmail, CustomWebApplicationFactory.PortalCustomerPassword);
+
+        var response = await client.GetAsync("/api/tickets");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task All_Return401_WhenAnonymous()
     {
         var listResponse = await _client.GetAsync("/api/tickets");
@@ -423,6 +434,25 @@ public class TicketsListPaginationEndpointTests : IClassFixture<CustomWebApplica
         Assert.Equal(HttpStatusCode.OK, secondPage.StatusCode);
         Assert.Equal(5, secondResult!.Items.Count);
         Assert.Equal(25, secondResult.TotalCount);
+    }
+
+    [Fact]
+    public async Task List_ReturnsEmptyItems_WhenPageBeyondResults()
+    {
+        var client = await AuthenticatedClientAsync();
+        var customerId = CreateCustomer("Beyond Page Customer", "beyond.page.customer@example.com");
+        var baseTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        for (var i = 0; i < 5; i++)
+        {
+            SeedTicket(customerId, $"Beyond page ticket {i}", baseTime.AddMinutes(i));
+        }
+
+        var response = await client.GetAsync("/api/tickets?page=99&pageSize=20");
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<TicketListItem>>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Empty(result!.Items);
+        Assert.Equal(5, result.TotalCount);
     }
 }
 

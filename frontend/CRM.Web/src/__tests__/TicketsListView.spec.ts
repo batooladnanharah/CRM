@@ -9,7 +9,7 @@ import type { TicketListItem, TicketPriority, TicketStatus } from '@/types/ticke
 const mountOptions = {
   global: {
     plugins: [i18n],
-    stubs: { RouterLink: true },
+    stubs: { RouterLink: { template: '<a><slot /></a>' } },
   },
 }
 
@@ -60,6 +60,7 @@ function makeFakeStore(overrides: Record<string, unknown> = {}) {
     loading: false,
     error: null as string | null,
     fetchList: vi.fn<() => Promise<void>>(),
+    retry: vi.fn<() => Promise<void>>(),
     setSearch: vi.fn<(term: string) => void>(),
     setFilters: vi.fn<(partial: Record<string, unknown>) => void>(),
     setPage: vi.fn<(page: number) => void>(),
@@ -180,5 +181,26 @@ describe('TicketsListView', () => {
     mount(TicketsListView, mountOptions)
 
     expect(fakeStore.fetchList).toHaveBeenCalled()
+  })
+
+  it('invokes store.retry when the error state retry button is clicked', async () => {
+    fakeStore.error = 'errorLoad'
+
+    const wrapper = mount(TicketsListView, mountOptions)
+    await wrapper.find('.ui-error-state__retry').trigger('click')
+
+    expect(fakeStore.retry).toHaveBeenCalled()
+  })
+
+  it('links the customer cell to the customer profile without triggering row navigation', async () => {
+    fakeStore.items = [makeTicket({ id: 'ticket-42', customerId: 'customer-7' })]
+
+    const wrapper = mount(TicketsListView, mountOptions)
+    const link = wrapper.find('tbody tr a')
+
+    expect(link.exists()).toBe(true)
+    await link.trigger('click')
+
+    expect(pushMock).not.toHaveBeenCalled()
   })
 })

@@ -203,6 +203,24 @@ describe('tickets store', () => {
     expect(store.items).toEqual([])
   })
 
+  it('retry() re-invokes the API with the current page, pageSize, and filters', async () => {
+    listTicketsMock.mockRejectedValueOnce(new Error('network down'))
+
+    const store = useTicketsStore()
+    await store.fetchList({ page: 2 })
+    expect(store.error).toBe('errorLoad')
+
+    const item = makeTicketListItem()
+    listTicketsMock.mockResolvedValueOnce(makePage([item], { page: 2 }))
+    await store.retry()
+
+    expect(listTicketsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2, pageSize: store.pageSize }),
+    )
+    expect(store.items).toEqual([item])
+    expect(store.error).toBeNull()
+  })
+
   describe('setSearch', () => {
     beforeEach(() => {
       vi.useFakeTimers()

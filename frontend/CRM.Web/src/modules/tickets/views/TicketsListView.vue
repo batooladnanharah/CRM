@@ -4,9 +4,11 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useTicketsStore } from '@/stores/tickets'
 import { useLocale } from '@/composables/useLocale'
+import { useTicketBadgeTone } from '@/composables/useTicketBadgeTone'
 import SlaBadge from '@/modules/tickets/components/SlaBadge.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppBadge from '@/components/ui/AppBadge.vue'
 import AppPagination from '@/components/ui/AppPagination.vue'
 import LoadingState from '@/components/ui/LoadingState.vue'
 import ErrorState from '@/components/ui/ErrorState.vue'
@@ -31,6 +33,7 @@ const { t } = useI18n()
 const { locale } = useLocale()
 const router = useRouter()
 const store = useTicketsStore()
+const { statusTone, priorityTone } = useTicketBadgeTone()
 
 const STATUSES: TicketStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed']
 const PRIORITIES: TicketPriority[] = ['Low', 'Normal', 'High', 'Urgent']
@@ -108,7 +111,11 @@ onMounted(() => {
     </div>
 
     <LoadingState v-if="store.loading" />
-    <ErrorState v-else-if="store.error" :retryable="false" :message="t('tickets.errors.errorLoad')" />
+    <ErrorState
+      v-else-if="store.error"
+      :message="t('tickets.errors.errorLoad')"
+      @retry="store.retry"
+    />
     <EmptyState v-else-if="store.items.length === 0" :description="t('tickets.list.empty')" />
 
     <div v-else class="surface table-wrap">
@@ -131,9 +138,16 @@ onMounted(() => {
             @click="onRowClick(ticket.id)"
           >
             <td>{{ ticket.title }}</td>
-            <td>{{ ticket.customerName }}</td>
-            <td>{{ t(`tickets.statuses.${ticket.status}`) }}</td>
-            <td>{{ t(`tickets.priorities.${ticket.priority}`) }}</td>
+            <td>
+              <router-link
+                :to="{ name: 'customer-profile', params: { id: ticket.customerId } }"
+                @click.stop
+              >
+                {{ ticket.customerName }}
+              </router-link>
+            </td>
+            <td><AppBadge :tone="statusTone(ticket.status)">{{ t(`tickets.statuses.${ticket.status}`) }}</AppBadge></td>
+            <td><AppBadge :tone="priorityTone(ticket.priority)">{{ t(`tickets.priorities.${ticket.priority}`) }}</AppBadge></td>
             <td>{{ formatDate(ticket.createdAtUtc) }}</td>
             <td><SlaBadge :sla="ticket.sla" :kind="worseSlaKind(ticket.sla)" /></td>
           </tr>
