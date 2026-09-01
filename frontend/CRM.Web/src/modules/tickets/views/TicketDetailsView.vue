@@ -49,6 +49,19 @@ const nextStatuses = computed(() =>
   store.current ? legalNextStatuses(store.current.status) : [],
 )
 
+const statusTone = computed<'neutral' | 'success' | 'warning' | 'danger'>(() => {
+  switch (store.current?.status) {
+    case 'Resolved':
+      return 'success'
+    case 'Closed':
+      return 'neutral'
+    case 'InProgress':
+      return 'warning'
+    default:
+      return 'neutral'
+  }
+})
+
 const actionErrorText = computed(() => {
   if (!store.actionError) {
     return null
@@ -215,34 +228,42 @@ async function onRegenerateSummary() {
 
     <div v-else-if="store.current" class="ticket-detail-body">
       <header class="surface ticket-header">
-        <h2>{{ store.current.title }}</h2>
-        <div class="sla-badges">
-          <SlaBadge :sla="store.current.sla" kind="firstResponse" />
-          <SlaBadge :sla="store.current.sla" kind="resolution" />
+        <div class="ticket-header-top">
+          <h2>{{ store.current.title }}</h2>
+          <div class="ticket-header-actions">
+            <EscalateTicketDialog v-if="canEscalate" :ticket-id="id" />
+            <AppButton
+              v-if="canManage"
+              variant="secondary"
+              size="sm"
+              type="button"
+              @click="knowledgeBaseSearchOpen = true"
+            >
+              {{ t('tickets.details.searchKnowledgeBase') }}
+            </AppButton>
+          </div>
         </div>
+
+        <div class="ticket-meta-row">
+          <div class="sla-badges">
+            <SlaBadge :sla="store.current.sla" kind="firstResponse" />
+            <SlaBadge :sla="store.current.sla" kind="resolution" />
+          </div>
+        </div>
+
         <ul v-if="store.current.escalations?.length" class="escalation-surface">
           <li v-for="(escalation, index) in store.current.escalations" :key="index">
             <span v-if="escalation.agentNotified">✓ {{ t('sla.escalation.ticket.agentNotified') }}</span>
             <span v-if="escalation.managerNotified">✓ {{ t('sla.escalation.ticket.managerNotified') }}</span>
           </li>
         </ul>
-        <EscalateTicketDialog v-if="canEscalate" :ticket-id="id" />
-        <AppButton
-          v-if="canManage"
-          variant="secondary"
-          size="sm"
-          type="button"
-          @click="knowledgeBaseSearchOpen = true"
-        >
-          {{ t('tickets.details.searchKnowledgeBase') }}
-        </AppButton>
       </header>
 
       <AppAlert v-if="actionErrorText" tone="danger" role="alert">{{ actionErrorText }}</AppAlert>
 
       <section class="surface ticket-section">
-        <p>
-          {{ t('tickets.details.status') }}:
+        <p class="detail-row">
+          <span class="detail-label">{{ t('tickets.details.status') }}:</span>
           <template v-if="canManage">
             <select
               :value="store.current.status"
@@ -255,11 +276,11 @@ async function onRegenerateSummary() {
             </select>
             <span v-if="store.isChangingStatus">{{ t('common.loading') }}</span>
           </template>
-          <template v-else>{{ t(`tickets.statuses.${store.current.status}`) }}</template>
+          <AppBadge v-else :tone="statusTone">{{ t(`tickets.statuses.${store.current.status}`) }}</AppBadge>
         </p>
 
-        <p>
-          {{ t('tickets.details.priority') }}:
+        <p class="detail-row">
+          <span class="detail-label">{{ t('tickets.details.priority') }}:</span>
           <template v-if="canManage">
             <select
               :value="store.current.priority"
@@ -272,11 +293,11 @@ async function onRegenerateSummary() {
             </select>
             <span v-if="store.isChangingPriority">{{ t('common.loading') }}</span>
           </template>
-          <template v-else>{{ t(`tickets.priorities.${store.current.priority}`) }}</template>
+          <span v-else class="meta-chip">{{ t(`tickets.priorities.${store.current.priority}`) }}</span>
         </p>
 
-        <p>
-          {{ t('tickets.assignee') }}:
+        <p class="detail-row">
+          <span class="detail-label">{{ t('tickets.assignee') }}:</span>
           <template v-if="canManage">
             <select
               :value="store.current.assigneeUserId ?? ''"
@@ -297,21 +318,22 @@ async function onRegenerateSummary() {
           </span>
         </p>
 
-        <p>
-          {{ t('tickets.details.customer') }}:
+        <p class="detail-row">
+          <span class="detail-label">{{ t('tickets.details.customer') }}:</span>
           <router-link :to="{ name: 'customer-profile', params: { id: store.current.customerId } }">
             {{ store.current.customerName }}
           </router-link>
         </p>
+
+        <p class="detail-row detail-timestamps">
+          <span class="meta-text">{{ t('tickets.details.createdAt') }}: {{ formatDate(store.current.createdAtUtc) }}</span>
+          <span class="meta-sep">·</span>
+          <span class="meta-text">{{ t('tickets.details.updatedAt') }}: {{ formatDate(store.current.updatedAtUtc) }}</span>
+        </p>
       </section>
 
-      <section class="surface ticket-section">
-        <p>{{ store.current.description }}</p>
-      </section>
-
-      <section class="surface ticket-section">
-        <p>{{ t('tickets.details.createdAt') }}: {{ formatDate(store.current.createdAtUtc) }}</p>
-        <p>{{ t('tickets.details.updatedAt') }}: {{ formatDate(store.current.updatedAtUtc) }}</p>
+      <section class="surface ticket-section ticket-description-section">
+        <p class="ticket-description">{{ store.current.description }}</p>
       </section>
 
       <section class="surface ticket-section ai-assistance">
@@ -365,7 +387,10 @@ async function onRegenerateSummary() {
           {{ t('tickets.history.empty') }}
         </p>
         <ul v-else class="history-list">
-          <li v-for="entry in store.history" :key="entry.id">{{ historyLine(entry) }}</li>
+          <li v-for="entry in store.history" :key="entry.id">
+            <span class="history-dot" aria-hidden="true"></span>
+            {{ historyLine(entry) }}
+          </li>
         </ul>
       </details>
 
@@ -384,14 +409,14 @@ async function onRegenerateSummary() {
 
 <style scoped>
 .ticket-details-view {
-  max-width: 40rem;
+  max-width: 44rem;
   margin: var(--space-8) auto;
 }
 
 .ticket-detail-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .state-card {
@@ -404,15 +429,97 @@ async function onRegenerateSummary() {
 
 .ticket-header {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border-inline-start: 4px solid var(--accent);
+}
+
+.ticket-header-top {
+  display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-5) var(--space-6);
+}
+
+.ticket-header-top h2 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  line-height: 1.25;
+}
+
+.ticket-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ticket-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--muted);
 }
 
 .ticket-section {
   padding: var(--space-5) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.detail-row {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.detail-row:not(:last-child) {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-label {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.detail-timestamps {
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+}
+
+.meta-chip {
+  padding: 0.15rem var(--space-2);
+  background: var(--canvas);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.meta-sep {
+  color: var(--line);
+}
+
+.meta-text {
+  color: var(--muted);
+}
+
+.ticket-description-section {
+  padding: var(--space-5) var(--space-6);
+}
+
+.ticket-description {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.55;
+  white-space: pre-wrap;
 }
 
 .sla-badges {
@@ -438,6 +545,22 @@ async function onRegenerateSummary() {
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-3);
+}
+
+.history-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+}
+
+.history-dot {
+  flex: none;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--line);
 }
 
 .ai-assistance {
@@ -466,5 +589,18 @@ async function onRegenerateSummary() {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
+}
+
+/* Logical properties (border-inline-start, padding-inline, flex gap) mirror
+   correctly under RTL (dir="rtl" set globally per assets/main.css). */
+@media (max-width: 640px) {
+  .ticket-details-view {
+    margin: var(--space-4) auto;
+  }
+
+  .ticket-header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

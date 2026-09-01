@@ -5,6 +5,7 @@ import { useTicketMessagesStore } from '@/stores/ticketMessages'
 import { useQuickRepliesStore } from '@/stores/quickReplies'
 import { fetchEligibleAgents } from '@/api/tickets'
 import { useLocale } from '@/composables/useLocale'
+import { useRelativeTime } from '@/composables/useRelativeTime'
 import AppAlert from '@/components/ui/AppAlert.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
@@ -15,6 +16,7 @@ const props = defineProps<{ ticketId: string; ticket?: Ticket | null }>()
 
 const { t } = useI18n()
 const { locale } = useLocale()
+const { formatRelativeTime } = useRelativeTime()
 const store = useTicketMessagesStore()
 const quickReplyStore = useQuickRepliesStore()
 
@@ -204,6 +206,10 @@ function highlightMentions(body: string): string[] {
 function isMentionSegment(segment: string): boolean {
   return segment.startsWith('@')
 }
+
+function initials(label: string): string {
+  return label.trim().slice(0, 1).toUpperCase() || '?'
+}
 </script>
 
 <template>
@@ -344,26 +350,33 @@ function isMentionSegment(segment: string): boolean {
         class="message-item"
         :class="{ internal: message.isInternal }"
       >
-        <p class="message-meta">
-          <span>{{ message.authorDisplayName }}</span>
-          <span>{{ formatDate(message.createdAtUtc) }}</span>
-          <span v-if="message.isInternal" class="internal-badge">
-            {{ t('tickets.messages.internalBadge') }}
+        <span class="message-avatar" aria-hidden="true">{{ initials(message.authorDisplayName) }}</span>
+        <div class="message-bubble-wrap">
+          <p class="message-meta">
+            <span class="message-sender">{{ message.authorDisplayName }}</span>
+            <span v-if="message.isInternal" class="internal-badge">
+              {{ t('tickets.messages.internalBadge') }}
+            </span>
+            <span v-else class="public-badge">{{ t('tickets.messages.publicBadge') }}</span>
+            <AppBadge
+              v-if="message.channel === 'Email' && message.emailDeliveryStatus"
+              :tone="deliveryStatusTone[message.emailDeliveryStatus] ?? 'neutral'"
+            >
+              {{ t(`tickets.messages.email.${message.emailDeliveryStatus.toLowerCase()}`) }}
+            </AppBadge>
+          </p>
+          <div class="message-bubble">
+            <p class="message-body">
+              <template v-for="(segment, index) in highlightMentions(message.body)" :key="index">
+                <strong v-if="message.mentionedUserIds.length > 0 && isMentionSegment(segment)" class="mention-highlight">{{ segment }}</strong>
+                <template v-else>{{ segment }}</template>
+              </template>
+            </p>
+          </div>
+          <span class="message-time" :title="formatDate(message.createdAtUtc)">
+            {{ formatRelativeTime(message.createdAtUtc) }}
           </span>
-          <span v-else class="public-badge">{{ t('tickets.messages.publicBadge') }}</span>
-          <AppBadge
-            v-if="message.channel === 'Email' && message.emailDeliveryStatus"
-            :tone="deliveryStatusTone[message.emailDeliveryStatus] ?? 'neutral'"
-          >
-            {{ t(`tickets.messages.email.${message.emailDeliveryStatus.toLowerCase()}`) }}
-          </AppBadge>
-        </p>
-        <p class="message-body">
-          <template v-for="(segment, index) in highlightMentions(message.body)" :key="index">
-            <strong v-if="message.mentionedUserIds.length > 0 && isMentionSegment(segment)" class="mention-highlight">{{ segment }}</strong>
-            <template v-else>{{ segment }}</template>
-          </template>
-        </p>
+        </div>
       </li>
     </ul>
   </div>
@@ -385,23 +398,50 @@ function isMentionSegment(segment: string): boolean {
 }
 
 .message-item {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: var(--space-3);
-  border-inline-start: 3px solid transparent;
-  padding-inline-start: var(--space-2);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 
-.message-item.internal {
-  border-inline-start-color: var(--color-status-warning);
+.message-avatar {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-status-info-bg);
+  color: var(--color-status-info);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.message-item.internal .message-avatar {
   background: var(--color-status-warning-bg);
+  color: var(--color-status-warning);
+}
+
+.message-bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .message-meta {
   display: flex;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--muted);
   font-size: var(--font-size-xs);
   font-weight: 700;
+}
+
+.message-sender {
+  color: var(--text-primary);
 }
 
 .internal-badge {
@@ -410,6 +450,31 @@ function isMentionSegment(segment: string): boolean {
 
 .public-badge {
   color: var(--color-status-success);
+}
+
+.message-bubble {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  border-end-start-radius: var(--radius-sm);
+  background: var(--canvas);
+  color: var(--text-primary);
+}
+
+.message-item.internal .message-bubble {
+  background: var(--color-status-warning-bg);
+}
+
+.message-body {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-time {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted, var(--muted));
+  padding-inline: 0.15rem;
 }
 
 .mention-highlight {
