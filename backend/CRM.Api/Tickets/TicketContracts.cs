@@ -83,7 +83,8 @@ public record CreateTicketMessageRequest(
 public record TicketMessageResponse(
     Guid Id,
     Guid TicketId,
-    Guid AuthorUserId,
+    Guid? AuthorUserId,
+    Guid? AuthorCustomerId,
     string AuthorDisplayName,
     string Body,
     bool IsInternal,

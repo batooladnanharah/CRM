@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCustomerPortalStore } from '@/stores/customerPortal'
+import { ApiError } from '@/api/http'
 import type {
   createPortalTicket,
   fetchPortalDashboard,
@@ -11,6 +12,7 @@ import type {
   listPortalCategories,
   listPortalCategoryArticles,
   searchPortalKnowledgeBase,
+  sendPortalTicketReply,
 } from '@/api/customerPortal'
 import type {
   CustomerDashboard,
@@ -19,6 +21,7 @@ import type {
   CustomerKnowledgeBaseCategorySummary,
   CustomerTicketDetails,
   CustomerTicketListItem,
+  CustomerTicketMessage,
 } from '@/types/customerPortal'
 
 const {
@@ -31,6 +34,7 @@ const {
   listPortalCategoriesMock,
   listPortalCategoryArticlesMock,
   searchPortalKnowledgeBaseMock,
+  sendPortalTicketReplyMock,
 } = vi.hoisted(() => ({
   fetchPortalDashboardMock: vi.fn<typeof fetchPortalDashboard>(),
   fetchPortalTicketsMock: vi.fn<typeof fetchPortalTickets>(),
@@ -41,6 +45,7 @@ const {
   listPortalCategoriesMock: vi.fn<typeof listPortalCategories>(),
   listPortalCategoryArticlesMock: vi.fn<typeof listPortalCategoryArticles>(),
   searchPortalKnowledgeBaseMock: vi.fn<typeof searchPortalKnowledgeBase>(),
+  sendPortalTicketReplyMock: vi.fn<typeof sendPortalTicketReply>(),
 }))
 
 vi.mock('@/api/customerPortal', () => ({
@@ -53,6 +58,7 @@ vi.mock('@/api/customerPortal', () => ({
   listPortalCategories: listPortalCategoriesMock,
   listPortalCategoryArticles: listPortalCategoryArticlesMock,
   searchPortalKnowledgeBase: searchPortalKnowledgeBaseMock,
+  sendPortalTicketReply: sendPortalTicketReplyMock,
 }))
 
 function makeTicketListItem(overrides: Partial<CustomerTicketListItem> = {}): CustomerTicketListItem {
@@ -88,6 +94,16 @@ function makeTicketDetails(overrides: Partial<CustomerTicketDetails> = {}): Cust
     updatedAtUtc: '2026-01-01T00:00:00Z',
     messages: [],
     history: [],
+    ...overrides,
+  }
+}
+
+function makeMessage(overrides: Partial<CustomerTicketMessage> = {}): CustomerTicketMessage {
+  return {
+    id: 'm1',
+    senderType: 'Customer',
+    body: 'A reply from the customer.',
+    createdAtUtc: '2026-01-02T00:00:00Z',
     ...overrides,
   }
 }
@@ -142,6 +158,7 @@ beforeEach(() => {
   listPortalCategoriesMock.mockReset()
   listPortalCategoryArticlesMock.mockReset()
   searchPortalKnowledgeBaseMock.mockReset()
+  sendPortalTicketReplyMock.mockReset()
 })
 
 describe('customerPortal store', () => {
@@ -218,6 +235,62 @@ describe('customerPortal store', () => {
 
     expect(store.error).toBe('errorLoad')
     expect(store.currentTicket).toBeNull()
+  })
+
+  it('fetchTicket() sets notFound (not error) on a 404 ApiError', async () => {
+    fetchPortalTicketMock.mockRejectedValue(new ApiError(404, 'Not Found'))
+
+    const store = useCustomerPortalStore()
+    await store.fetchTicket('missing')
+
+    expect(store.notFound).toBe(true)
+    expect(store.error).toBeNull()
+    expect(store.currentTicket).toBeNull()
+  })
+
+  it('sendReply() appends the returned message and toggles sendingReply', async () => {
+    const message = makeMessage()
+    let resolveSend: (() => void) | undefined
+    sendPortalTicketReplyMock.mockImplementation(
+      () => new Promise((resolve) => { resolveSend = () => resolve(message) }),
+    )
+
+    const store = useCustomerPortalStore()
+    store.currentTicket = makeTicketDetails({ id: '1', messages: [] })
+
+    const promise = store.sendReply('1', 'A reply from the customer.')
+    expect(store.sendingReply).toBe(true)
+
+    resolveSend?.()
+    await promise
+
+    expect(store.sendingReply).toBe(false)
+    expect(store.currentTicket?.messages).toEqual([message])
+    expect(store.replyError).toBeNull()
+  })
+
+  it('sendReply() sets replyError and leaves currentTicket.messages untouched on failure', async () => {
+    sendPortalTicketReplyMock.mockRejectedValue(new Error('network down'))
+
+    const store = useCustomerPortalStore()
+    store.currentTicket = makeTicketDetails({ id: '1', messages: [] })
+
+    await expect(store.sendReply('1', 'A reply from the customer.')).rejects.toThrow('network down')
+
+    expect(store.replyError).toBe('errorSend')
+    expect(store.sendingReply).toBe(false)
+    expect(store.currentTicket?.messages).toEqual([])
+  })
+
+  it('sendReply() sets a ticketClosed replyError on a 409 ApiError', async () => {
+    sendPortalTicketReplyMock.mockRejectedValue(new ApiError(409, 'ticket_closed'))
+
+    const store = useCustomerPortalStore()
+    store.currentTicket = makeTicketDetails({ id: '1', messages: [] })
+
+    await expect(store.sendReply('1', 'A reply from the customer.')).rejects.toThrow('ticket_closed')
+
+    expect(store.replyError).toBe('ticketClosed')
   })
 
   it('createTicket() returns the created ticket on success', async () => {

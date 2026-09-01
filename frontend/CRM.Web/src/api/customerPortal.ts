@@ -7,6 +7,8 @@ import type {
   CustomerKnowledgeBaseCategorySummary,
   CustomerTicketDetails,
   CustomerTicketListItem,
+  CustomerTicketMessage,
+  SendPortalTicketReplyPayload,
 } from '@/types/customerPortal'
 import type { KnowledgeBaseSearchResponse } from '@/types/knowledgeBase'
 
@@ -24,6 +26,18 @@ export function fetchPortalTicket(id: string): Promise<CustomerTicketDetails> {
 
 export function createPortalTicket(payload: CreateCustomerTicketPayload): Promise<CustomerTicketDetails> {
   return apiRequest<CustomerTicketDetails>('/customer/tickets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+// Sends a customer reply — the backend resolves the sending customer from
+// the authenticated session (ICurrentCustomerAccessor); nothing sender-
+// related is ever included in this payload.
+export function sendPortalTicketReply(
+  ticketId: string, payload: SendPortalTicketReplyPayload,
+): Promise<CustomerTicketMessage> {
+  return apiRequest<CustomerTicketMessage>(`/customer/tickets/${ticketId}/messages`, {
     method: 'POST',
     body: JSON.stringify(payload),
   })

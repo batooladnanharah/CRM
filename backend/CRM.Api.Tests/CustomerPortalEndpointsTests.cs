@@ -74,6 +74,24 @@ public class CustomerPortalEndpointsTests : IClassFixture<CustomWebApplicationFa
         db.SaveChanges();
     }
 
+    private void SetTicketStatus(Guid ticketId, TicketStatus status)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TicketDbContext>();
+        var ticket = db.Tickets.First(t => t.Id == ticketId);
+        ticket.Status = status;
+        db.SaveChanges();
+    }
+
+    private void SetTicketAssignee(Guid ticketId, Guid assigneeUserId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TicketDbContext>();
+        var ticket = db.Tickets.First(t => t.Id == ticketId);
+        ticket.AssigneeUserId = assigneeUserId;
+        db.SaveChanges();
+    }
+
     private void AddHistoryEntry(Guid ticketId, TicketChangeType changeType, string? oldValue, string? newValue)
     {
         using var scope = _factory.Services.CreateScope();
@@ -237,6 +255,210 @@ public class CustomerPortalEndpointsTests : IClassFixture<CustomWebApplicationFa
         Assert.Equal("Public reply to the customer.", body.Messages[0].Body);
         Assert.Single(body.History);
         Assert.Equal("InProgress", body.History[0].NewValue);
+    }
+
+    [Fact]
+    public async Task GetTicketDetails_ReturnsCustomerSafeDto_WithNoInternalFields()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Safe DTO Ticket");
+
+        var response = await client.GetAsync($"/api/customer/tickets/{ticketId}");
+        var raw = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // The DTO type itself never carries these fields, but this also
+        // guards the wire format directly in case a future edit widens the
+        // record — see the "Customer-safe DTO" comment on
+        // CustomerTicketDetailsResponse in CustomerPortalContracts.cs.
+        Assert.DoesNotContain("assigneeUserId", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("slaPolicyId", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("autoAssigned", raw, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("internalNotes", raw, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetTicketDetails_RequiresCustomerAuth()
+    {
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Anon Ticket");
+
+        var response = await _client.GetAsync($"/api/customer/tickets/{ticketId}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostMessage_CreatesMessage_ForOwnTicket_AsCustomerSender()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Reply Ticket");
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/customer/tickets/{ticketId}/messages", new { body = "I need an update please." });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<CustomerTicketMessageResponse>();
+        Assert.Equal("Customer", body!.SenderType);
+        Assert.Equal("I need an update please.", body.Body);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TicketDbContext>();
+        var entity = db.TicketMessages.Single(m => m.Id == body.Id);
+        Assert.Equal(_portalCustomerId, entity.AuthorCustomerId);
+        Assert.Null(entity.AuthorUserId);
+        Assert.False(entity.IsInternal);
+    }
+
+    [Fact]
+    public async Task PostMessage_IgnoresClientSuppliedSender()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Ignores Sender Ticket");
+
+        var response = await client.PostAsJsonAsync($"/api/customer/tickets/{ticketId}/messages", new
+        {
+            body = "Ignore whatever sender I claim to be.",
+            senderCustomerId = _otherCustomerId,
+            authorCustomerId = _otherCustomerId,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<CustomerTicketMessageResponse>();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TicketDbContext>();
+        var entity = db.TicketMessages.Single(m => m.Id == created!.Id);
+        Assert.Equal(_portalCustomerId, entity.AuthorCustomerId);
+        Assert.NotEqual(_otherCustomerId, entity.AuthorCustomerId);
+    }
+
+    [Fact]
+    public async Task PostMessage_ReturnsNotFound_ForOtherCustomersTicket()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_otherCustomerId, "Not Mine For Reply");
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/customer/tickets/{ticketId}/messages", new { body = "Trying to reply anyway." });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostMessage_RejectsEmptyContent()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Empty Body Ticket");
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/customer/tickets/{ticketId}/messages", new { body = "   " });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostMessage_RejectsContentOverMaxLength()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Too Long Ticket");
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/customer/tickets/{ticketId}/messages", new { body = new string('a', 5001) });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostMessage_OnClosedTicket_ReturnsConflict_AndCreatesNoMessage()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Closed Ticket", TicketStatus.Closed);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/customer/tickets/{ticketId}/messages", new { body = "Please reopen." });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TicketDbContext>();
+        Assert.Empty(db.TicketMessages.Where(m => m.TicketId == ticketId));
+    }
+
+    // TicketStatusRules allows Resolved -> Open (the only non-terminal
+    // transition it defines out of Resolved); CustomerPortalEndpoints takes
+    // that as "a customer reply reopens a resolved ticket" rather than
+    // rejecting it — see the comment on the POST /messages handler.
+    [Fact]
+    public async Task PostMessage_OnResolvedTicket_ReopensTicketAndCreatesMessage()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Resolved Ticket", TicketStatus.Resolved);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/customer/tickets/{ticketId}/messages", new { body = "Actually, still broken." });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TicketDbContext>();
+        var ticket = db.Tickets.Single(t => t.Id == ticketId);
+        Assert.Equal(TicketStatus.Open, ticket.Status);
+        Assert.Single(db.TicketMessages.Where(m => m.TicketId == ticketId));
+    }
+
+    [Fact]
+    public async Task PostMessage_RequiresCustomerAuth()
+    {
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Anon Reply Ticket");
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/customer/tickets/{ticketId}/messages", new { body = "Anonymous attempt." });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetTicketDetails_And_PostMessage_RoundTrip_NewReplyAppearsInSubsequentGet()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Round Trip Ticket");
+
+        var initialGet = await client.GetAsync($"/api/customer/tickets/{ticketId}");
+        var initialBody = await initialGet.Content.ReadFromJsonAsync<CustomerTicketDetailsResponse>();
+        Assert.Empty(initialBody!.Messages);
+
+        var post = await client.PostAsJsonAsync(
+            $"/api/customer/tickets/{ticketId}/messages", new { body = "Following up on this." });
+        Assert.Equal(HttpStatusCode.Created, post.StatusCode);
+
+        var followUpGet = await client.GetAsync($"/api/customer/tickets/{ticketId}");
+        var followUpBody = await followUpGet.Content.ReadFromJsonAsync<CustomerTicketDetailsResponse>();
+        Assert.Single(followUpBody!.Messages);
+        Assert.Equal("Following up on this.", followUpBody.Messages[0].Body);
+        Assert.Equal("Customer", followUpBody.Messages[0].SenderType);
+    }
+
+    [Fact]
+    public async Task PostMessage_NotifiesAssignedAgent()
+    {
+        var client = await AuthenticatedClientAsync();
+        var ticketId = CreateTicketForCustomer(_portalCustomerId, "Notify Agent Ticket");
+
+        using var setupScope = _factory.Services.CreateScope();
+        var authDb = setupScope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        var agent = authDb.Users.First(u => u.Email == CustomWebApplicationFactory.ActiveEmail);
+        SetTicketAssignee(ticketId, agent.Id);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/customer/tickets/{ticketId}/messages", new { body = "Please look into this." });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var notificationsDb = scope.ServiceProvider.GetRequiredService<CRM.Api.Notifications.NotificationsDbContext>();
+        var notification = notificationsDb.Notifications.SingleOrDefault(
+            n => n.UserId == agent.Id && n.TicketId == ticketId);
+        Assert.NotNull(notification);
+        Assert.Equal(CRM.Api.Notifications.NotificationType.CustomerReplied, notification!.Type);
     }
 
     private Guid EnsureDefaultCategory()

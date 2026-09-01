@@ -1,5 +1,6 @@
 import { reactive, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { ApiError } from '@/api/http'
 import {
   createPortalTicket,
   fetchPortalDashboard,
@@ -10,6 +11,7 @@ import {
   listPortalCategories,
   listPortalCategoryArticles,
   searchPortalKnowledgeBase,
+  sendPortalTicketReply,
 } from '@/api/customerPortal'
 import type {
   CreateCustomerTicketPayload,
@@ -32,6 +34,10 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
   const loading = ref(false)
   const creating = ref(false)
   const error = ref<string | null>(null)
+  const notFound = ref(false)
+
+  const sendingReply = ref(false)
+  const replyError = ref<string | null>(null)
 
   const articles = ref<CustomerKnowledgeBaseArticleListItem[]>([])
   const currentArticle = ref<CustomerKnowledgeBaseArticleDetails | null>(null)
@@ -164,14 +170,55 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
   async function fetchTicket(id: string) {
     loading.value = true
     error.value = null
+    notFound.value = false
     currentTicket.value = null
 
     try {
       currentTicket.value = await fetchPortalTicket(id)
-    } catch {
-      error.value = 'errorLoad'
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        notFound.value = true
+      } else {
+        error.value = 'errorLoad'
+      }
     } finally {
       loading.value = false
+    }
+  }
+
+  // Same fetchTicket, kept as a distinct name for a manual "refresh" action
+  // in the details view so its intent reads differently from the initial
+  // on-mount load, even though the behavior is identical.
+  function refreshTicket(id: string) {
+    return fetchTicket(id)
+  }
+
+  // Sends a customer reply and, on success, appends the returned message to
+  // currentTicket.messages locally rather than re-fetching the whole ticket
+  // — avoids a full reload flicker and an extra round trip. On failure the
+  // caller's draft content is left untouched (this store never clears it).
+  async function sendReply(id: string, body: string) {
+    sendingReply.value = true
+    replyError.value = null
+
+    try {
+      const message = await sendPortalTicketReply(id, { body })
+      if (currentTicket.value && currentTicket.value.id === id) {
+        currentTicket.value.messages.push(message)
+        currentTicket.value.updatedAtUtc = message.createdAtUtc
+      }
+      return message
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        replyError.value = 'ticketClosed'
+      } else if (err instanceof ApiError && err.status === 404) {
+        replyError.value = 'notFound'
+      } else {
+        replyError.value = 'errorSend'
+      }
+      throw err
+    } finally {
+      sendingReply.value = false
     }
   }
 
@@ -255,9 +302,14 @@ export const useCustomerPortalStore = defineStore('customerPortal', () => {
     loading,
     creating,
     error,
+    notFound,
+    sendingReply,
+    replyError,
     fetchDashboard,
     fetchTickets,
     fetchTicket,
+    refreshTicket,
+    sendReply,
     createTicket,
     articles,
     currentArticle,

@@ -9,10 +9,19 @@ export interface CustomerTicketListItem {
   updatedAtUtc: string
 }
 
+// senderType mirrors the backend CustomerTicketMessageResponse: "Customer"
+// when the reply came through the portal, "Agent" for staff-authored public
+// replies. Internal notes are never included — the GET endpoint filters
+// them out server-side.
 export interface CustomerTicketMessage {
   id: string
+  senderType: 'Customer' | 'Agent'
   body: string
   createdAtUtc: string
+}
+
+export interface SendPortalTicketReplyPayload {
+  body: string
 }
 
 export interface CustomerTicketHistoryEntry {

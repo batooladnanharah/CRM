@@ -10,14 +10,21 @@ public record CustomerTicketListItemResponse(
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc);
 
-// No AuthorRole/author identity — every message in this codebase is
-// staff-authored (there is no customer- or system-authored message path
-// yet), so exposing an author label would always read "agent" and adds
-// nothing; omitted rather than inventing a taxonomy the domain doesn't have.
+// Customer-safe DTO. Do NOT add internal fields (assigned agent, SLA,
+// escalation, internal notes). SenderType is derived server-side from which
+// author field is set on the underlying TicketMessage ("Customer" when
+// AuthorCustomerId is set, "Agent" when AuthorUserId is set) — never trust a
+// client-supplied sender.
 public record CustomerTicketMessageResponse(
     Guid Id,
+    string SenderType,
     string Body,
     DateTime CreatedAtUtc);
+
+// Portal reply request body for POST /api/customer/tickets/{id}/messages.
+// Body-only — the sending customer is always resolved server-side via
+// ICurrentCustomerAccessor, never accepted from the request.
+public record CustomerCreateTicketMessageRequest(string Body);
 
 // Only status-change history is customer-visible — see
 // CustomerPortalEndpoints.IsPortalVisibleHistoryEntry for the full rationale.
@@ -29,6 +36,11 @@ public record CustomerTicketHistoryEntryResponse(
     string? NewValue,
     DateTime ChangedAtUtc);
 
+// Customer-safe DTO. Do NOT add internal fields (assigned agent, SLA,
+// escalation, internal notes, internal priority). Audited against Ticket's
+// full field set (AssigneeUserId, SlaPolicyId, FirstResponseDueAtUtc,
+// ResolutionDueAtUtc, *BreachedAtUtc, SlaAutoEscalatedAtUtc, AutoAssigned) —
+// none of those are exposed here or on CustomerTicketListItemResponse.
 public record CustomerTicketDetailsResponse(
     Guid Id,
     string Title,

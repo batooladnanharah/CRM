@@ -16,5 +16,9 @@ public sealed class Notification
 public enum NotificationType
 {
     SlaAtRisk = 1,
-    SlaBreached = 2
+    SlaBreached = 2,
+
+    // CRM-74 — a customer posted a reply via the customer portal. Sent to
+    // the ticket's assignee (if any); no notification when unassigned.
+    CustomerReplied = 3
 }

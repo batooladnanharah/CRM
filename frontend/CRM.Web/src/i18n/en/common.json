@@ -830,7 +830,29 @@
         "noMessages": "No replies yet.",
         "statusChange": "Status changed from {from} to {to} — {when}",
         "none": "None",
-        "backToList": "Back to my tickets"
+        "backToList": "Back to my tickets",
+        "refresh": "Refresh",
+        "conversationRoles": {
+          "customer": "You",
+          "support": "Support"
+        },
+        "composer": {
+          "label": "Your reply",
+          "placeholder": "Type your reply…",
+          "send": "Send",
+          "sending": "Sending…",
+          "toastSent": "Message sent.",
+          "toastError": "Unable to send your message. Please try again.",
+          "errors": {
+            "ticketClosed": "This ticket is closed and can no longer receive replies.",
+            "notFound": "We couldn't find that ticket.",
+            "errorSend": "Unable to send your message. Please try again."
+          }
+        },
+        "closed": {
+          "body": "This ticket is closed.",
+          "cta": "Create New Ticket"
+        }
       }
     },
     "helpCentre": {

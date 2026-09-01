@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CRM.Api.Auth;
 using CRM.Api.KnowledgeBase;
+using CRM.Api.Notifications;
 using CRM.Api.Security;
 using CRM.Api.Tickets;
 using Microsoft.AspNetCore.Http;
@@ -88,6 +89,129 @@ public static class CustomerPortalEndpoints
             return Results.Ok(await ToDetailsResponseAsync(entity, db, ct));
         })
         .WithName("GetPortalTicket");
+
+        // Portal reply — the customer-authored counterpart to
+        // TicketMessageEndpoints.CreateTicketMessage. Deliberately not the
+        // same endpoint/policy: that one is gated to Permissions.TicketsManage
+        // (staff only) and must stay that way; this one is gated to
+        // Permissions.PortalAccess via the enclosing MapGroup and always
+        // writes IsInternal = false, AuthorCustomerId = the resolved caller,
+        // AuthorUserId = null.
+        customer.MapPost("/tickets/{id:guid}/messages", async (
+            Guid id, CustomerCreateTicketMessageRequest request, ClaimsPrincipal principal,
+            ICurrentCustomerAccessor accessor, TicketDbContext db, INotificationService notifications,
+            IAuditLogger auditLogger, CancellationToken ct) =>
+        {
+            var customerId = await accessor.GetCurrentCustomerIdAsync(principal, ct);
+            if (customerId is null)
+            {
+                return Results.Forbid();
+            }
+
+            var body = request.Body?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(body))
+            {
+                return Results.BadRequest(new ErrorResponse("Body is required."));
+            }
+            // Same limit as TicketMessage.Body (TicketDbContext.OnModelCreating,
+            // and the staff-side check in TicketMessageEndpoints) — one ceiling
+            // for the column, enforced at every write path.
+            if (body.Length > 5000)
+            {
+                return Results.BadRequest(new ErrorResponse("Body must be 5000 characters or fewer."));
+            }
+
+            // Same "never disclose existence" rule as GetPortalTicket above —
+            // foreign-owned and missing tickets both 404.
+            var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id && t.CustomerId == customerId, ct);
+            if (ticket is null)
+            {
+                return Results.NotFound();
+            }
+
+            // TicketStatusRules: Closed is terminal (no allowed transitions at
+            // all), so a reply is always rejected there. Resolved allows
+            // Resolved -> Open, which we take as "a customer reply reopens a
+            // resolved ticket" — the only other TicketStatusRules-sanctioned
+            // outcome for Resolved would be to reject, and reopening is more
+            // useful to a customer who still needs help.
+            if (ticket.Status == TicketStatus.Closed)
+            {
+                return Results.Conflict(new ErrorResponse("ticket_closed"));
+            }
+
+            var now = DateTime.UtcNow;
+
+            if (ticket.Status == TicketStatus.Resolved &&
+                TicketStatusRules.IsAllowedTransition(TicketStatus.Resolved, TicketStatus.Open))
+            {
+                db.TicketHistory.Add(new TicketHistoryEntry
+                {
+                    Id = Guid.NewGuid(),
+                    TicketId = ticket.Id,
+                    ChangeType = TicketChangeType.Status,
+                    OldValue = ticket.Status.ToString(),
+                    NewValue = TicketStatus.Open.ToString(),
+                    ChangedByUserId = customerId.Value,
+                    ChangedAtUtc = now,
+                });
+                ticket.Status = TicketStatus.Open;
+            }
+
+            var message = new TicketMessage
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticket.Id,
+                AuthorUserId = null,
+                AuthorCustomerId = customerId.Value,
+                Body = body,
+                IsInternal = false,
+                Channel = MessageChannel.Web,
+                CreatedAtUtc = now,
+            };
+            db.TicketMessages.Add(message);
+
+            db.TicketHistory.Add(new TicketHistoryEntry
+            {
+                Id = Guid.NewGuid(),
+                TicketId = ticket.Id,
+                ChangeType = TicketChangeType.MessageAdded,
+                OldValue = null,
+                NewValue = message.Id.ToString(),
+                ChangedByUserId = customerId.Value,
+                ChangedAtUtc = now,
+            });
+
+            ticket.UpdatedAtUtc = now;
+
+            await db.SaveChangesAsync(ct);
+
+            // Mirrors the intent of the staff-side notification hooks (see
+            // Sla/EscalationDispatcher.cs for the established Notification
+            // creation pattern) — notify whoever is currently assigned that
+            // the customer replied. No assignee yet -> no notification.
+            if (ticket.AssigneeUserId is { } assigneeId)
+            {
+                await notifications.CreateAsync(new Notification
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = assigneeId,
+                    Type = NotificationType.CustomerReplied,
+                    Title = "New customer reply",
+                    Message = $"The customer replied on \"{ticket.Title}\".",
+                    TicketId = ticket.Id,
+                    IsRead = false,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                }, ct);
+            }
+
+            await auditLogger.WriteAsync(
+                AuditActions.TicketMessageAdded, targetType: "ticket", targetId: ticket.Id.ToString(), ct: ct);
+
+            return Results.Created(
+                $"/api/customer/tickets/{ticket.Id}/messages/{message.Id}", ToMessageResponse(message));
+        })
+        .WithName("CreatePortalTicketMessage");
 
         customer.MapPost("/tickets", async (
             CreateCustomerTicketRequest request, ClaimsPrincipal principal, ICurrentCustomerAccessor accessor,
@@ -300,6 +424,9 @@ public static class CustomerPortalEndpoints
         .WithName("SearchPortalKnowledgeBase");
     }
 
+    private static CustomerTicketMessageResponse ToMessageResponse(TicketMessage m) => new(
+        m.Id, m.AuthorCustomerId != null ? "Customer" : "Agent", m.Body, m.CreatedAtUtc);
+
     private static CustomerTicketListItemResponse ToListItemResponse(Ticket t) => new(
         t.Id, t.Title, t.Status, t.Priority, t.CreatedAtUtc, t.UpdatedAtUtc);
 
@@ -309,7 +436,8 @@ public static class CustomerPortalEndpoints
         var messages = await db.TicketMessages.AsNoTracking()
             .Where(m => m.TicketId == ticket.Id && !m.IsInternal)
             .OrderBy(m => m.CreatedAtUtc)
-            .Select(m => new CustomerTicketMessageResponse(m.Id, m.Body, m.CreatedAtUtc))
+            .Select(m => new CustomerTicketMessageResponse(
+                m.Id, m.AuthorCustomerId != null ? "Customer" : "Agent", m.Body, m.CreatedAtUtc))
             .ToListAsync(ct);
 
         var history = await db.TicketHistory.AsNoTracking()

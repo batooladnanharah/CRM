@@ -24,7 +24,7 @@ public static class TicketMessageEndpoints
 
         messages.MapGet("/", async (
             Guid ticketId, [AsParameters] TicketMessagesQuery query, TicketDbContext db, AuthDbContext authDb,
-            CommunicationChannelsDbContext channelsDb) =>
+            CommunicationChannelsDbContext channelsDb, CustomerDbContext customerDb) =>
         {
             var ticketExists = await db.Tickets.AsNoTracking().AnyAsync(t => t.Id == ticketId);
             if (!ticketExists)
@@ -45,7 +45,7 @@ public static class TicketMessageEndpoints
                 .Take(pageSize)
                 .ToListAsync();
 
-            var items = await ToResponsesAsync(entities, db, authDb, channelsDb);
+            var items = await ToResponsesAsync(entities, db, authDb, channelsDb, customerDb);
             return Results.Ok(new PagedResult<TicketMessageResponse>(items, page, pageSize, totalCount));
         })
         .WithName("ListTicketMessages");
@@ -236,7 +236,7 @@ public static class TicketMessageEndpoints
                     await auditLogger.WriteAsync(
                         AuditActions.TicketMessageAdded, targetType: "ticket", targetId: ticketId.ToString());
 
-                    var successResponse = (await ToResponsesAsync([entity], db, authDb, channelsDb))[0];
+                    var successResponse = (await ToResponsesAsync([entity], db, authDb, channelsDb, customerDb))[0];
                     return Results.Created($"/api/tickets/{ticketId}/messages/{entity.Id}", successResponse);
                 }
 
@@ -259,7 +259,7 @@ public static class TicketMessageEndpoints
             await auditLogger.WriteAsync(
                 AuditActions.TicketMessageAdded, targetType: "ticket", targetId: ticketId.ToString());
 
-            var response = (await ToResponsesAsync([entity], db, authDb, channelsDb))[0];
+            var response = (await ToResponsesAsync([entity], db, authDb, channelsDb, customerDb))[0];
             return Results.Created($"/api/tickets/{ticketId}/messages/{entity.Id}", response);
         })
         .WithName("CreateTicketMessage");
@@ -267,13 +267,21 @@ public static class TicketMessageEndpoints
 
     private static async Task<List<TicketMessageResponse>> ToResponsesAsync(
         IReadOnlyList<TicketMessage> messages, TicketDbContext db, AuthDbContext authDb,
-        CommunicationChannelsDbContext channelsDb)
+        CommunicationChannelsDbContext channelsDb, CustomerDbContext customerDb)
     {
-        var authorIds = messages.Select(m => m.AuthorUserId).Distinct().ToList();
+        var authorIds = messages.Where(m => m.AuthorUserId is not null)
+            .Select(m => m.AuthorUserId!.Value).Distinct().ToList();
         var authorNames = await authDb.Users
             .AsNoTracking()
             .Where(u => authorIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.Name);
+
+        var authorCustomerIds = messages.Where(m => m.AuthorCustomerId is not null)
+            .Select(m => m.AuthorCustomerId!.Value).Distinct().ToList();
+        var authorCustomerNames = await customerDb.Customers
+            .AsNoTracking()
+            .Where(c => authorCustomerIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.FullName);
 
         var messageIds = messages.Select(m => m.Id).ToList();
         var mentionsByMessageId = (await db.MessageMentions
@@ -293,7 +301,12 @@ public static class TicketMessageEndpoints
                 m.Id,
                 m.TicketId,
                 m.AuthorUserId,
-                authorNames.GetValueOrDefault(m.AuthorUserId, string.Empty),
+                m.AuthorCustomerId,
+                m.AuthorUserId is { } userId
+                    ? authorNames.GetValueOrDefault(userId, string.Empty)
+                    : m.AuthorCustomerId is { } customerId
+                        ? authorCustomerNames.GetValueOrDefault(customerId, string.Empty)
+                        : string.Empty,
                 m.Body,
                 m.IsInternal,
                 mentionsByMessageId.GetValueOrDefault(m.Id, Array.Empty<Guid>()),
